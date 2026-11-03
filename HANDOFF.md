@@ -1,5 +1,6 @@
 # 交接说明 · 昌子大冒险 Chapter 1 Demo
 
+> 公开仓库：https://github.com/kami0410/changzi-adventure
 > 版本：`0.11.0-demo`（2026-11-03）
 > 引擎：Godot **4.7.2 stable 标准版**（GDScript，不是 .NET）
 > 仓库根目录就是 Godot 项目根目录，可以直接用 Godot 打开。

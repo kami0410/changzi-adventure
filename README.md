@@ -4,7 +4,7 @@
 
 ## 0.11.0-demo（2026-11-03）
 
-**Chapter 1 可试玩 demo。** 20–25 分钟：标题 → Hub 教学 → 墨雨档案馆六房 + 精英/事件 +
+**Chapter 1 可试玩 demo。** 公开仓库：https://github.com/kami0410/changzi-adventure 20–25 分钟：标题 → Hub 教学 → 墨雨档案馆六房 + 精英/事件 +
 休息 + 隐藏书库 → 墨骸史官 → 续命/改写权柄 → 章末选择 → “未完待续”。
 
 - 全像素 demo：角色/敌人/Boss/背景/立绘/道具/Logo 统一像素语言；`tests/check_pixel_assets.py --demo` 门禁。
