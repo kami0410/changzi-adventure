@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_58xaw"]
+
+[resource]
+script = ExtResource("1_58xaw")
+id = &"zhaohuan"
+glyph = "⛧"
+phoneme = "zhao huan"
+meaning = "召唤"
+grammar_role = 1
+tags = Array[StringName]([&"summon"])
+power = 3
+decoded = true
+components = Dictionary[StringName, float]({
+&"duration": 1.0,
+&"summon": 1.0
+})
+description = "从空白处叫来一位旧读者。"

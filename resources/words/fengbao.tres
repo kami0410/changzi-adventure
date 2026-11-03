@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_fb"]
+
+[resource]
+script = ExtResource("1_fb")
+id = &"fengbao"
+glyph = "☳"
+phoneme = "feng bao"
+meaning = "风暴"
+grammar_role = 2
+tags = Array[StringName]([&"thunder", &"movement"])
+power = 3
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 2.0,
+&"area": 0.5
+})
+description = "把整片天空折成一页，再撕开。"

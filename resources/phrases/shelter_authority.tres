@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhraseData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phrase_data.gd" id="1_mbbjj"]
+
+[resource]
+script = ExtResource("1_mbbjj")
+id = &"shelter_authority"
+display_name = "庇护权柄"
+word_ids = Array[StringName]([&"bihu", &"quanbing"])
+tags = Array[StringName]([&"shield", &"life", &"authority"])
+description = "示例短语：庇护权柄"

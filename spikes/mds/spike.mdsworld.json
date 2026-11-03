@@ -1,0 +1,31 @@
+{
+  "format": "mds_world",
+  "version": 1,
+  "name": "Changzi MDS spike",
+  "settings": {"grid": 32, "default_room_size": [1280, 720], "weather": "ashfall"},
+  "layers": ["Main"],
+  "areas": {
+    "Ink Archive": {"color": "#4fb3a9", "weather": "fog(color=#1d3a44, density=0.35, ground=0.8), embers(kind=ash, density=0.25)", "background": "", "boss_background": "void_pulse"}
+  },
+  "rooms": {
+    "spike_battle": {
+      "scene_path": "res://spikes/mds/room_battle.tscn", "area": "Ink Archive", "layer": 0,
+      "origin": [0, 0], "rects": [[0, 0, 1280, 720]],
+      "gates": {"right1": {"pos": [1272, 470], "side": "right", "to": "spike_chest", "to_gate": "left1"}}
+    },
+    "spike_chest": {
+      "scene_path": "res://spikes/mds/room_chest.tscn", "area": "Ink Archive", "layer": 0,
+      "origin": [1280, 0], "rects": [[0, 0, 1280, 720]],
+      "gates": {
+        "left1": {"pos": [8, 470], "side": "left", "to": "spike_battle", "to_gate": "right1"},
+        "right1": {"pos": [1272, 470], "side": "right", "to": "spike_boss", "to_gate": "left1"}
+      }
+    },
+    "spike_boss": {
+      "scene_path": "res://spikes/mds/room_boss.tscn", "area": "Ink Archive", "layer": 0,
+      "origin": [2560, 0], "rects": [[0, 0, 1280, 720]], "type": "boss", "boss": "墨骸史官",
+      "gates": {"left1": {"pos": [8, 470], "side": "left", "to": "spike_chest", "to_gate": "right1"}}
+    }
+  },
+  "links": [], "pins": [], "start_room": "spike_battle"
+}

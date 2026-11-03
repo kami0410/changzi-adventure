@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_sm"]
+
+[resource]
+script = ExtResource("1_sm")
+id = &"shemian"
+glyph = "☨"
+phoneme = "she mian"
+meaning = "赦免"
+grammar_role = 1
+tags = Array[StringName]([&"order", &"holy", &"purify"])
+power = 3
+corruption = 0
+decoded = true
+components = Dictionary[StringName, float]({
+&"purify": 6.0,
+&"shield": 2.0
+})
+description = "赦免不是原谅，是把账页从档案里撕下来。"

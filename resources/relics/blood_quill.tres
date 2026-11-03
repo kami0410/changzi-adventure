@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/relic_data.gd" id="1_rdrwb"]
+
+[resource]
+script = ExtResource("1_rdrwb")
+id = &"blood_quill"
+display_name = "血羽笔"
+tags = Array[StringName]([&"blood", &"archive"])
+corruption = 3
+effect_id = &"lifesteal_up"
+description = "用血当墨，写下的字会回到血管里。"

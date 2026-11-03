@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_ucehv"]
+
+[resource]
+script = ExtResource("1_ucehv")
+id = &"quanbing"
+glyph = "♛"
+phoneme = "quan bing"
+meaning = "权柄"
+tags = Array[StringName]([&"authority"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 2.0
+})
+description = "史官对世界下达命令的资格。"

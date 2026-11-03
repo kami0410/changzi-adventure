@@ -1,0 +1,46 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/beam_enemy.gd" id="1_enemy"]
+[ext_resource type="Resource" path="res://resources/enemies/mirror_sniper.tres" id="2_data"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 16.0
+
+[node name="MirrorSniper" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_enemy")
+data = ExtResource("2_data")
+actor_style = &"humanoid"
+aggro_range = 760.0
+deaggro_range = 1100.0
+attack_range = 760.0
+attack_cooldown = 2.6
+attack_windup = 0.62
+attack_recovery = 0.42
+telegraph_color = Color(0.71, 0.9, 0.95, 1)
+beam_range = 760.0
+keep_distance = 300.0
+beam_width = 26.0
+warning_time = 0.48
+beam_color = Color(0.71, 0.9, 0.95, 1)
+
+[node name="Body" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-12, -22, 0, -34, 12, -22, 10, 20, -10, 20)
+color = Color(0.2, 0.24, 0.29, 1)
+
+[node name="Eye" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(3, -26, 10, -22, 3, -18)
+color = Color(0.58, 0.9, 0.96, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_body")
+
+[node name="HealthBar" type="ProgressBar" parent="."]
+offset_left = -28.0
+offset_top = -54.0
+offset_right = 28.0
+offset_bottom = -46.0
+max_value = 36.0
+value = 36.0
+show_percentage = false

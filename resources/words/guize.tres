@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_gz"]
+
+[resource]
+script = ExtResource("1_gz")
+id = &"guize"
+glyph = "▥"
+phoneme = "gui ze"
+meaning = "规则"
+grammar_role = 0
+tags = Array[StringName]([&"authority", &"archive"])
+power = 3
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 2.0,
+&"shield": 3.0
+})
+description = "世界坏掉之后，只剩书写它的规则还站着。"

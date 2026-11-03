@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_bjsho"]
+
+[resource]
+script = ExtResource("1_bjsho")
+id = &"xue"
+glyph = "◐"
+phoneme = "xue"
+meaning = "血"
+tags = Array[StringName]([&"blood", &"life"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 1.0,
+&"lifesteal": 0.15
+})
+description = "流动的记忆，写下就会疼。"

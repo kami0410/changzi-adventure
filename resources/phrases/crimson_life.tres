@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhraseData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phrase_data.gd" id="1_p84cg"]
+
+[resource]
+script = ExtResource("1_p84cg")
+id = &"crimson_life"
+display_name = "猩红生命"
+word_ids = Array[StringName]([&"xinghong", &"gr"])
+tags = Array[StringName]([&"blood", &"life"])
+description = "示例短语：猩红生命"

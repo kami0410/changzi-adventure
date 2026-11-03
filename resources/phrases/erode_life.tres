@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhraseData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phrase_data.gd" id="1_5jo5m"]
+
+[resource]
+script = ExtResource("1_5jo5m")
+id = &"erode_life"
+display_name = "侵蚀生命"
+word_ids = Array[StringName]([&"grlufai", &"gr"])
+tags = Array[StringName]([&"corruption", &"life"])
+description = "示例短语：侵蚀生命"

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_2j2oq"]
+
+[resource]
+script = ExtResource("1_2j2oq")
+id = &"xunji"
+glyph = "»"
+phoneme = "xun ji"
+meaning = "迅捷"
+grammar_role = 2
+tags = Array[StringName]([&"movement", &"time"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"move_speed": 0.3
+})
+description = "把脚步写成一笔带过的连字。"

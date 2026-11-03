@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="DialogueData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/hub/dialogue_data.gd" id="1_dialogue"]
+
+[resource]
+script = ExtResource("1_dialogue")
+speaker = "闻烬"
+lines = Array[String](["你还活着。真可惜，我本来想把你那一页写得更精彩一点。", "别信你看到的名册。名册也会累，也会想换一种写法。", "我卖情报，不卖安慰。想听哪一段？"])

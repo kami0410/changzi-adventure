@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/relic_data.gd" id="1_vcdui"]
+
+[resource]
+script = ExtResource("1_vcdui")
+id = &"immortal_archive"
+display_name = "不朽档案"
+tags = Array[StringName]([&"life", &"archive"])
+effect_id = &"revive_once"
+description = "死亡时档案替你翻回上一页；每局一次。"

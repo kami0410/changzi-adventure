@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"guanchuan"
+glyph = "↠"
+phoneme = "guanchuan"
+meaning = "贯穿"
+grammar_role = 1
+tags = Array[StringName]([&"sight"])
+power = 2
+corruption = 0
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 2.0,
+&"pierce": 2.0
+})
+description = "闻烬的笔尖曾经一口气划穿七份档案。"

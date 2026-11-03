@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_s8f8m"]
+
+[resource]
+script = ExtResource("1_s8f8m")
+id = &"echo_flute"
+display_name = "回声笛"
+kind = 1
+damage = 8
+attack_cooldown = 0.35
+attack_range = 380.0
+projectile_speed = 820.0
+special_id = &"echo_shot"
+tags = Array[StringName]([&"ranged", &"summon", &"projectile"])

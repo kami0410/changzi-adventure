@@ -1,0 +1,365 @@
+{
+  "format": "mds_world",
+  "version": 1,
+  "name": "Changzi Chapter 1",
+  "settings": {
+    "grid": 32,
+    "default_room_size": [
+      1280,
+      720
+    ],
+    "weather": "fog(color=#1d3a44, density=0.28, ground=0.75), embers(kind=ash, density=0.18)"
+  },
+  "layers": [
+    "Main"
+  ],
+  "areas": {
+    "Ink Archive": {
+      "color": "#2e6b66",
+      "weather": "fog(color=#1d3a44, density=0.32, ground=0.8), embers(kind=ash, density=0.22)",
+      "background": "",
+      "boss_background": "void_pulse"
+    }
+  },
+  "rooms": {
+    "ch1_01": {
+      "scene_path": "res://scenes/mds/ch1_01.tscn",
+      "name": "档案馆前厅",
+      "area": "Ink Archive",
+      "layer": 0,
+      "origin": [
+        0,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch1_02",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch1_02": {
+      "scene_path": "res://scenes/mds/ch1_02.tscn",
+      "name": "墨雨长廊",
+      "area": "Ink Archive",
+      "layer": 0,
+      "origin": [
+        1280,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch1_01",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch1_03",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch1_03": {
+      "scene_path": "res://scenes/mds/ch1_03.tscn",
+      "name": "裂页书库",
+      "area": "Ink Archive",
+      "layer": 0,
+      "origin": [
+        2560,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch1_02",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch1_04",
+          "to_gate": "left1"
+        },
+        "door1": {
+          "pos": [
+            922,
+            500
+          ],
+          "side": "door",
+          "to": "ch1_vault",
+          "to_gate": "door1"
+        }
+      }
+    },
+    "ch1_04": {
+      "scene_path": "res://scenes/mds/ch1_04.tscn",
+      "name": "倒悬书架",
+      "area": "Ink Archive",
+      "layer": 0,
+      "origin": [
+        3840,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch1_03",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch1_05",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch1_05": {
+      "scene_path": "res://scenes/mds/ch1_05.tscn",
+      "name": "墨池回廊",
+      "area": "Ink Archive",
+      "layer": 0,
+      "origin": [
+        5120,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch1_04",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch1_06",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch1_06": {
+      "scene_path": "res://scenes/mds/ch1_06.tscn",
+      "name": "封库门前",
+      "area": "Ink Archive",
+      "layer": 0,
+      "origin": [
+        6400,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch1_05",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch1_rest",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch1_rest": {
+      "scene_path": "res://scenes/mds/ch1_rest.tscn",
+      "name": "守夜人的火盆",
+      "type": "rest",
+      "area": "Ink Archive",
+      "layer": 0,
+      "origin": [
+        7680,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch1_06",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch1_boss",
+          "to_gate": "left1"
+        },
+        "door2": {
+          "pos": [
+            1100,
+            500
+          ],
+          "side": "door",
+          "to": "ch1_02"
+        }
+      }
+    },
+    "ch1_boss": {
+      "scene_path": "res://scenes/mds/ch1_boss.tscn",
+      "name": "封印库",
+      "type": "boss",
+      "boss": "墨骸史官",
+      "area": "Ink Archive",
+      "layer": 0,
+      "origin": [
+        8960,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch1_rest",
+          "to_gate": "right1"
+        }
+      }
+    },
+    "ch1_vault": {
+      "scene_path": "res://scenes/mds/ch1_vault.tscn",
+      "name": "隐藏书库",
+      "type": "rest",
+      "area": "Ink Archive",
+      "layer": 0,
+      "origin": [
+        2560,
+        720
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "door1": {
+          "pos": [
+            640,
+            500
+          ],
+          "side": "door",
+          "to": "ch1_03",
+          "to_gate": "door1"
+        }
+      }
+    }
+  },
+  "links": [],
+  "pins": [],
+  "start_room": "ch1_01"
+}

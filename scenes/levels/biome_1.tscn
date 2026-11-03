@@ -1,0 +1,183 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/levels/room.tscn" id="1_room"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/ink_archive.png" id="2_bg"]
+[ext_resource type="PackedScene" path="res://scenes/levels/memory_stele.tscn" id="3_stele"]
+[ext_resource type="PackedScene" path="res://scenes/levels/memory_shop.tscn" id="4_shop"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ground"]
+size = Vector2(12000, 80)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_platform"]
+size = Vector2(240, 24)
+
+[node name="Biome1" type="Node2D"]
+
+[node name="BackgroundArt" type="Sprite2D" parent="."]
+z_index = -10
+texture_filter = 1
+modulate = Color(0.82, 0.88, 0.95, 1)
+texture = ExtResource("2_bg")
+position = Vector2(1920, 360)
+scale = Vector2(2.5, 0.833333)
+
+[node name="Background" type="ColorRect" parent="."]
+visible = false
+offset_right = 12000.0
+offset_bottom = 720.0
+mouse_filter = 2
+color = Color(0.055, 0.065, 0.09, 1)
+
+[node name="Ground" type="StaticBody2D" parent="."]
+position = Vector2(0, 560)
+
+[node name="Visual" type="ColorRect" parent="Ground"]
+visible = false
+offset_right = 12000.0
+offset_bottom = 80.0
+mouse_filter = 2
+color = Color(0.16, 0.15, 0.19, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ground"]
+position = Vector2(6000, 40)
+shape = SubResource("RectangleShape2D_ground")
+
+[node name="Platform" type="StaticBody2D" parent="."]
+position = Vector2(900, 500)
+
+[node name="Visual" type="ColorRect" parent="Platform"]
+offset_left = -120.0
+offset_top = -12.0
+offset_right = 120.0
+offset_bottom = 12.0
+mouse_filter = 2
+color = Color(0.22, 0.2, 0.26, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platform"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="SidePlatform" type="StaticBody2D" parent="."]
+position = Vector2(2580, 450)
+
+[node name="Visual" type="ColorRect" parent="SidePlatform"]
+offset_left = -120.0
+offset_top = -12.0
+offset_right = 120.0
+offset_bottom = 12.0
+mouse_filter = 2
+color = Color(0.19, 0.22, 0.27, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SidePlatform"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="HighPlatform" type="StaticBody2D" parent="."]
+position = Vector2(3960, 430)
+
+[node name="Visual" type="ColorRect" parent="HighPlatform"]
+offset_left = -120.0
+offset_top = -12.0
+offset_right = 120.0
+offset_bottom = 12.0
+mouse_filter = 2
+color = Color(0.18, 0.23, 0.27, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HighPlatform"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="RoomReadingHall" parent="." instance=ExtResource("1_room")]
+position = Vector2(1920, 280)
+room_id = &"ink_archive_reading_hall"
+
+[node name="RoomStacks" parent="." instance=ExtResource("1_room")]
+position = Vector2(3200, 280)
+room_id = &"ink_archive_stacks"
+
+[node name="RoomBoss" parent="." instance=ExtResource("1_room")]
+position = Vector2(9600, 280)
+room_id = &"ink_archive_sealed_vault"
+
+[node name="RoomThird" parent="." instance=ExtResource("1_room")]
+position = Vector2(4480, 280)
+room_id = &"ink_third"
+
+[node name="RoomFourth" parent="." instance=ExtResource("1_room")]
+position = Vector2(5760, 280)
+room_id = &"ink_archive_fourth"
+
+
+[node name="PlatformBranch" type="StaticBody2D" parent="."]
+position = Vector2(5360, 460)
+
+[node name="Visual" type="ColorRect" parent="PlatformBranch"]
+offset_left = -120.0
+offset_top = -12.0
+offset_right = 120.0
+offset_bottom = 12.0
+mouse_filter = 2
+color = Color(0.2, 0.18, 0.2, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformBranch"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="PlatformTreasure" type="StaticBody2D" parent="."]
+position = Vector2(6640, 440)
+
+[node name="Visual" type="ColorRect" parent="PlatformTreasure"]
+offset_left = -120.0
+offset_top = -12.0
+offset_right = 120.0
+offset_bottom = 12.0
+mouse_filter = 2
+color = Color(0.18, 0.16, 0.19, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformTreasure"]
+shape = SubResource("RectangleShape2D_platform")
+
+
+[node name="RoomFifth" parent="." instance=ExtResource("1_room")]
+position = Vector2(7040, 280)
+room_id = &"ink_archive_fifth"
+
+[node name="RoomSixth" parent="." instance=ExtResource("1_room")]
+position = Vector2(8320, 280)
+room_id = &"ink_archive_sixth"
+
+[node name="PlatformFifth" type="StaticBody2D" parent="."]
+position = Vector2(7920, 440)
+
+[node name="Visual" type="ColorRect" parent="PlatformFifth"]
+offset_left = -120.0
+offset_top = -12.0
+offset_right = 120.0
+offset_bottom = 12.0
+mouse_filter = 2
+color = Color(0.2, 0.18, 0.2, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformFifth"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="PlatformSixth" type="StaticBody2D" parent="."]
+position = Vector2(9040, 460)
+
+[node name="Visual" type="ColorRect" parent="PlatformSixth"]
+offset_left = -120.0
+offset_top = -12.0
+offset_right = 120.0
+offset_bottom = 12.0
+mouse_filter = 2
+color = Color(0.2, 0.18, 0.2, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlatformSixth"]
+shape = SubResource("RectangleShape2D_platform")
+
+[node name="MemoryStele" parent="." instance=ExtResource("3_stele")]
+position = Vector2(2580, 438)
+stele_id = &"ink_archive_stele"
+
+
+[node name="MemoryShop" parent="." instance=ExtResource("4_shop")]
+position = Vector2(900, 488)
+shop_id = &"ink_archive_shop"
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(120, 530)

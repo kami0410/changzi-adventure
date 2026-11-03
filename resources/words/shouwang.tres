@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"shouwang"
+glyph = "☖"
+phoneme = "shouwang"
+meaning = "守望"
+grammar_role = 1
+tags = Array[StringName]([&"shield", &"archive"])
+power = 2
+corruption = 0
+decoded = true
+components = Dictionary[StringName, float]({
+&"shield": 4.0,
+&"heal": 1.0
+})
+description = "守夜人不需要被记住，只需要一直醒着。"

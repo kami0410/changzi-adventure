@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_gtgsp"]
+
+[resource]
+script = ExtResource("1_gtgsp")
+id = &"tunshi"
+glyph = "◈"
+phoneme = "tun shi"
+meaning = "吞噬"
+grammar_role = 1
+tags = Array[StringName]([&"abyss", &"life"])
+power = 3
+corruption = 1
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 2.0,
+&"lifesteal": 0.2
+})
+description = "吞下别人的记录，补全自己的。"

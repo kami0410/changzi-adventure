@@ -1,0 +1,29 @@
+# Godot 4+
+.godot/
+export.cfg
+*.translation
+
+# Build outputs
+build/
+artifacts/
+*.apk
+*.aab
+*.pck
+
+# Secrets
+*.keystore
+*.jks
+
+# Python tooling
+__pycache__/
+*.pyc
+# Magpie default output when no path is given
+generated-images/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.tmp
+assets/references/

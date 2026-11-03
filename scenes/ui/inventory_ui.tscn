@@ -1,0 +1,292 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/inventory_ui.gd" id="1_inventory"]
+[ext_resource type="Theme" path="res://resources/ui/theme.tres" id="2_theme"]
+
+[node name="InventoryUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_inventory")
+theme = ExtResource("2_theme")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.051, 0.071, 0.094, 0.84)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(1000, 620)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.106, 0.122, 0.141, 1)
+theme_override_font_sizes/font_size = 36
+text = "背包"
+
+[node name="Rule" type="ColorRect" parent="Center/Panel/Margin/VBox/Header"]
+custom_minimum_size = Vector2(3, 0)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.659, 0.196, 0.18, 1)
+
+[node name="Subtitle" type="Label" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "当前局内的装备、词与遗物"
+vertical_alignment = 1
+
+[node name="Spacer" type="Control" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Hint" type="Label" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "点击槽位选中"
+vertical_alignment = 1
+
+[node name="HeaderLine" type="HSeparator" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Body" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="Left" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Body"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="EquipTitle" type="Label" parent="Center/Panel/Margin/VBox/Body/Left"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.659, 0.196, 0.18, 1)
+theme_override_font_sizes/font_size = 12
+text = "装备槽"
+
+[node name="Grid" type="GridContainer" parent="Center/Panel/Margin/VBox/Body/Left"]
+layout_mode = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 2
+
+[node name="WeaponSlotCard1" type="PanelContainer" parent="Center/Panel/Margin/VBox/Body/Left/Grid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 112)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Body/Left/Grid/WeaponSlotCard1"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Caption" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/WeaponSlotCard1/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "武器槽 1"
+
+[node name="WeaponSlotName1" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/WeaponSlotCard1/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "—"
+
+[node name="WeaponSlotTags1" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/WeaponSlotCard1/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "空槽位"
+autowrap_mode = 3
+
+[node name="WeaponSlotCard2" type="PanelContainer" parent="Center/Panel/Margin/VBox/Body/Left/Grid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 112)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Body/Left/Grid/WeaponSlotCard2"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Caption" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/WeaponSlotCard2/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "武器槽 2"
+
+[node name="WeaponSlotName2" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/WeaponSlotCard2/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "—"
+
+[node name="WeaponSlotTags2" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/WeaponSlotCard2/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "空槽位"
+autowrap_mode = 3
+
+[node name="PhraseSlotCard1" type="PanelContainer" parent="Center/Panel/Margin/VBox/Body/Left/Grid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 112)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Body/Left/Grid/PhraseSlotCard1"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Caption" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/PhraseSlotCard1/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "短语槽 1"
+
+[node name="PhraseSlotName1" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/PhraseSlotCard1/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "—"
+
+[node name="PhraseSlotTags1" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/PhraseSlotCard1/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "空槽位"
+autowrap_mode = 3
+
+[node name="PhraseSlotCard2" type="PanelContainer" parent="Center/Panel/Margin/VBox/Body/Left/Grid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 112)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Body/Left/Grid/PhraseSlotCard2"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Caption" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/PhraseSlotCard2/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "短语槽 2"
+
+[node name="PhraseSlotName2" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/PhraseSlotCard2/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "—"
+
+[node name="PhraseSlotTags2" type="Label" parent="Center/Panel/Margin/VBox/Body/Left/Grid/PhraseSlotCard2/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "空槽位"
+autowrap_mode = 3
+
+[node name="Divider" type="VSeparator" parent="Center/Panel/Margin/VBox/Body"]
+layout_mode = 2
+
+[node name="Right" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="WordsTitle" type="Label" parent="Center/Panel/Margin/VBox/Body/Right"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.659, 0.196, 0.18, 1)
+theme_override_font_sizes/font_size = 12
+text = "词（0）"
+
+[node name="WordsScroll" type="ScrollContainer" parent="Center/Panel/Margin/VBox/Body/Right"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="WordGrid" type="GridContainer" parent="Center/Panel/Margin/VBox/Body/Right/WordsScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 3
+
+[node name="RelicsTitle" type="Label" parent="Center/Panel/Margin/VBox/Body/Right"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.52, 0.38, 0.12, 1)
+theme_override_font_sizes/font_size = 12
+text = "遗物（0）"
+
+[node name="Relics" type="Label" parent="Center/Panel/Margin/VBox/Body/Right"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.29, 0.29, 0.271, 1)
+theme_override_font_sizes/font_size = 12
+text = "尚未获得遗物。"
+autowrap_mode = 3
+
+[node name="FooterLine" type="HSeparator" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Corruption" type="Label" parent="Center/Panel/Margin/VBox/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "总污染：0"
+
+[node name="Spacer" type="Control" parent="Center/Panel/Margin/VBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Hint" type="Label" parent="Center/Panel/Margin/VBox/Footer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "ESC 关闭"

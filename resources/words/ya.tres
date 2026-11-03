@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"ya"
+glyph = "♠"
+phoneme = "ya"
+meaning = "鸦"
+grammar_role = 0
+tags = Array[StringName]([&"shadow", &"feather"])
+power = 2
+corruption = 1
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 1.0,
+&"projectiles": 4.0,
+&"homing": 0.8,
+&"corruption_gain": 1.0
+})
+description = "档案馆屋檐下住着一群鸦，它们只吃被划掉的名字。"

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"zhentui"
+glyph = "⇉"
+phoneme = "zhentui"
+meaning = "震退"
+grammar_role = 1
+tags = Array[StringName]([&"earth", &"sound"])
+power = 2
+corruption = 0
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 1.0,
+&"knockback": 2.5
+})
+description = "阿砚的铁锤落在砧上，整条街的灰都会往后退一步。"

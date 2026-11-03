@@ -1,0 +1,169 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/codex_ui.gd" id="1_codex"]
+[ext_resource type="Theme" path="res://resources/ui/theme.tres" id="2_theme"]
+[ext_resource type="StyleBox" path="res://resources/ui/panel_inner.tres" id="3_panel_inner"]
+
+[node name="CodexUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_codex")
+theme = ExtResource("2_theme")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.051, 0.071, 0.094, 0.84)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(1120, 640)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.106, 0.122, 0.141, 1)
+theme_override_font_sizes/font_size = 36
+text = "语言图鉴"
+
+[node name="Rule" type="ColorRect" parent="Center/Panel/Margin/VBox/Header"]
+custom_minimum_size = Vector2(3, 0)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.659, 0.196, 0.18, 1)
+
+[node name="Subtitle" type="Label" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "未解码的词只显现符文；读懂之后，意义才会浮现。"
+vertical_alignment = 1
+
+[node name="Spacer" type="Control" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Hint" type="Label" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "图鉴 · 造句台"
+vertical_alignment = 1
+
+[node name="HeaderLine" type="HSeparator" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Body" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="Left" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="WordsTitle" type="Label" parent="Center/Panel/Margin/VBox/Body/Left"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.659, 0.196, 0.18, 1)
+theme_override_font_sizes/font_size = 12
+text = "词表（0）"
+
+[node name="WordsScroll" type="ScrollContainer" parent="Center/Panel/Margin/VBox/Body/Left"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="WordGrid" type="GridContainer" parent="Center/Panel/Margin/VBox/Body/Left/WordsScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="Divider" type="VSeparator" parent="Center/Panel/Margin/VBox/Body"]
+layout_mode = 2
+
+[node name="Right" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="CombosTitle" type="Label" parent="Center/Panel/Margin/VBox/Body/Right"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.52, 0.38, 0.12, 1)
+theme_override_font_sizes/font_size = 12
+text = "已发现组合（0）"
+
+[node name="CombosScroll" type="ScrollContainer" parent="Center/Panel/Margin/VBox/Body/Right"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="CombosList" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Body/Right/CombosScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="ForgeLine" type="HSeparator" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="ForgePanel" type="PanelContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("3_panel_inner")
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin/VBox/ForgePanel"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ForgeTitle" type="Label" parent="Center/Panel/Margin/VBox/ForgePanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.659, 0.196, 0.18, 1)
+theme_override_font_sizes/font_size = 12
+text = "造句台预览"
+
+[node name="ForgePreview" type="Label" parent="Center/Panel/Margin/VBox/ForgePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.29, 0.29, 0.271, 1)
+theme_override_font_sizes/font_size = 12
+text = "在造句台选择 2–3 个词后，这里会显示实时推演结果。"
+autowrap_mode = 3

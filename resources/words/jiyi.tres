@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_jy"]
+
+[resource]
+script = ExtResource("1_jy")
+id = &"jiyi"
+glyph = "◷"
+phoneme = "ji yi"
+meaning = "记忆"
+grammar_role = 0
+tags = Array[StringName]([&"memory", &"archive", &"life"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"heal": 2.0
+})
+description = "你还记得自己曾经记得。仅此一点，就够走下去了。"

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/relic_data.gd" id="1_dr0g4"]
+
+[resource]
+script = ExtResource("1_dr0g4")
+id = &"breathing_lung"
+display_name = "呼吸之肺"
+tags = Array[StringName]([&"life", &"time"])
+effect_id = &"rest_heal"
+description = "废墟的呼吸有节奏，跟着它就能活下来。"

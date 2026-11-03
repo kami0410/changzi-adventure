@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_aow50"]
+
+[resource]
+script = ExtResource("1_aow50")
+id = &"jilu"
+glyph = "▤"
+phoneme = "ji lu"
+meaning = "记录"
+tags = Array[StringName]([&"archive"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"shield": 2.0
+})
+description = "被写下的东西不会完全消失。"

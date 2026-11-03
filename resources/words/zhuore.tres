@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_gwftn"]
+
+[resource]
+script = ExtResource("1_gwftn")
+id = &"zhuore"
+glyph = "♌"
+phoneme = "zhuo re"
+meaning = "灼热"
+grammar_role = 2
+tags = Array[StringName]([&"flame"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 3.0
+})
+description = "纸页边缘先于内容开始卷曲。"

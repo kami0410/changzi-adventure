@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"zhenming"
+glyph = "※"
+phoneme = "zhenming"
+meaning = "真名"
+grammar_role = 0
+tags = Array[StringName]([&"name", &"authority"])
+power = 3
+corruption = 1
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 3.0,
+&"pierce": 2.0
+})
+description = "叫出一个人的真名，等于把他从所有别的名字里抽出来。"

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_yy"]
+
+[resource]
+script = ExtResource("1_yy")
+id = &"yinyan"
+glyph = "◮"
+phoneme = "yin yan"
+meaning = "引燃"
+grammar_role = 1
+tags = Array[StringName]([&"flame", &"blood"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 3.0,
+&"lifesteal": 0.08
+})
+description = "以血为引，火才肯烧得久一点。"

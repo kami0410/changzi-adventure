@@ -1,0 +1,22 @@
+[gd_resource type="Theme" load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/fusion-pixel-12px-monospaced-zh_hans.ttf.woff2" id="1_font"]
+
+[sub_resource type="StyleBoxFlat" id="strip"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(0.051, 0.071, 0.094, 0.820)
+anti_aliasing = false
+
+[resource]
+default_font = ExtResource("1_font")
+default_font_size = 12
+Label/colors/font_color = Color(0.910, 0.882, 0.812, 1.000)
+Label/colors/font_shadow_color = Color(0.051, 0.071, 0.094, 0.950)
+Label/constants/shadow_offset_x = 1
+Label/constants/shadow_offset_y = 1
+Label/font_sizes/font_size = 12
+PanelContainer/styles/panel = SubResource("strip")
+ProgressBar/styles/background = SubResource("strip")

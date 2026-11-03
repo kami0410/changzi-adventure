@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_gg"]
+
+[resource]
+script = ExtResource("1_gg")
+id = &"gengu"
+glyph = "↻"
+phoneme = "geng gu"
+meaning = "更鼓"
+grammar_role = 2
+tags = Array[StringName]([&"time", &"archive"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"ink_gain": 6.0
+})
+description = "旧城里最后一面鼓，每敲一次就把夜往后推。"

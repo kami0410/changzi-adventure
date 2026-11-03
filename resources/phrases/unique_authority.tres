@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhraseData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phrase_data.gd" id="1_atgqd"]
+
+[resource]
+script = ExtResource("1_atgqd")
+id = &"unique_authority"
+display_name = "唯一权柄"
+word_ids = Array[StringName]([&"weiyi", &"quanbing"])
+tags = Array[StringName]([&"authority"])
+description = "示例短语：唯一权柄"

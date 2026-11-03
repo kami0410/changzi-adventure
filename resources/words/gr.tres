@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_503ew"]
+
+[resource]
+script = ExtResource("1_503ew")
+id = &"gr"
+glyph = "♡"
+phoneme = "gr"
+meaning = "生命"
+tags = Array[StringName]([&"life"])
+decoded = true
+components = Dictionary[StringName, float]({
+&"heal": 3.0
+})
+description = "最基础的音节，指代一切仍在延续的东西。"

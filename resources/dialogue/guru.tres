@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="DialogueData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/hub/dialogue_data.gd" id="1_dialogue"]
+
+[resource]
+script = ExtResource("1_dialogue")
+speaker = "咕噜"
+lines = Array[String](["哟，史官大人。今天想买点什么？", "我这儿只收记忆碎片，不赊账——上次赊账的那位，现在已经不记得自己姓什么了。", "看看货吧。都是些别人想不起来、我却捡得到的东西。"])

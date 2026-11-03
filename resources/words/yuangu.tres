@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"yuangu"
+glyph = "♄"
+phoneme = "yuangu"
+meaning = "远古"
+grammar_role = 2
+tags = Array[StringName]([&"first", &"memory"])
+power = 2
+corruption = 0
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 2.0,
+&"duration": 1.0
+})
+description = "比档案馆更早的东西没有人记得，所以它什么都记得。"

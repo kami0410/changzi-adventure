@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/mds_chapter_room.gd" id="1_room"]
+
+[node name="Room" type="Node2D"]
+script = ExtResource("1_room")
+kind = 1
+chapter_index = 1
+room_index = 8
+platform_pattern = 1
+has_chest = true
+has_stele = true
+has_left_gate = false
+has_right_gate = false
+has_vault_gate = true

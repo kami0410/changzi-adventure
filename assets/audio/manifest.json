@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "project": "changzi-adventure",
+  "generated_at": "2026-11-01",
+  "music": {
+    "pipeline": "tools/generate_music.py — numpy/scipy additive synthesis, FM bells, filtered noise, synthetic reverb; ffmpeg libvorbis q4 + loudnorm",
+    "format": "OGG Vorbis, 44.1 kHz stereo, loop at runtime via AudioStreamOggVorbis.loop",
+    "tracks": [
+      {
+        "id": "title",
+        "path": "assets/audio/music/title.ogg",
+        "seconds": 24,
+        "role": "标题界面"
+      },
+      {
+        "id": "chapter_archive",
+        "path": "assets/audio/music/chapter_archive.ogg",
+        "seconds": 32,
+        "role": "第一章 / Hub"
+      },
+      {
+        "id": "chapter_breathing",
+        "path": "assets/audio/music/chapter_breathing.ogg",
+        "seconds": 32,
+        "role": "第二章"
+      },
+      {
+        "id": "chapter_sea",
+        "path": "assets/audio/music/chapter_sea.ogg",
+        "seconds": 40,
+        "role": "第三章"
+      },
+      {
+        "id": "boss",
+        "path": "assets/audio/music/boss.ogg",
+        "seconds": 24,
+        "role": "Boss 战"
+      },
+      {
+        "id": "chapter_theater",
+        "path": "assets/audio/music/chapter_theater.ogg",
+        "seconds": 36,
+        "role": "第四章 笑面剧场"
+      }
+    ],
+    "license": "Original procedural score generated in-house for Changzi Adventure. Replace with a commissioned score before commercial release if desired."
+  },
+  "voice": {
+    "pipeline": "tools/generate_voice.py — Windows System.Speech Microsoft Huihui Desktop (zh-CN), 22.05 kHz mono; ffmpeg highpass/echo/loudnorm, OGG q3",
+    "ids": [
+      "luchen_mission",
+      "ch1_intro",
+      "ch1_outro",
+      "ch2_intro",
+      "ch2_outro",
+      "ch3_intro",
+      "ch3_outro",
+      "boss_ink_phase2",
+      "boss_ink_phase3",
+      "boss_lung_phase2",
+      "boss_lung_phase3",
+      "boss_smiling_phase2",
+      "boss_smiling_phase3",
+      "ending_restored",
+      "ending_burned",
+      "ending_abyss",
+      "ending_unfinished",
+      "ending_interrupted",
+      "ch4_intro",
+      "ch4_outro",
+      "boss_reader_phase2",
+      "boss_reader_phase3"
+    ],
+    "text_index": "tools/voice_lines.json",
+    "license": "PROTOTYPE ONLY. Microsoft SAPI output has no clear commercial redistribution grant. Replace with a licensed voice actor or a paid TTS tier before commercial release; disclose AI voice where required."
+  },
+  "gag": {
+    "id": "guru_laugh",
+    "path": "assets/audio/voice/zh_cn/guru_laugh.ogg",
+    "seconds": 10.3,
+    "role": "咕噜对话间歇的彩蛋笑声，打开对话约 45%、翻页约 30% 概率触发",
+    "source": "用户提供的 奶龙大笑_爱给网_aigei_com.wav；ffmpeg highpass=f=80 + loudnorm(I=-16, TP=-1.5)，OGG q4",
+    "license": "Provenance unclear (爱给网 sample). Internal prototype only; confirm redistribution rights or replace before commercial release."
+  }
+}

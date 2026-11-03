@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"gechang"
+glyph = "♪"
+phoneme = "ge chang"
+meaning = "歌唱"
+grammar_role = 1
+tags = Array[StringName]([&"song", &"sound", &"summon"])
+power = 2
+corruption = 0
+decoded = true
+components = Dictionary[StringName, float]({
+&"summon": 1.0,
+&"damage": 1.0
+})
+description = "歌声会自己找到听众。"

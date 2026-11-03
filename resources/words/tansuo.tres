@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"tansuo"
+glyph = "◍"
+phoneme = "tansuo"
+meaning = "坍缩"
+grammar_role = 1
+tags = Array[StringName]([&"space", &"time"])
+power = 3
+corruption = 1
+decoded = true
+components = Dictionary[StringName, float]({
+&"pull": 1.5,
+&"slow": 0.15,
+&"damage": 1.0
+})
+description = "白榆说，走不完的路最后都会坍成一个点。"

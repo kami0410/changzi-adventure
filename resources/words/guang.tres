@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"guang"
+glyph = "☉"
+phoneme = "guang"
+meaning = "光"
+grammar_role = 0
+tags = Array[StringName]([&"light", &"life"])
+power = 2
+corruption = 0
+decoded = true
+components = Dictionary[StringName, float]({
+&"heal": 2.0,
+&"shield": 1.0
+})
+description = "被看见的东西才存在。"

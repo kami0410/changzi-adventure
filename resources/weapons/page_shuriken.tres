@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_weapon_data"]
+
+[resource]
+script = ExtResource("1_weapon_data")
+id = &"page_shuriken"
+display_name = "书页飞刃"
+kind = 1
+damage = 6
+attack_cooldown = 0.3
+attack_range = 360.0
+projectile_speed = 900.0
+tags = Array[StringName]([&"ranged", &"page", &"projectile"])

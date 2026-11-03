@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_81f2h"]
+
+[resource]
+script = ExtResource("1_81f2h")
+id = &"guanzilu"
+glyph = "⏳"
+phoneme = "guan zi lu"
+meaning = "延展"
+grammar_role = 1
+tags = Array[StringName]([&"time"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"slow": 0.2
+})
+description = "把一瞬拉长成一段。"

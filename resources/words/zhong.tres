@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"zhong"
+glyph = "♫"
+phoneme = "zhong"
+meaning = "钟"
+grammar_role = 0
+tags = Array[StringName]([&"sound", &"order"])
+power = 2
+corruption = 1
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 1.0,
+&"stun": 0.5,
+&"slow": 0.15
+})
+description = "肺钟每响一次，城里就少一口气。"

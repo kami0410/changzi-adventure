@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_xd"]
+
+[resource]
+script = ExtResource("1_xd")
+id = &"xidi"
+glyph = "〰"
+phoneme = "xi di"
+meaning = "洗涤"
+grammar_role = 1
+tags = Array[StringName]([&"water", &"holy", &"purify"])
+power = 1
+corruption = 0
+decoded = true
+components = Dictionary[StringName, float]({
+&"purify": 3.0,
+&"heal": 1.0,
+&"slow": 0.1
+})
+description = "水记得名字，也记得怎么把名字洗干净。"

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_6d5i0"]
+
+[resource]
+script = ExtResource("1_6d5i0")
+id = &"archive_hammer"
+display_name = "档案锤"
+damage = 30
+attack_cooldown = 1.15
+attack_range = 84.0
+tags = Array[StringName]([&"melee", &"archive", &"heavy"])

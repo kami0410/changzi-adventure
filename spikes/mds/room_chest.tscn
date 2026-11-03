@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://spikes/mds/spike_room.gd" id="1_room"]
+
+[node name="Spike_chest" type="Node2D"]
+script = ExtResource("1_room")
+kind = "chest"
+has_left_gate = true
+has_right_gate = true

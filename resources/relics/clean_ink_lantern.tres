@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/relic_data.gd" id="1_cil"]
+
+[resource]
+script = ExtResource("1_cil")
+id = &"clean_ink_lantern"
+display_name = "净墨灯"
+tags = Array[StringName]([&"holy", &"life", &"light"])
+corruption = 0
+effect_id = &"purify_flow"
+description = "灯芯里烧的不是油，是你喉咙里剩下的黑。"

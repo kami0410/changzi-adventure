@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"qiyue"
+glyph = "✉"
+phoneme = "qiyue"
+meaning = "契约"
+grammar_role = 1
+tags = Array[StringName]([&"blood", &"order"])
+power = 2
+corruption = 1
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 2.0,
+&"lifesteal": 0.15,
+&"stun": 0.2
+})
+description = "闻烬签过的每一份契约，最后一行都写着她自己的名字。"

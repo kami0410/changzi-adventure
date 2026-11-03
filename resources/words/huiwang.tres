@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_hw"]
+
+[resource]
+script = ExtResource("1_hw")
+id = &"huiwang"
+glyph = "↶"
+phoneme = "hui wang"
+meaning = "回望"
+grammar_role = 1
+tags = Array[StringName]([&"time", &"memory"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"heal": 2.0,
+&"slow": 0.15
+})
+description = "回头看一眼，来路就慢了下来。"

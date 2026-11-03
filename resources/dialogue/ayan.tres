@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="DialogueData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/hub/dialogue_data.gd" id="1_dialogue"]
+
+[resource]
+script = ExtResource("1_dialogue")
+speaker = "阿砚"
+lines = Array[String](["刀口又卷了？拿过来，我看看。", "断页剑的基底还能再稳一点。记忆碎片会烧掉一部分，但留下的东西不会随死亡消失。", "站稳，别动。接下来会有点疼——那是记忆在重新排列。"])

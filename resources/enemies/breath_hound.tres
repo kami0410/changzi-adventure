@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_m01xh"]
+
+[resource]
+script = ExtResource("1_m01xh")
+id = &"breath_hound"
+display_name = "喘息猎犬"
+max_health = 28
+speed = 135.0
+contact_damage = 9

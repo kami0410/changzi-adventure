@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AuthorityData" format=3]
+
+[ext_resource type="Script" path="res://scripts/language/authority_data.gd" id="1_gxbi2"]
+
+[resource]
+script = ExtResource("1_gxbi2")
+id = &"devour"
+display_name = "吞噬"
+tags = Array[StringName]([&"abyss", &"corruption"])
+effect_id = &"devour"
+corruption = 10
+description = "把污染转化为伤害，污染越高越强。"

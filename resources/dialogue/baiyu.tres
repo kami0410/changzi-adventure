@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="DialogueData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/hub/dialogue_data.gd" id="1_dialogue"]
+
+[resource]
+script = ExtResource("1_dialogue")
+speaker = "白榆"
+lines = Array[String](["路还在。只是这次，你想走哪一条？", "地图上有七个点。六个会关门，一个不会。", "别急着谢我。有些路，走进去之后才算开始。"])

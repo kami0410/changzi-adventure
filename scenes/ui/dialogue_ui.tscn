@@ -1,0 +1,144 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/dialogue_ui.gd" id="1_dialogue"]
+[ext_resource type="Theme" path="res://resources/ui/theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_portrait"]
+content_margin_left = 2.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+bg_color = Color(0.035, 0.05, 0.066, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.910, 0.882, 0.812, 0.280)
+anti_aliasing = false
+
+[node name="DialogueUI" type="CanvasLayer"]
+process_mode = 3
+layer = 60
+script = ExtResource("1_dialogue")
+
+[node name="Root" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="Dim" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.051, 0.071, 0.094, 0.84)
+
+[node name="PortraitFrame" type="PanelContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 28.0
+offset_top = -532.0
+offset_right = 412.0
+offset_bottom = -20.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_portrait")
+
+[node name="Portrait" type="TextureRect" parent="Root/PortraitFrame"]
+layout_mode = 2
+mouse_filter = 2
+texture_filter = 4
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Panel" type="PanelContainer" parent="Root"]
+custom_minimum_size = Vector2(660, 240)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 460.0
+offset_top = -286.0
+offset_right = -56.0
+offset_bottom = -28.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="Root/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="Root/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Speaker" type="Label" parent="Root/Panel/Margin/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.659, 0.196, 0.18, 1)
+theme_override_font_sizes/font_size = 24
+text = "????"
+
+[node name="Spacer" type="Control" parent="Root/Panel/Margin/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Progress" type="Label" parent="Root/Panel/Margin/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "1 / 1"
+vertical_alignment = 1
+
+[node name="Rule" type="HSeparator" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Line" type="Label" parent="Root/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.106, 0.122, 0.141, 1)
+theme_override_font_sizes/font_size = 24
+text = "……"
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 0
+
+[node name="InspireButton" type="Button" parent="Root/Panel/Margin/VBox/Buttons"]
+visible = false
+layout_mode = 2
+text = "言灵对话  [Y]"
+
+[node name="Spacer" type="Control" parent="Root/Panel/Margin/VBox/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="ContinueButton" type="Button" parent="Root/Panel/Margin/VBox/Buttons"]
+layout_mode = 2
+text = "继续  [E]"
+
+[node name="CloseButton" type="Button" parent="Root/Panel/Margin/VBox/Buttons"]
+layout_mode = 2
+text = "关闭"

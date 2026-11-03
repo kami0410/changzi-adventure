@@ -1,0 +1,68 @@
+[gd_resource type="Resource" script_class="ChapterPlanData" format=3]
+
+[ext_resource type="Script" path="res://scripts/language/authority_data.gd" id="1_kkhsw"]
+[ext_resource type="Resource" path="res://resources/authorities/revive.tres" id="2_on21r"]
+[ext_resource type="Resource" path="res://resources/authorities/rewrite.tres" id="3_f0tmx"]
+[ext_resource type="PackedScene" path="res://scenes/bosses/ink_archivist_ch1.tscn" id="4_5qgaw"]
+[ext_resource type="Script" path="res://scripts/data/chapter_plan_data.gd" id="5_cv5nq"]
+
+[resource]
+script = ExtResource("5_cv5nq")
+chapter_id = &"ink_archive"
+rooms = Array[Dictionary]([{
+"id": "ch1_01",
+"platform_rows": [30],
+"reward_pool": "default",
+"type": "combat",
+"wave": [&"ink_hound", &"scribe_bug"]
+}, {
+"id": "ch1_02",
+"platform_rows": [30, 28],
+"reward_pool": "default",
+"type": "combat",
+"wave": [&"blank_man", &"ink_hound", &"scribe_bug"]
+}, {
+"id": "ch1_03",
+"platform_rows": [30],
+"reward_pool": "default",
+"type": "combat",
+"wave": [&"ink_bomber", &"page_swarm", &"ink_hound"]
+}, {
+"id": "ch1_04",
+"platform_rows": [30, 28],
+"reward_pool": "elite",
+"type": "elite",
+"wave": [&"typo_beast", &"blank_man", &"blank_man"]
+}, {
+"id": "ch1_05",
+"platform_rows": [30],
+"reward_pool": "event",
+"type": "event",
+"wave": []
+}, {
+"id": "ch1_06",
+"platform_rows": [30],
+"reward_pool": "default",
+"type": "combat",
+"wave": [&"ink_bomber", &"scribe_bug", &"ink_hound", &"page_swarm"]
+}, {
+"id": "ch1_rest",
+"platform_rows": [30],
+"reward_pool": "rest",
+"type": "rest",
+"wave": []
+}, {
+"id": "ch1_boss",
+"platform_rows": [30],
+"reward_pool": "boss",
+"type": "boss",
+"wave": []
+}, {
+"id": "ch1_vault",
+"platform_rows": [30],
+"reward_pool": "vault",
+"type": "vault",
+"wave": []
+}])
+boss_scene = ExtResource("4_5qgaw")
+authority_pool = Array[ExtResource("1_kkhsw")]([ExtResource("2_on21r"), ExtResource("3_f0tmx")])

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"gu"
+glyph = "☥"
+phoneme = "gu"
+meaning = "骨"
+grammar_role = 0
+tags = Array[StringName]([&"bone", &"earth"])
+power = 2
+corruption = 1
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 2.0,
+&"knockback": 1.0,
+&"shield": 1.0
+})
+description = "墨骸史官把自己的骨头当作书脊，一节一节缝进封面。"

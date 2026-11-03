@@ -1,0 +1,46 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/swarm_enemy.gd" id="1_enemy"]
+[ext_resource type="Resource" path="res://resources/enemies/page_swarm.tres" id="2_data"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 14.0
+
+[node name="PageSwarm" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_enemy")
+data = ExtResource("2_data")
+apply_gravity = false
+actor_style = &"flyer"
+aggro_range = 460.0
+deaggro_range = 780.0
+attack_range = 64.0
+attack_cooldown = 1.2
+attack_windup = 0.24
+attack_recovery = 0.18
+telegraph_color = Color(0.84, 0.66, 0.91, 1)
+hovering_height = 58.0
+weave_speed = 3.6
+dart_speed = 430.0
+dart_duration = 0.24
+
+[node name="Body" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-16, -10, -4, -20, 12, -16, 18, -2, 8, 16, -10, 14, -18, 2)
+color = Color(0.78, 0.74, 0.64, 1)
+
+[node name="Eye" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(5, -8, 12, -5, 5, -2)
+color = Color(0.56, 0.3, 0.56, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_body")
+
+[node name="HealthBar" type="ProgressBar" parent="."]
+offset_left = -26.0
+offset_top = -42.0
+offset_right = 26.0
+offset_bottom = -34.0
+max_value = 16.0
+value = 16.0
+show_percentage = false

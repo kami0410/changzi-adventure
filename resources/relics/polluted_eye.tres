@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/relic_data.gd" id="1_w05bp"]
+
+[resource]
+script = ExtResource("1_w05bp")
+id = &"polluted_eye"
+display_name = "污染之眼"
+tags = Array[StringName]([&"corruption", &"abyss"])
+corruption = 5
+effect_id = &"corruption_sight"
+description = "你能看见污染的颜色，也更容易被它看见。"

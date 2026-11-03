@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhraseData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phrase_data.gd" id="1_op24b"]
+
+[resource]
+script = ExtResource("1_op24b")
+id = &"extend_record"
+display_name = "延展记录"
+word_ids = Array[StringName]([&"guanzilu", &"jilu"])
+tags = Array[StringName]([&"time", &"archive"])
+description = "示例短语：延展记录"

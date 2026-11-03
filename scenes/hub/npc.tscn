@@ -1,0 +1,55 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/hub/npc.gd" id="1_npc"]
+[ext_resource type="Theme" path="res://resources/ui/hud_theme.tres" id="2_theme"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_npc"]
+radius = 30.0
+
+[node name="NPC" type="Area2D"]
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+monitorable = false
+script = ExtResource("1_npc")
+
+[node name="Body" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-26, 40, -34, -16, -22, -58, 22, -58, 34, -16, 26, 40)
+color = Color(0.36, 0.72, 0.68, 1)
+
+[node name="Head" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(16, -76, 11.3, -64.7, 0, -60, -11.3, -64.7, -16, -76, -11.3, -87.3, 0, -92, 11.3, -87.3)
+color = Color(0.56, 0.84, 0.8, 1)
+
+[node name="NameLabel" type="Label" parent="."]
+offset_left = -100.0
+offset_top = -138.0
+offset_right = 100.0
+offset_bottom = -110.0
+mouse_filter = 2
+theme = ExtResource("2_theme")
+theme_override_colors/font_color = Color(0.91, 0.882, 0.812, 1)
+theme_override_colors/font_outline_color = Color(0.051, 0.071, 0.094, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "NPC"
+horizontal_alignment = 1
+
+[node name="Prompt" type="Label" parent="."]
+visible = false
+offset_left = -80.0
+offset_top = 52.0
+offset_right = 80.0
+offset_bottom = 78.0
+mouse_filter = 2
+theme = ExtResource("2_theme")
+theme_override_colors/font_color = Color(0.561, 0.91, 0.863, 1)
+theme_override_colors/font_outline_color = Color(0.051, 0.071, 0.094, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "按 E 交谈"
+horizontal_alignment = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -26)
+shape = SubResource("CircleShape2D_npc")

@@ -1,0 +1,365 @@
+{
+  "format": "mds_world",
+  "version": 1,
+  "name": "Changzi Chapter 4",
+  "settings": {
+    "grid": 32,
+    "default_room_size": [
+      1280,
+      720
+    ],
+    "weather": "embers(kind=ash, density=0.3, hot_color=#e8d2b0, cool_color=#7a5a4a, rise_speed=-20, drift=6), light_shafts(color=Color(0.85, 0.95, 0.9, 0.22), angle=6, spread=260, motes=0.5)"
+  },
+  "layers": [
+    "Main"
+  ],
+  "areas": {
+    "Smiling Theater": {
+      "color": "#6a2a34",
+      "weather": "embers(kind=ash, density=0.3, hot_color=#e8d2b0, cool_color=#7a5a4a, rise_speed=-20, drift=6), light_shafts(color=Color(0.85, 0.95, 0.9, 0.22), angle=6, spread=260, motes=0.5)",
+      "background": "",
+      "boss_background": "blood_moon"
+    }
+  },
+  "rooms": {
+    "ch4_01": {
+      "scene_path": "res://scenes/mds/ch4_01.tscn",
+      "name": "剧场前厅",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "origin": [
+        0,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch4_02",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch4_02": {
+      "scene_path": "res://scenes/mds/ch4_02.tscn",
+      "name": "笑面回廊",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "origin": [
+        1280,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch4_01",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch4_03",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch4_03": {
+      "scene_path": "res://scenes/mds/ch4_03.tscn",
+      "name": "血幕书库",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "origin": [
+        2560,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch4_02",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch4_04",
+          "to_gate": "left1"
+        },
+        "door1": {
+          "pos": [
+            922,
+            500
+          ],
+          "side": "door",
+          "to": "ch4_vault",
+          "to_gate": "door1"
+        }
+      }
+    },
+    "ch4_04": {
+      "scene_path": "res://scenes/mds/ch4_04.tscn",
+      "name": "空座中庭",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "origin": [
+        3840,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch4_03",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch4_05",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch4_05": {
+      "scene_path": "res://scenes/mds/ch4_05.tscn",
+      "name": "舞台侧廊",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "origin": [
+        5120,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch4_04",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch4_06",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch4_06": {
+      "scene_path": "res://scenes/mds/ch4_06.tscn",
+      "name": "第四页之幕",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "origin": [
+        6400,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch4_05",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch4_rest",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch4_rest": {
+      "scene_path": "res://scenes/mds/ch4_rest.tscn",
+      "name": "熄灯的后台",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "origin": [
+        7680,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch4_06",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch4_boss",
+          "to_gate": "left1"
+        },
+        "door2": {
+          "pos": [
+            1100,
+            500
+          ],
+          "side": "door",
+          "to": "ch4_02"
+        }
+      },
+      "type": "rest"
+    },
+    "ch4_boss": {
+      "scene_path": "res://scenes/mds/ch4_boss.tscn",
+      "name": "笑面剧场",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "origin": [
+        8960,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch4_rest",
+          "to_gate": "right1"
+        }
+      },
+      "type": "boss",
+      "boss": "笑面史官"
+    },
+    "ch4_vault": {
+      "scene_path": "res://scenes/mds/ch4_vault.tscn",
+      "name": "隐藏书库",
+      "type": "rest",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "origin": [
+        2560,
+        720
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "door1": {
+          "pos": [
+            640,
+            500
+          ],
+          "side": "door",
+          "to": "ch4_03",
+          "to_gate": "door1"
+        }
+      }
+    }
+  },
+  "links": [],
+  "pins": [],
+  "start_room": "ch4_01"
+}

@@ -1,0 +1,115 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="1_pause"]
+[ext_resource type="Theme" path="res://resources/ui/theme.tres" id="2_theme"]
+
+[node name="PauseMenu" type="CanvasLayer"]
+process_mode = 3
+layer = 100
+script = ExtResource("1_pause")
+
+[node name="Root" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+theme = ExtResource("2_theme")
+
+[node name="Dim" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.051, 0.071, 0.094, 0.84)
+
+[node name="Center" type="CenterContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Root/Center"]
+custom_minimum_size = Vector2(480, 400)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Root/Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Kicker" type="Label" parent="Root/Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.659, 0.196, 0.18, 1)
+theme_override_font_sizes/font_size = 12
+text = ""
+horizontal_alignment = 1
+
+[node name="Title" type="Label" parent="Root/Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.106, 0.122, 0.141, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 36
+text = "已 暂 停"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Root/Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "外界的声音暂时退去，档案仍在等待。"
+horizontal_alignment = 1
+
+[node name="Rule" type="HSeparator" parent="Root/Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Buttons" type="VBoxContainer" parent="Root/Center/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ResumeButton" type="Button" parent="Root/Center/Panel/Margin/VBox/Buttons"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 2
+text = "继续游戏"
+
+[node name="RestartButton" type="Button" parent="Root/Center/Panel/Margin/VBox/Buttons"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 2
+text = "重新开始本局"
+
+[node name="QuitButton" type="Button" parent="Root/Center/Panel/Margin/VBox/Buttons"]
+unique_name_in_owner = true
+process_mode = 3
+layout_mode = 2
+text = "退出游戏"
+
+[node name="Rule2" type="HSeparator" parent="Root/Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Footer" type="Label" parent="Root/Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.4, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "按 P 或 Esc 继续"
+horizontal_alignment = 1

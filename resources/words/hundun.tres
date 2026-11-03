@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"hundun"
+glyph = "☯"
+phoneme = "hundun"
+meaning = "混沌"
+grammar_role = 0
+tags = Array[StringName]([&"chaos", &"abyss"])
+power = 3
+corruption = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 3.0,
+&"corruption_gain": 2.0,
+&"area": 0.4
+})
+description = "所有被撕掉的页堆在一起，就不再有前后。"

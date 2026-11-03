@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhraseData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phrase_data.gd" id="1_fu8xw"]
+
+[resource]
+script = ExtResource("1_fu8xw")
+id = &"broken_life"
+display_name = "破碎生命"
+word_ids = Array[StringName]([&"posui", &"gr"])
+tags = Array[StringName]([&"abyss", &"life"])
+description = "示例短语：破碎生命"

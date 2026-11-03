@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AuthorityData" format=3]
+
+[ext_resource type="Script" path="res://scripts/language/authority_data.gd" id="1_vi5js"]
+
+[resource]
+script = ExtResource("1_vi5js")
+id = &"revive"
+display_name = "续命"
+tags = Array[StringName]([&"life"])
+effect_id = &"revive"
+description = "本局死亡时复活一次，保留当前构筑。"

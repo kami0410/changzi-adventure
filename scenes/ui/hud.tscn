@@ -1,0 +1,289 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_gss2c"]
+[ext_resource type="Theme" path="res://resources/ui/hud_theme.tres" id="2_h022r"]
+[ext_resource type="StyleBox" path="res://resources/ui/bar_background.tres" id="3_4jqwt"]
+[ext_resource type="StyleBox" path="res://resources/ui/bar_health.tres" id="4_kicr4"]
+[ext_resource type="StyleBox" path="res://resources/ui/bar_ink.tres" id="5_mj13f"]
+[ext_resource type="StyleBox" path="res://resources/ui/bar_corruption.tres" id="6_0h1do"]
+[ext_resource type="StyleBox" path="res://resources/ui/bar_boss.tres" id="7_4d46k"]
+
+[node name="HUD" type="CanvasLayer" unique_id=1036223057]
+layer = 10
+script = ExtResource("1_gss2c")
+
+[node name="UIRoot" type="Control" parent="." unique_id=1999901961]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme = ExtResource("2_h022r")
+
+[node name="TopLeft" type="PanelContainer" parent="UIRoot" unique_id=1096820034]
+custom_minimum_size = Vector2(236, 98)
+layout_mode = 0
+offset_left = 16.0
+offset_top = 14.0
+offset_right = 252.0
+offset_bottom = 152.0
+mouse_filter = 2
+[node name="@VBoxContainer@3" type="VBoxContainer" parent="UIRoot/TopLeft" unique_id=1101616919]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Name" type="Label" parent="UIRoot/TopLeft/@VBoxContainer@3" unique_id=2001619122]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.882, 0.812, 1)
+theme_override_font_sizes/font_size = 24
+text = "昌子  /  失忆史官"
+[node name="Health" type="Label" parent="UIRoot/TopLeft/@VBoxContainer@3" unique_id=1408512734]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.882, 0.812, 1)
+theme_override_font_sizes/font_size = 12
+text = "HP 100/100"
+[node name="HealthBar" type="ProgressBar" parent="UIRoot/TopLeft/@VBoxContainer@3" unique_id=1989055666]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = ExtResource("3_4jqwt")
+theme_override_styles/fill = ExtResource("4_kicr4")
+show_percentage = false
+[node name="Ink" type="Label" parent="UIRoot/TopLeft/@VBoxContainer@3" unique_id=1379502184]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.882, 0.812, 1)
+theme_override_font_sizes/font_size = 12
+text = "墨量 100/100"
+[node name="InkBar" type="ProgressBar" parent="UIRoot/TopLeft/@VBoxContainer@3" unique_id=1941172714]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = ExtResource("3_4jqwt")
+theme_override_styles/fill = ExtResource("5_mj13f")
+show_percentage = false
+[node name="Corruption" type="Label" parent="UIRoot/TopLeft/@VBoxContainer@3" unique_id=6069115]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.64, 0.64, 1)
+theme_override_font_sizes/font_size = 12
+text = "污染 0/100"
+[node name="CorruptionBar" type="ProgressBar" parent="UIRoot/TopLeft/@VBoxContainer@3" unique_id=190331541]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = ExtResource("3_4jqwt")
+theme_override_styles/fill = ExtResource("6_0h1do")
+show_percentage = false
+[node name="Relics" type="Label" parent="UIRoot/TopLeft/@VBoxContainer@3" unique_id=1778023311]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.847, 0.706, 0.416, 1)
+theme_override_font_sizes/font_size = 12
+text = "遗物 0 · 尚未获得"
+autowrap_mode = 3
+max_lines_visible = 2
+text_overrun_behavior = 3
+[node name="Authority" type="Label" parent="UIRoot/TopLeft/@VBoxContainer@3"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.902, 0.784, 0.478, 1)
+theme_override_font_sizes/font_size = 12
+text = "权柄  —"
+[node name="TopRight" type="PanelContainer" parent="UIRoot" unique_id=2128280608]
+custom_minimum_size = Vector2(260, 98)
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -276.0
+offset_top = 14.0
+offset_right = -16.0
+offset_bottom = 112.0
+mouse_filter = 2
+[node name="@VBoxContainer@4" type="VBoxContainer" parent="UIRoot/TopRight" unique_id=621845484]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Region" type="Label" parent="UIRoot/TopRight/@VBoxContainer@4" unique_id=1621011291]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.561, 0.91, 0.863, 1)
+theme_override_font_sizes/font_size = 24
+text = "墨雨档案馆"
+[node name="Progress" type="Label" parent="UIRoot/TopRight/@VBoxContainer@4" unique_id=839275784]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.847, 0.706, 0.416, 1)
+theme_override_font_sizes/font_size = 12
+text = "档案  0 / 4"
+[node name="Objective" type="Label" parent="UIRoot/TopRight/@VBoxContainer@4" unique_id=2084969480]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.882, 0.812, 1)
+theme_override_font_sizes/font_size = 12
+text = "向右探索，清除污染"
+autowrap_mode = 3
+[node name="Score" type="Label" parent="UIRoot/TopRight/@VBoxContainer@4" unique_id=1360448894]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.64, 0.64, 1)
+theme_override_font_sizes/font_size = 12
+text = "击败 0"
+[node name="BossPanel" type="PanelContainer" parent="UIRoot" unique_id=1540786974]
+visible = false
+custom_minimum_size = Vector2(560, 46)
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -280.0
+offset_top = 14.0
+offset_right = 280.0
+offset_bottom = 60.0
+mouse_filter = 2
+[node name="@VBoxContainer@5" type="VBoxContainer" parent="UIRoot/BossPanel" unique_id=1863117365]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="BossName" type="Label" parent="UIRoot/BossPanel/@VBoxContainer@5" unique_id=983531236]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.42, 0.36, 1)
+theme_override_font_sizes/font_size = 12
+text = "墨骸史官"
+horizontal_alignment = 1
+[node name="BossBar" type="ProgressBar" parent="UIRoot/BossPanel/@VBoxContainer@5" unique_id=1404217020]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/background = ExtResource("3_4jqwt")
+theme_override_styles/fill = ExtResource("7_4d46k")
+show_percentage = false
+[node name="BottomSlots" type="HBoxContainer" parent="UIRoot" unique_id=1320685572]
+custom_minimum_size = Vector2(760, 52)
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -380.0
+offset_top = -80.0
+offset_right = 380.0
+offset_bottom = -28.0
+theme_override_constants/separation = 8
+[node name="WeaponCard1" type="PanelContainer" parent="UIRoot/BottomSlots" unique_id=1882218302]
+custom_minimum_size = Vector2(184, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+[node name="@VBoxContainer@6" type="VBoxContainer" parent="UIRoot/BottomSlots/WeaponCard1" unique_id=1654304599]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="WeaponCaption1" type="Label" parent="UIRoot/BottomSlots/WeaponCard1/@VBoxContainer@6" unique_id=273252459]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.64, 0.64, 1)
+theme_override_font_sizes/font_size = 12
+text = "[1] 武器"
+[node name="WeaponValue1" type="Label" parent="UIRoot/BottomSlots/WeaponCard1/@VBoxContainer@6" unique_id=1963473798]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.882, 0.812, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+text_overrun_behavior = 3
+[node name="WeaponCard2" type="PanelContainer" parent="UIRoot/BottomSlots" unique_id=53030268]
+custom_minimum_size = Vector2(184, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+[node name="@VBoxContainer@7" type="VBoxContainer" parent="UIRoot/BottomSlots/WeaponCard2" unique_id=2059159392]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="WeaponCaption2" type="Label" parent="UIRoot/BottomSlots/WeaponCard2/@VBoxContainer@7" unique_id=959330313]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.64, 0.64, 1)
+theme_override_font_sizes/font_size = 12
+text = "[2] 武器"
+[node name="WeaponValue2" type="Label" parent="UIRoot/BottomSlots/WeaponCard2/@VBoxContainer@7" unique_id=1877208672]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.882, 0.812, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+text_overrun_behavior = 3
+[node name="PhraseCard1" type="PanelContainer" parent="UIRoot/BottomSlots" unique_id=622331881]
+custom_minimum_size = Vector2(184, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+[node name="@VBoxContainer@8" type="VBoxContainer" parent="UIRoot/BottomSlots/PhraseCard1" unique_id=755518300]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="PhraseCaption1" type="Label" parent="UIRoot/BottomSlots/PhraseCard1/@VBoxContainer@8" unique_id=1780807321]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.64, 0.64, 1)
+theme_override_font_sizes/font_size = 12
+text = "[Q] 短语"
+[node name="PhraseValue1" type="Label" parent="UIRoot/BottomSlots/PhraseCard1/@VBoxContainer@8" unique_id=81581841]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.882, 0.812, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+text_overrun_behavior = 3
+[node name="PhraseStatus1" type="Label" parent="UIRoot/BottomSlots/PhraseCard1/@VBoxContainer@8" unique_id=710728004]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.561, 0.91, 0.863, 1)
+theme_override_font_sizes/font_size = 12
+text = "等待铭刻"
+[node name="PhraseCard2" type="PanelContainer" parent="UIRoot/BottomSlots" unique_id=1561803874]
+custom_minimum_size = Vector2(184, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+[node name="@VBoxContainer@9" type="VBoxContainer" parent="UIRoot/BottomSlots/PhraseCard2" unique_id=376826864]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="PhraseCaption2" type="Label" parent="UIRoot/BottomSlots/PhraseCard2/@VBoxContainer@9" unique_id=605091254]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.62, 0.64, 0.64, 1)
+theme_override_font_sizes/font_size = 12
+text = "[F] 短语"
+[node name="PhraseValue2" type="Label" parent="UIRoot/BottomSlots/PhraseCard2/@VBoxContainer@9" unique_id=1685458515]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.882, 0.812, 1)
+theme_override_font_sizes/font_size = 12
+text = "—"
+text_overrun_behavior = 3
+[node name="PhraseStatus2" type="Label" parent="UIRoot/BottomSlots/PhraseCard2/@VBoxContainer@9" unique_id=1161362725]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.561, 0.91, 0.863, 1)
+theme_override_font_sizes/font_size = 12
+text = "等待铭刻"
+[node name="ControlsHint" type="Label" parent="UIRoot" unique_id=1726484674]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -560.0
+offset_top = -22.0
+offset_right = 560.0
+offset_bottom = -4.0
+theme_override_colors/font_color = Color(0.62, 0.64, 0.64, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.03, 0.05, 0.9)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "A / D 移动    空格 跳跃    J 攻击    L 翻滚    Q / F 言灵    Tab 背包    C 造句    H 说明    M 地图    Esc 暂停"
+horizontal_alignment = 1
+[node name="Message" type="Label" parent="UIRoot" unique_id=475423768]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -460.0
+offset_top = 128.0
+offset_right = 460.0
+offset_bottom = 160.0
+theme_override_colors/font_color = Color(0.847, 0.706, 0.416, 1)
+theme_override_colors/font_outline_color = Color(0.051, 0.071, 0.094, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1

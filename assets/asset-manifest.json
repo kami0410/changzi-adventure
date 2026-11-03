@@ -1,0 +1,1540 @@
+{
+  "schema_version": 1,
+  "project": "changzi-adventure",
+  "milestone": "0.10 exploration and frame animation",
+  "generated_at": "2026-11-02",
+  "art_direction": {
+    "sources": [
+      "docs/GDD.md §13",
+      "docs/GDD-v0.2-decisions.md §22.3"
+    ],
+    "style": "high-precision pixel art, Lovecraftian apocalypse",
+    "palette_roles": [
+      "midnight blue",
+      "sickly cyan",
+      "bone white",
+      "dry blood red",
+      "black ink"
+    ],
+    "view": "three-quarter side view, full body, facing right",
+    "rim_light": "sickly cyan from upper right",
+    "scale": {
+      "player": "96x96",
+      "boss": "256x256",
+      "enemies": "96x96",
+      "npcs": "96x96",
+      "weapon_icons": "64x64",
+      "backgrounds": "1536x864"
+    }
+  },
+  "pipeline": {
+    "generation": "Magpie MCP (mcp__magpie-image__generate_image), model codex/gpt-image-2",
+    "normalization": "tools/normalize_sprite.py: premultiplied LANCZOS fit, binary alpha, palette from opaque pixels with 1/4 slots reserved for saturated accents, nearest-colour mapping without dithering, small-cluster removal, 1 px ink outline (#101820), bottom-centre placement. --cleanup for sprites without a high-resolution source (binary alpha + outline, no resize).",
+    "alpha_cleanup": "low-alpha black background film (alpha < 16, RGB <= 8) set to 0; near-opaque pixels (alpha >= 240) set to 255; glow alpha preserved",
+    "transparency_source": "Magpie native transparent background output; alpha verified with Pillow",
+    "animation": "Version 0.10.0 adds generated frame sets for the player: 4-frame run cycle (12 fps), 3-frame jump/fall, 3-frame melee attack, 2-frame cast, 2-frame hurt/stagger and 2-frame dodge (16 frames in total). Each strip is generated on transparent background with the idle sprite as reference, sliced on alpha gaps by tools/slice_anim_sheet.py, fitted to one shared height across the set, quantized with one shared palette, outlined and bottom-centre anchored. ActorMotion still owns squash, lean, bob and the feet pin.",
+    "runtime_review": "2026-11-02 0.9.0: pixel_smooth shader (crisp sampling + cyan rim light), PixelSprite grounding, whole-number scales, whole-sprite ActorMotion pinned at the feet. Screenshots checked at 1280x720.",
+    "frame_pipeline": "assets/concept/anim/*_sheet_v1.png (attack uses v2) -> tools/slice_anim_sheet.py -> assets/sprites/player/frames/<action>_<n>.png",
+    "pixel_qa": "python tests/check_pixel_assets.py --demo — exact canvas size, binary alpha, transparent corners, <=32 colours, foot baseline on the canvas bottom row, uncompressed/no-mipmap import. Exit 1 on any failure."
+  },
+  "chapter1_demo_pixel": {
+    "gate": "python tests/check_pixel_assets.py --demo",
+    "backgrounds": {
+      "far": "assets/backgrounds/pixel/ink_archive_far.png",
+      "mid": "assets/backgrounds/pixel/ink_archive_mid.png",
+      "spec": "1280x720, <=32 colours, Nearest, two static layers",
+      "source": "assets/concept/demo/bg_ink_archive_*_raw.png (Magpie codex/gpt-image-2, 2026-11-03), quantised to the shared 32-colour budget"
+    },
+    "portraits": {
+      "paths": [
+        "assets/portraits/pixel/luchen.png",
+        "assets/portraits/pixel/ayan.png",
+        "assets/portraits/pixel/guru.png"
+      ],
+      "spec": "192x256, <=32 colours, opaque character-card crop",
+      "source": "cut from the existing 800x1000 pixel portraits so the faces stay identical; no generated replacement face is used"
+    },
+    "tiles": {
+      "path": "assets/tiles/ch1/tiles.png",
+      "spec": "64x16, four 16x16 tiles (ground top/fill, platform top/fill), <=32 colours"
+    },
+    "props": {
+      "paths": [
+        "assets/sprites/props/shop.png",
+        "assets/sprites/props/stele.png",
+        "assets/sprites/props/chest.png",
+        "assets/sprites/props/door.png",
+        "assets/sprites/props/training_dummy.png"
+      ],
+      "spec": "bottom-aligned, <=32 colours, hard pixel edges"
+    },
+    "logo": {
+      "path": "assets/branding/logo_pixel.png",
+      "spec": "256x256, transparent background, <=32 colours"
+    },
+    "not_in_demo": [
+      "assets/backgrounds/ink_archive.png and the other paintings — chapters 2-4 only",
+      "assets/portraits/*.png 800x1000 — Wenjin/Baiyu only; the Chapter 1 demo uses the 192x256 pixel cards"
+    ]
+  },
+  "assets": [
+    {
+      "id": "player_idle",
+      "role": "主角昌子 idle 静态 sprite",
+      "path": "assets/sprites/player/player_idle.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 32
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-10-31",
+        "references": [
+          "assets/concept/style-tests/changzi_pixel.png"
+        ],
+        "prompt_summary": "3/4 侧视全身：黑色高领长衣与干血红内衬、圆眼镜、手持发青光的打开书册；厚像素、大色块、右上青色轮廓光、透明背景。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "从两版候选中选用更简洁、剪影更易读的一版；缩到 96 后书册辉光保留，眼镜与衣领可辨。锚点脚底中心，脚底贴画布底边。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 5239,
+          "sha256": "77e7311c8d543bf0b488ced20e5cb66513a5ff83e3728cf1d94afeb40a4b9225",
+          "alpha": true,
+          "transparent_percent": 64.2,
+          "opaque_percent": 30.2,
+          "partial_alpha_percent": 5.6
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "ink_archivist",
+      "role": "Boss 墨骸史官静态 sprite",
+      "path": "assets/sprites/bosses/ink_archivist.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "256x256",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 32
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-10-31",
+        "references": [
+          "assets/sprites/player/player_idle.png",
+          "assets/concept/style-tests/changzi_pixel.png"
+        ],
+        "prompt_summary": "3/4 侧视全身：黑墨与骨白构成的枯瘦史官，书脊王冠、单眼骨面具、巨型羽毛笔手臂、锁链巨册、破损长袍；256 剪影有压迫感。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "细节密度高但缩到 256 后仍可读；羽毛笔与巨册占宽度，按宽度适配后高度约 250px。",
+        "measured": {
+          "dimensions": "256x256",
+          "format": "RGBA",
+          "bytes": 37381,
+          "sha256": "cd5438f3a3ddf17f9b702233dc1b3dda7068105bf25060e9d5f58c4537604dfd",
+          "alpha": true,
+          "transparent_percent": 34.7,
+          "opaque_percent": 65.3,
+          "partial_alpha_percent": 0.0,
+          "opaque_colors": 29
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)",
+        "2026-11-03 re-quantized to the Chapter 1 demo 32-colour budget for tests/check_pixel_assets.py --demo"
+      ]
+    },
+    {
+      "id": "ink_hound",
+      "role": "普通敌人 墨犬",
+      "path": "assets/sprites/enemies/ink_hound.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 40
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-10-31",
+        "references": [
+          "assets/sprites/player/player_idle.png"
+        ],
+        "prompt_summary": "3/4 侧视四足墨犬：书脊状脊骨、纸耳、双青色眼光、笔尖爪、滴墨长舌；低伏冲锋姿态。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "横长体型，缩到 96 后以宽度适配，高度约 70px；四足与脊骨可辨。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 6729,
+          "sha256": "23bf4e683b5a24ea0831ac5845ed653decff3060217930b9a32fd1fef0689a7b",
+          "alpha": true,
+          "transparent_percent": 61.1,
+          "opaque_percent": 29.8,
+          "partial_alpha_percent": 9.1
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "scribe_bug",
+      "role": "远程敌人 抄写虫",
+      "path": "assets/sprites/enemies/scribe_bug.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 40
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-10-31",
+        "references": [
+          "assets/sprites/player/player_idle.png"
+        ],
+        "prompt_summary": "3/4 侧视甲虫：墨水罐腹部、羽毛笔腿、纸翼、单只大青眼、卷轴口器。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "圆形甲虫剪影在 96 下清晰；青色墨水罐与单眼是主要识别点。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 8882,
+          "sha256": "45cf877ed3873ede9a9950f072c27378154d13b8eaa158363844a6fbcfb727dc",
+          "alpha": true,
+          "transparent_percent": 52.3,
+          "opaque_percent": 41.1,
+          "partial_alpha_percent": 6.6
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "blank_man",
+      "role": "冲锋敌人 空白人",
+      "path": "assets/sprites/enemies/blank_man.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 40
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/sprites/player/player_idle.png"
+        ],
+        "prompt_summary": "3/4 侧视无面人：骨白纸西装、头部撕裂空洞、过长手臂与多指、前倾冲锋。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "骨白大面积与周围暗色分离度好，96 下仍能读出头洞与长臂。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 9487,
+          "sha256": "d0874549fee211f64d023f1f0f11ce6c186b23b66183f7e82bd9697f944087c9",
+          "alpha": true,
+          "transparent_percent": 60.6,
+          "opaque_percent": 28.7,
+          "partial_alpha_percent": 10.7
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "hanging_scribe",
+      "role": "飞行敌人 悬吊书吏",
+      "path": "assets/sprites/enemies/hanging_scribe.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 40
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/sprites/player/player_idle.png"
+        ],
+        "prompt_summary": "3/4 侧视飞行敌人：红链悬吊的无腿书吏、骨面具、青色提灯、羽毛笔手指、飘散纸页。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "锁链顶端接近画布上缘但未裁切；飞行单位建议由主线程在场景中设置悬浮偏移。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 6186,
+          "sha256": "cdf033daf9893268bb797b588aef2a03bd7e6d5b7c25644fae333fc08d7de43b",
+          "alpha": true,
+          "transparent_percent": 62.6,
+          "opaque_percent": 28.6,
+          "partial_alpha_percent": 8.7
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "echo_enemy",
+      "role": "精英敌人 失忆回声",
+      "path": "assets/sprites/enemies/echo_enemy.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 40
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/sprites/player/player_idle.png"
+        ],
+        "prompt_summary": "3/4 侧视悬浮回声体：玩家轮廓、碎裂镜面头、青色裂纹、重影手臂、体内纸页与墨片。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "与主角同轮廓、不同材质；用于表现“复制玩家动作”的精英。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 7822,
+          "sha256": "631f4ea03aebbcf398f681d29cebbe433e1ef6764a8b5d184367627468859c6c",
+          "alpha": true,
+          "transparent_percent": 60.1,
+          "opaque_percent": 26.0,
+          "partial_alpha_percent": 13.9
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "typo_beast",
+      "role": "精英敌人 错字兽",
+      "path": "assets/sprites/enemies/typo_beast.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 40
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/sprites/player/player_idle.png"
+        ],
+        "prompt_summary": "3/4 侧视巨兽：骨白畸形字符堆叠成体、多只青眼、纸牙、墨触须、爪状前肢。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "字符形状不构成可读文本；大面积骨白与多眼在 96 下可辨。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 10495,
+          "sha256": "4a2ff1a564ba97eee9403198b30f1065be07790921f4c80ac7c67690689e0afe",
+          "alpha": true,
+          "transparent_percent": 41.2,
+          "opaque_percent": 48.7,
+          "partial_alpha_percent": 10.2
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "ink_archive_bg",
+      "role": "背景 墨雨档案馆",
+      "path": "assets/backgrounds/ink_archive.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "1536x864",
+        "alpha": false,
+        "anchor": "full-frame",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 0
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [],
+        "prompt_summary": "横版侧视废墟哥特档案馆内景：无尽书架、漂浮书页、青色月光彩窗、红色长幡、积水地面、远处日食；中景留空。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "原始生成 1672x941，按 cover 裁切到 1536x864（水平裁掉约 2%）。RGB 不透明；单层背景，不含角色或 UI。",
+        "measured": {
+          "dimensions": "1536x864",
+          "format": "RGB",
+          "bytes": 2438283,
+          "sha256": "50e008cd6c3b793184e99377b1a87a8df470dbad518cf4249eb806eae0563c35",
+          "alpha": false,
+          "opaque_percent": 100.0
+        }
+      }
+    },
+    {
+      "id": "breathing_ruins_bg",
+      "role": "背景 呼吸废墟",
+      "path": "assets/backgrounds/breathing_ruins.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "1536x864",
+        "alpha": false,
+        "anchor": "full-frame",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 0
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [],
+        "prompt_summary": "横版侧视外部废墟档案城：断裂柱廊、有机呼吸墙体、墨触须、骨白雕像与碎柱、青色地雾、干血红日食。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "原始生成 1672x941，按 cover 裁切到 1536x864。RGB 不透明；单层背景，不含角色或 UI。",
+        "measured": {
+          "dimensions": "1536x864",
+          "format": "RGB",
+          "bytes": 2416331,
+          "sha256": "0d7e48c86fc014d8aa8472137d8ca77d060939fc930bd1dd9473a36b27091642",
+          "alpha": false,
+          "opaque_percent": 100.0
+        }
+      }
+    },
+    {
+      "id": "luchen",
+      "role": "Hub NPC 陆沉",
+      "path": "assets/sprites/npcs/luchen.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 40
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/characters/luchen_pixel.png",
+          "assets/sprites/player/player_idle.png"
+        ],
+        "prompt_summary": "3/4 侧视全身：年长瘦削档案教授、圆眼镜、灰黑后梳发、深蓝学者长衣、红色文件夹、疲惫威严。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "深色衣体在暗背景下主要靠青色轮廓光分离；红文件夹是识别点。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 3723,
+          "sha256": "b9b22221b85f8a6684d9fbf57c9e355158769b6630022e31cd091798941857ed",
+          "alpha": true,
+          "transparent_percent": 72.0,
+          "opaque_percent": 22.9,
+          "partial_alpha_percent": 5.1
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "ayan",
+      "role": "Hub NPC 阿砚",
+      "path": "assets/sprites/npcs/ayan.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 40
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/characters/ayan_pixel.png",
+          "assets/sprites/player/player_idle.png"
+        ],
+        "prompt_summary": "3/4 侧视全身：年轻冷峻守夜人、短刺发、深色制服与破损长衣、腰间钥匙、青色提灯长矛。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "长矛与提灯拉高轮廓，96 下钥匙细节会简化，但长矛剪影明确。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 5890,
+          "sha256": "d2ccf71e8b03e18f0eecc8c5516fc4ae2936e77f51231553ed5f90641489a2d3",
+          "alpha": true,
+          "transparent_percent": 66.2,
+          "opaque_percent": 26.2,
+          "partial_alpha_percent": 7.6
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "gulu",
+      "role": "Hub NPC 咕噜",
+      "path": "assets/sprites/npcs/gulu.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 40
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/characters/gulu_pixel.png",
+          "assets/sprites/player/player_idle.png"
+        ],
+        "prompt_summary": "3/4 侧视全身：圆润赭黄拾荒生物、单只大绿眼、破旧深蓝披风、腰间发光词片玻璃罐、怀抱裂纹罐。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "保留概念图的赭黄色作为有意例外；圆润剪影与青色罐子是识别点。",
+        "measured": {
+          "dimensions": "96x96",
+          "format": "RGBA",
+          "bytes": 7636,
+          "sha256": "a5e2e2012202dec6a3736bd5cde192e99a373dfb29ae5a3e70966238810e8861",
+          "alpha": true,
+          "transparent_percent": 43.7,
+          "opaque_percent": 49.7,
+          "partial_alpha_percent": 6.6
+        }
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "broken_page_sword",
+      "role": "近战武器图标 断页剑",
+      "path": "assets/sprites/weapons/broken_page_sword.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "64x64",
+        "alpha": true,
+        "anchor": "center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 32
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [],
+        "prompt_summary": "3/4 斜构图：骨白撕纸剑身、黑色墨迹、羽毛笔剑柄、红色缠绳、书脊护手。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "细长斜向剪影在 64 下可辨；图标按 56px 内容区居中留 4px 边距。",
+        "measured": {
+          "dimensions": "64x64",
+          "format": "RGBA",
+          "bytes": 2571,
+          "sha256": "24aa6d246aa3db92301bdc6dc588722a5e8e87ac6cc3ad20b609ad3b18b33f85",
+          "alpha": true,
+          "transparent_percent": 83.4,
+          "opaque_percent": 9.9,
+          "partial_alpha_percent": 6.7
+        }
+      }
+    },
+    {
+      "id": "ink_axe",
+      "role": "近战武器图标 墨斧",
+      "path": "assets/sprites/weapons/ink_axe.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "64x64",
+        "alpha": true,
+        "anchor": "center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 32
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [],
+        "prompt_summary": "3/4 斜构图：黑墨石宽斧、青色刃口、书脊长柄、红布与锁链缠绕。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "宽斧头与青色刃口是主要识别点。",
+        "measured": {
+          "dimensions": "64x64",
+          "format": "RGBA",
+          "bytes": 2883,
+          "sha256": "8e9b5c5eaee82fcdb65c50342ea30cb8198c887a83850b125e990ed2d14a4340",
+          "alpha": true,
+          "transparent_percent": 73.3,
+          "opaque_percent": 19.4,
+          "partial_alpha_percent": 7.3
+        }
+      }
+    },
+    {
+      "id": "chain_blade",
+      "role": "近战武器图标 链刃",
+      "path": "assets/sprites/weapons/chain_blade.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "64x64",
+        "alpha": true,
+        "anchor": "center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 32
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [],
+        "prompt_summary": "3/4 蛇形斜构图：三节骨白弯刃由血红锁链连接、书脊柄、青色符文。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "分节链刃在 64 下仍能看出连接关系；细节较细，建议 HUD 至少 32px 显示。",
+        "measured": {
+          "dimensions": "64x64",
+          "format": "RGBA",
+          "bytes": 1884,
+          "sha256": "c65388a4756dec5da43169b6dd7ae96d8af909580f2f02948fccfb489c9dca44",
+          "alpha": true,
+          "transparent_percent": 86.0,
+          "opaque_percent": 5.1,
+          "partial_alpha_percent": 9.0
+        }
+      }
+    },
+    {
+      "id": "ink_bolt_gun",
+      "role": "远程武器图标 墨弹枪",
+      "path": "assets/sprites/weapons/ink_bolt_gun.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "64x64",
+        "alpha": true,
+        "anchor": "center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 32
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [],
+        "prompt_summary": "3/4 斜构图：黑铁手炮、墨水罐炮口、青色符文、红色皮柄、枪口凝聚墨弹。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "粗炮身与大握把在 64 下清晰。",
+        "measured": {
+          "dimensions": "64x64",
+          "format": "RGBA",
+          "bytes": 2395,
+          "sha256": "5c9a0fe2cc902dfe0625777668a9ea85577e6c352c65e842803abd60ac069179",
+          "alpha": true,
+          "transparent_percent": 77.0,
+          "opaque_percent": 18.3,
+          "partial_alpha_percent": 4.7
+        }
+      }
+    },
+    {
+      "id": "talisman_gun",
+      "role": "远程武器图标 符枪",
+      "path": "assets/sprites/weapons/talisman_gun.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "64x64",
+        "alpha": true,
+        "anchor": "center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 32
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [],
+        "prompt_summary": "3/4 斜构图：长管仪式手枪、骨白符纸包裹、青色符文、红色流苏、黄铜配件、枪口青烟。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "符纸与流苏形成横向轮廓；青烟在缩小时会变淡。",
+        "measured": {
+          "dimensions": "64x64",
+          "format": "RGBA",
+          "bytes": 3075,
+          "sha256": "40c5b432696d132964a06dae1cb8f51790e5959237189ad62aef5618553a44c1",
+          "alpha": true,
+          "transparent_percent": 74.4,
+          "opaque_percent": 16.7,
+          "partial_alpha_percent": 9.0
+        }
+      }
+    },
+    {
+      "id": "page_shuriken",
+      "role": "远程武器图标 书页飞刃",
+      "path": "assets/sprites/weapons/page_shuriken.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "64x64",
+        "alpha": true,
+        "anchor": "center",
+        "frames": 1,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 32
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [],
+        "prompt_summary": "俯视四角折纸手里剑：骨白纸刃、黑色墨迹、青色刃缘、中心红绳。",
+        "license": "Proprietary in-house asset for Changzi Adventure (M1). Generated in-house; no third-party stock. NPC likeness references are internal only; the shipped game uses stylized originals.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": false,
+        "technical_checks_passed": true,
+        "notes": "对称四角剪影在 64 下最易读；中心红绳保留。",
+        "measured": {
+          "dimensions": "64x64",
+          "format": "RGBA",
+          "bytes": 3590,
+          "sha256": "0d1e5924472a8d907f1a23949785c6504448ac68db619295dbb96c3cfd90626a",
+          "alpha": true,
+          "transparent_percent": 74.2,
+          "opaque_percent": 19.6,
+          "partial_alpha_percent": 6.2
+        }
+      }
+    },
+    {
+      "id": "branding_emblem",
+      "role": "游戏图标与标题徽记",
+      "path": "assets/branding/icon_512.png",
+      "status": "normalized-runtime",
+      "technical": {
+        "dimensions": "512x512",
+        "alpha": false,
+        "variants": "432/256/192/128/64/48/32/16 PNG + changzi.ico",
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/branding/changzi_emblem_source.png"
+        ],
+        "prompt_summary": "午夜蓝底，破碎骨白书页组成一只青色眼睛，朱红书签封印；大轮廓、可缩到32px。",
+        "license": "Proprietary in-house asset for Changzi Adventure."
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "标题界面与窗口图标实际渲染检查。"
+      }
+    },
+    {
+      "id": "lightless_sea",
+      "role": "第三章无光海背景",
+      "path": "assets/backgrounds/lightless_sea.png",
+      "status": "normalized-runtime",
+      "technical": {
+        "dimensions": "1536x864",
+        "alpha": false,
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/environments/lightless_sea_source.png"
+        ],
+        "prompt_summary": "无光墨海、断钟、漂流档案塔、月食；冷蓝夜海，下方留出玩法地面。",
+        "license": "Proprietary in-house asset for Changzi Adventure."
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "第三章实机画面检查；背景作为 LivingBackdrop 远景，覆盖比例由运行时保持。"
+      }
+    },
+    {
+      "id": "smiling_archivist",
+      "role": "最终Boss笑面史官",
+      "path": "assets/sprites/bosses/smiling_archivist.png",
+      "status": "normalized-runtime",
+      "technical": {
+        "dimensions": "256x256",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/characters/smiling_archivist_sprite_source.png",
+          "assets/concept/characters/smiling_archivist_pixel.png"
+        ],
+        "prompt_summary": "骨白学者长衣、黑墨下摆、朱红领结、笑脸与断页，3/4侧视全身；透明背景，底边对齐。",
+        "license": "Proprietary in-house asset for Changzi Adventure. Internal photo references are not shipped."
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "256尺寸下笑脸、书册、羽毛笔与光环可辨；第三章 Boss 实机检查。"
+      },
+      "history": [
+        "2026-11-02 re-normalized from high-resolution source with tools/normalize_sprite.py --batch"
+      ]
+    },
+    {
+      "id": "ink_bomber",
+      "role": "墨囊投手 · 中距离投掷/双发/污染池",
+      "path": "assets/sprites/enemies/ink_bomber.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/enemies/"
+        ],
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house; no third-party stock."
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "0.7.0 实机截图检查；NPC 图由内部参考图风格化，对外发布前确认肖像授权。"
+      },
+      "history": [
+        "2026-11-02 re-normalized from high-resolution source with tools/normalize_sprite.py --batch"
+      ]
+    },
+    {
+      "id": "choir_summoner",
+      "role": "合唱召引者 · 召唤/治疗/后排施法",
+      "path": "assets/sprites/enemies/choir_summoner.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/enemies/"
+        ],
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house; no third-party stock."
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "0.7.0 实机截图检查；NPC 图由内部参考图风格化，对外发布前确认肖像授权。"
+      },
+      "history": [
+        "2026-11-02 re-normalized from high-resolution source with tools/normalize_sprite.py --batch"
+      ]
+    },
+    {
+      "id": "mirror_sniper",
+      "role": "镜面狙手 · 预警贯穿光束",
+      "path": "assets/sprites/enemies/mirror_sniper.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/enemies/"
+        ],
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house; no third-party stock."
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "0.7.0 实机截图检查；NPC 图由内部参考图风格化，对外发布前确认肖像授权。"
+      },
+      "history": [
+        "2026-11-02 re-normalized from high-resolution source with tools/normalize_sprite.py --batch"
+      ]
+    },
+    {
+      "id": "page_swarm",
+      "role": "残页群 · 高速俯冲集群",
+      "path": "assets/sprites/enemies/page_swarm.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/enemies/"
+        ],
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house; no third-party stock."
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "0.7.0 实机截图检查；NPC 图由内部参考图风格化，对外发布前确认肖像授权。"
+      },
+      "history": [
+        "2026-11-02 re-normalized from high-resolution source with tools/normalize_sprite.py --batch"
+      ]
+    },
+    {
+      "id": "wenjin",
+      "role": "闻烬 · 情报/契约 NPC",
+      "path": "assets/sprites/npcs/wenjin.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/enemies/"
+        ],
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house; no third-party stock."
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "0.7.0 实机截图检查；NPC 图由内部参考图风格化，对外发布前确认肖像授权。"
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "baiyu",
+      "role": "白榆 · 地图/路线 NPC",
+      "path": "assets/sprites/npcs/baiyu.png",
+      "status": "normalized-static",
+      "technical": {
+        "dimensions": "96x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 1,
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-01",
+        "references": [
+          "assets/concept/enemies/"
+        ],
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house; no third-party stock."
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "0.7.0 实机截图检查；NPC 图由内部参考图风格化，对外发布前确认肖像授权。"
+      },
+      "history": [
+        "2026-11-02 cleaned in place with tools/normalize_sprite.py --cleanup (binary alpha + outline)"
+      ]
+    },
+    {
+      "id": "lung_bell_guardian",
+      "path": "assets/sprites/bosses/lung_bell_guardian.png",
+      "size": [
+        256,
+        256
+      ],
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-02",
+        "source_path": "assets/concept/characters/lung_bell_guardian_source.png",
+        "references": [
+          "assets/sprites/bosses/ink_archivist.png",
+          "assets/backgrounds/breathing_ruins.png"
+        ],
+        "prompt_summary": "第二章 Boss 肺钟守卫：裂开的青铜钟为躯干，钟内悬挂灰粉色肺叶作钟舌，骨白肋骨笼罩，锈蚀钟摆臂，铁管细腿，羊皮纸条与小铜铃，钟冠一道病青色眼缝；3/4 侧视，透明背景，像素密度与墨骸史官一致。",
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house; no third-party stock."
+      },
+      "status": "approved"
+    },
+    {
+      "id": "player_run",
+      "role": "主角奔跑循环 4 帧",
+      "path": "assets/sprites/player/frames/run_0.png … assets/sprites/player/frames/run_3.png",
+      "status": "animated-normalized",
+      "technical": {
+        "dimensions": "112x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 4,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 24
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-02",
+        "references": [
+          "assets/sprites/player/player_idle.png",
+          "assets/concept/style-tests/changzi_pixel.png"
+        ],
+        "source_sheet": "assets/concept/anim/run_sheet_v1.png",
+        "prompt_summary": "同一角色向右奔跑的四帧横排：接触、下沉、经过、抬升；透明背景、脚底同基线、像素风、保留黑发眼镜黑红长外套与青色书。",
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house with Magpie; no third-party stock. Character design is an internal stylized original.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "四帧跑步循环，脚底共用基线，12 fps；胸前书发出青色边缘光。"
+      },
+      "measured": [
+        {
+          "path": "assets/sprites/player/frames/run_0.png",
+          "dimensions": "112x112",
+          "bytes": 7706,
+          "sha256": "79adbffbd6c4c22b9239d61b20da14bc268e5acd8ad90ce45fd2c9790486c61c"
+        },
+        {
+          "path": "assets/sprites/player/frames/run_1.png",
+          "dimensions": "112x112",
+          "bytes": 6440,
+          "sha256": "110e537fc615a76b940aadd1f0fd1309a459ee8b8d9f6fb3c5a77e373239f4db"
+        },
+        {
+          "path": "assets/sprites/player/frames/run_2.png",
+          "dimensions": "112x112",
+          "bytes": 7328,
+          "sha256": "baed6b17ca67acfcd5c9e1a20e174c0623f9e613008e67faa0a6475f2810b78c"
+        },
+        {
+          "path": "assets/sprites/player/frames/run_3.png",
+          "dimensions": "112x112",
+          "bytes": 7296,
+          "sha256": "9ba77e9a24e5d0693fb38cfb88a527880ce0d97f365c5e24ffddfbd1b35964d5"
+        }
+      ],
+      "history": [
+        "2026-11-02 generated transparent strip, sliced and normalized with tools/slice_anim_sheet.py; reviewed in-engine at 1280x720 (artifacts/anim_contact.png)"
+      ]
+    },
+    {
+      "id": "player_jump",
+      "role": "主角跳跃/下落 3 帧",
+      "path": "assets/sprites/player/frames/jump_0.png … assets/sprites/player/frames/jump_2.png",
+      "status": "animated-normalized",
+      "technical": {
+        "dimensions": "112x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 3,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 24
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-02",
+        "references": [
+          "assets/sprites/player/player_idle.png",
+          "assets/concept/style-tests/changzi_pixel.png"
+        ],
+        "source_sheet": "assets/concept/anim/jump_sheet_v1.png",
+        "prompt_summary": "同一角色三帧横排：起跳蹲伏、上升收腿、下落伸腿；透明背景、同比例。",
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house with Magpie; no third-party stock. Character design is an internal stylized original.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "起跳蓄力、上升收腿、下落伸腿三帧；由 ActorMotion 叠加位移与挤压。"
+      },
+      "measured": [
+        {
+          "path": "assets/sprites/player/frames/jump_0.png",
+          "dimensions": "112x112",
+          "bytes": 5237,
+          "sha256": "74cacd40c4692f39e2f95b0ea85eceff4ddc253a12b3826e2b7823b2266e64c8"
+        },
+        {
+          "path": "assets/sprites/player/frames/jump_1.png",
+          "dimensions": "112x112",
+          "bytes": 6065,
+          "sha256": "d38e0fe1c8d21a204400cbb259e20d67a87151b81b4ed546028c12152825f9b7"
+        },
+        {
+          "path": "assets/sprites/player/frames/jump_2.png",
+          "dimensions": "112x112",
+          "bytes": 6827,
+          "sha256": "6a25cb41d8756dc0499542866df02125eb82a8ef79006e2211cf6d5141c5ee85"
+        }
+      ],
+      "history": [
+        "2026-11-02 generated transparent strip, sliced and normalized with tools/slice_anim_sheet.py; reviewed in-engine at 1280x720 (artifacts/anim_contact.png)"
+      ]
+    },
+    {
+      "id": "player_attack",
+      "role": "主角近战攻击 3 帧",
+      "path": "assets/sprites/player/frames/attack_0.png … assets/sprites/player/frames/attack_2.png",
+      "status": "animated-normalized",
+      "technical": {
+        "dimensions": "160x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 3,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 24
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-02",
+        "references": [
+          "assets/sprites/player/player_idle.png",
+          "assets/concept/style-tests/changzi_pixel.png"
+        ],
+        "source_sheet": "assets/concept/anim/attack_sheet_v2.png",
+        "prompt_summary": "同一角色三帧横排：蓄力、横斩突刺、收势；持短剑、每帧完全位于自己的网格内。",
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house with Magpie; no third-party stock. Character design is an internal stylized original.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "蓄力、突刺、收势三帧；画布 160 px 宽以容纳短剑，不裁切。"
+      },
+      "measured": [
+        {
+          "path": "assets/sprites/player/frames/attack_0.png",
+          "dimensions": "160x160",
+          "bytes": 9031,
+          "sha256": "f5f83b9d38d28027931d6156277b654b58cda18690aaa17a45f60d5ae7556ffa"
+        },
+        {
+          "path": "assets/sprites/player/frames/attack_1.png",
+          "dimensions": "160x160",
+          "bytes": 9209,
+          "sha256": "80b5ca90766237c101d0bd9cfc37486bb1e40c226c6c7e2583813e1490f3c2ab"
+        },
+        {
+          "path": "assets/sprites/player/frames/attack_2.png",
+          "dimensions": "160x160",
+          "bytes": 8563,
+          "sha256": "810fa2a9a3fedd664970053fd8854b0d9a5b51a80d5c465231f54a5184474c44"
+        }
+      ],
+      "history": [
+        "2026-11-02 generated transparent strip, sliced and normalized with tools/slice_anim_sheet.py; reviewed in-engine at 1280x720 (artifacts/anim_contact.png)"
+      ]
+    },
+    {
+      "id": "player_cast",
+      "role": "主角施法 2 帧",
+      "path": "assets/sprites/player/frames/cast_0.png … assets/sprites/player/frames/cast_1.png",
+      "status": "animated-normalized",
+      "technical": {
+        "dimensions": "112x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 2,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 24
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-02",
+        "references": [
+          "assets/sprites/player/player_idle.png",
+          "assets/concept/style-tests/changzi_pixel.png"
+        ],
+        "source_sheet": "assets/concept/anim/cast_sheet_v1.png",
+        "prompt_summary": "同一角色两帧横排：捧书阅读、举书施法；透明背景、同比例。",
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house with Magpie; no third-party stock. Character design is an internal stylized original.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "捧书阅读、举书施言两帧；法术圆环由 SpellVFX 叠加，不烘焙进帧。"
+      },
+      "measured": [
+        {
+          "path": "assets/sprites/player/frames/cast_0.png",
+          "dimensions": "112x112",
+          "bytes": 5515,
+          "sha256": "891788f3017134716f7bc86212756ded302243da05f83fc5cfcd52526ab19d97"
+        },
+        {
+          "path": "assets/sprites/player/frames/cast_1.png",
+          "dimensions": "112x112",
+          "bytes": 6026,
+          "sha256": "e620ab98ca9bdd62752b021e6c92b5c9e3e7d8bd57a959f05eb03f561378ecc0"
+        }
+      ],
+      "history": [
+        "2026-11-02 generated transparent strip, sliced and normalized with tools/slice_anim_sheet.py; reviewed in-engine at 1280x720 (artifacts/anim_contact.png)"
+      ]
+    },
+    {
+      "id": "player_hurt",
+      "role": "主角受击/倒地起始 2 帧",
+      "path": "assets/sprites/player/frames/hurt_0.png … assets/sprites/player/frames/hurt_1.png",
+      "status": "animated-normalized",
+      "technical": {
+        "dimensions": "160x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 2,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 24
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-02",
+        "references": [
+          "assets/sprites/player/player_idle.png",
+          "assets/concept/style-tests/changzi_pixel.png"
+        ],
+        "source_sheet": "assets/concept/anim/hurt_sheet_v1.png",
+        "prompt_summary": "同一角色两帧横排：受击后仰、踉跄跪地；透明背景、同比例。",
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house with Magpie; no third-party stock. Character design is an internal stylized original.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "后仰与踉跄两帧；受击闪红由 ActorMotion 叠加；倒地沿用第二帧再程序化塌缩。"
+      },
+      "measured": [
+        {
+          "path": "assets/sprites/player/frames/hurt_0.png",
+          "dimensions": "160x160",
+          "bytes": 8724,
+          "sha256": "7ccec2b604f88671022ae5a5f0ccb2ef248dbc431479d447a4699a01861a7754"
+        },
+        {
+          "path": "assets/sprites/player/frames/hurt_1.png",
+          "dimensions": "160x160",
+          "bytes": 7539,
+          "sha256": "4e1e73aef16bdd8dee42744e1f93bc5ab2da1de6c45c8f410d4208d3759bfab6"
+        }
+      ],
+      "history": [
+        "2026-11-02 generated transparent strip, sliced and normalized with tools/slice_anim_sheet.py; reviewed in-engine at 1280x720"
+      ]
+    },
+    {
+      "id": "player_dodge",
+      "role": "主角闪避冲刺 2 帧",
+      "path": "assets/sprites/player/frames/dodge_0.png … assets/sprites/player/frames/dodge_1.png",
+      "status": "animated-normalized",
+      "technical": {
+        "dimensions": "160x96",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "frames": 2,
+        "filtering_recommended": "nearest",
+        "palette_quantization_colors": 24
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "codex/gpt-image-2",
+        "created_at": "2026-11-02",
+        "references": [
+          "assets/sprites/player/player_idle.png",
+          "assets/concept/style-tests/changzi_pixel.png"
+        ],
+        "source_sheet": "assets/concept/anim/dodge_sheet_v1.png",
+        "prompt_summary": "同一角色两帧横排：蓄势、快速侧步；透明背景、同比例。",
+        "license": "Proprietary in-house asset for Changzi Adventure. Generated in-house with Magpie; no third-party stock. Character design is an internal stylized original.",
+        "attribution": "Claude Code art agent via Magpie"
+      },
+      "verification": {
+        "native_scale_reviewed": true,
+        "in_engine_reviewed": true,
+        "technical_checks_passed": true,
+        "notes": "蓄势与侧步两帧，0.22 秒内按进度切换；残影由 Player.spawn_afterimage 叠加。"
+      },
+      "measured": [
+        {
+          "path": "assets/sprites/player/frames/dodge_0.png",
+          "dimensions": "160x160",
+          "bytes": 8547,
+          "sha256": "05819b27ca7d7aa0bce51a3622c54743fb140e77379a92ee36cd75a43a417465"
+        },
+        {
+          "path": "assets/sprites/player/frames/dodge_1.png",
+          "dimensions": "160x160",
+          "bytes": 8692,
+          "sha256": "cc14932d3e3ae0c101b1dfdce30cdd2f3ad3ea6e89fa3b3e050e6258c9e98b7b"
+        }
+      ],
+      "history": [
+        "2026-11-02 generated transparent strip, sliced and normalized with tools/slice_anim_sheet.py; reviewed in-engine at 1280x720"
+      ]
+    }
+  ],
+  "known_gaps": [
+    "Downscaled generated pixel art retains some anti-aliased edge pixels and fine-detail noise; Pixelorama/Aseprite cleanup is recommended before pixel-perfect final animation.",
+    "Backgrounds are single flattened images; separate parallax layers are not included.",
+    "NPC portraits are derived from internal likeness references; confirm likeness usage rights before public release.",
+    "Player run/attack/cast frame sets are key-frame approximations, not hand-tuned Aseprite cycles; a future pass can add in-between frames and per-frame smear."
+  ]
+}

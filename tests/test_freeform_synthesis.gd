@@ -1,0 +1,62 @@
+extends RefCounted
+
+func run(t: Callable) -> void:
+	var words: Array = ContentLibrary.WORDS.duplicate()
+	var fire := SpellSynthesizer.synthesize("火焰", words)
+	t.call(fire != null, true, "freeform_fire_resolves")
+	t.call(fire.spell.get(&"shape", &""), &"flame", "freeform_fire_becomes_flame")
+	t.call(fire.from_text, "火焰", "freeform_preserves_sentence")
+
+	var combo := SpellSynthesizer.synthesize("让雷落在火里", words)
+	t.call(combo != null, true, "freeform_hybrid_resolves")
+	t.call(combo.word_count >= 2, true, "freeform_uses_multiple_known_words")
+	t.call(combo.spell.get(&"resonances", []).has("雷火"), true, "freeform_hybrid_resonance")
+
+	var wild := SpellSynthesizer.synthesize("不可名状的低语", words)
+	t.call(wild != null, true, "unknown_sentence_still_becomes_spell")
+	t.call(wild.word_count, 1, "unknown_sentence_is_one_wild_word")
+	t.call(wild.from_text, "不可名状的低语", "wild_sentence_keeps_text")
+	t.call(wild.components.get(&"damage", 0.0) >= 1.0, true, "wild_spell_has_playable_damage")
+
+	t.call(SpellSynthesizer.synthesize("   ", words), null, "empty_sentence_rejected")
+
+	var profile := Profile.new()
+	var starter := RunLoot.starting_words(profile)
+	var borrowed := SpellSynthesizer.synthesize("让雷落在火里", starter)
+	t.call(borrowed != null, true, "borrowed_concept_resolves")
+	t.call(borrowed.wild_count, 1, "unowned_thunder_is_borrowed_with_cost")
+	t.call(borrowed.synthesis.get(&"concepts", []).has(&"thunder"), true, "borrowed_thunder_is_explained")
+	t.call(borrowed.spell.get(&"shape", &""), &"chain", "borrowed_text_keeps_intended_shape")
+	t.call(borrowed.corruption_gain > 0, true, "borrowed_concept_has_corruption")
+	var huge := SpellSynthesizer.synthesize("巨大的雷", [])
+	t.call(huge != null and huge.components.get(&"area", 0.0) > 0.0, true, "scale_word_changes_spell")
+	var heal := SpellSynthesizer.synthesize("治愈自己", [])
+	t.call(heal != null and heal.spell.get(&"shape", &"") == &"ward", true, "heal_word_becomes_ward")
+	t.call(heal.components.get(&"heal", 0.0) > 0.0, true, "heal_intent_adds_healing")
+	var stop := SpellSynthesizer.synthesize("让时间停下来", [])
+	t.call(stop != null and stop.spell.get(&"shape", &"") == &"vortex", true, "time_word_becomes_vortex")
+	t.call(stop.components.get(&"slow", 0.0) > 0.0, true, "slow_intent_adds_slow")
+	var ice := SpellSynthesizer.synthesize("冰封", [])
+	t.call(ice != null and ice.spell.get(&"shape", &"") == &"vortex", true, "ice_concept_becomes_vortex")
+	var holy := SpellSynthesizer.synthesize("圣光", [])
+	t.call(holy != null and holy.spell.get(&"shape", &"") == &"ward", true, "holy_light_becomes_ward")
+	var explanation := SpellSynthesizer.explain(borrowed)
+	t.call(explanation.get("matched", ""), "火", "explain_prefers_exact_owned_word")
+	t.call(explanation.get("concepts", "").contains("雷"), true, "explain_lists_borrowed_terms")
+	t.call(explanation.get("shape", ""), "裂空", "explain_names_shape")
+	profile.free()
+
+	SpellSynthesizer.remote_provider = func(_text: String) -> Dictionary:
+		return {"name": "远程言灵", "shape": "flame", "element": "测试", "damage": 999.0,
+			"ink_cost": 1, "cooldown": 99.0, "corruption": 999}
+	var remote := SpellSynthesizer.synthesize("远程测试", words)
+	t.call(remote != null, true, "remote_provider_resolves")
+	t.call(remote.components.get(&"damage", 0.0), 40.0, "remote_damage_is_clamped")
+	t.call(remote.ink_cost, 4, "remote_ink_cost_is_clamped")
+	t.call(remote.cooldown, 6.0, "remote_cooldown_is_clamped")
+	t.call(remote.corruption_gain, 20, "remote_corruption_is_clamped")
+	SpellSynthesizer.remote_provider = Callable()
+	var compiled := SpellSynthesizer.compile_intent("让雷落在火里", {"name": "裂空雷火", "description": "召雷引火。", "shape": "chain", "tags": [&"flame", &"thunder"]}, [])
+	t.call(compiled != null, true, "ai_intent_compiles_offline")
+	t.call(compiled.spell.get(&"shape", &""), &"chain", "ai_intent_keeps_shape")
+	t.call(compiled.display_name, "裂空雷火", "ai_intent_keeps_name")

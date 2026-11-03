@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhraseData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phrase_data.gd" id="1_tse0p"]
+
+[resource]
+script = ExtResource("1_tse0p")
+id = &"devour_abyss"
+display_name = "吞噬深渊"
+word_ids = Array[StringName]([&"tunshi", &"shenyuan"])
+tags = Array[StringName]([&"abyss", &"life"])
+description = "示例短语：吞噬深渊"

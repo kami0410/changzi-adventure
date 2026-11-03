@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"qihei"
+glyph = "●"
+phoneme = "qi hei"
+meaning = "漆黑"
+grammar_role = 2
+tags = Array[StringName]([&"shadow", &"abyss"])
+power = 2
+corruption = 1
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 2.0,
+&"corruption_gain": 1.0
+})
+description = "比夜更黑的地方，藏着名字。"

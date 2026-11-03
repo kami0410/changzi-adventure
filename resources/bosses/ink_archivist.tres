@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_krql3"]
+
+[resource]
+script = ExtResource("1_krql3")
+id = &"ink_archivist"
+display_name = "墨骸史官"
+max_health = 120
+speed = 60.0
+contact_damage = 12
+behavior = &"boss"

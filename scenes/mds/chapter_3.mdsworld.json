@@ -1,0 +1,365 @@
+{
+  "format": "mds_world",
+  "version": 1,
+  "name": "Changzi Chapter 3",
+  "settings": {
+    "grid": 32,
+    "default_room_size": [
+      1280,
+      720
+    ],
+    "weather": "fog(color=#1a2440, density=0.45, ground=1, ground_height=0.25, drift=-20), rain(density=0.25, angle=-8, fall_speed=900, mist=0.2, color=Color(0.55, 0.65, 0.85, 0.35))"
+  },
+  "layers": [
+    "Main"
+  ],
+  "areas": {
+    "Lightless Sea": {
+      "color": "#2c3a66",
+      "weather": "fog(color=#1a2440, density=0.45, ground=1, ground_height=0.25, drift=-20), rain(density=0.25, angle=-8, fall_speed=900, mist=0.2, color=Color(0.55, 0.65, 0.85, 0.35))",
+      "background": "",
+      "boss_background": "deep_water"
+    }
+  },
+  "rooms": {
+    "ch3_01": {
+      "scene_path": "res://scenes/mds/ch3_01.tscn",
+      "name": "无光海岸",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "origin": [
+        0,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch3_02",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch3_02": {
+      "scene_path": "res://scenes/mds/ch3_02.tscn",
+      "name": "墨潮浅滩",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "origin": [
+        1280,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch3_01",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch3_03",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch3_03": {
+      "scene_path": "res://scenes/mds/ch3_03.tscn",
+      "name": "沉船书库",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "origin": [
+        2560,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch3_02",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch3_04",
+          "to_gate": "left1"
+        },
+        "door1": {
+          "pos": [
+            922,
+            500
+          ],
+          "side": "door",
+          "to": "ch3_vault",
+          "to_gate": "door1"
+        }
+      }
+    },
+    "ch3_04": {
+      "scene_path": "res://scenes/mds/ch3_04.tscn",
+      "name": "静水回廊",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "origin": [
+        3840,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch3_03",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch3_05",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch3_05": {
+      "scene_path": "res://scenes/mds/ch3_05.tscn",
+      "name": "深渊裂口",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "origin": [
+        5120,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch3_04",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch3_06",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch3_06": {
+      "scene_path": "res://scenes/mds/ch3_06.tscn",
+      "name": "第三页之门",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "origin": [
+        6400,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch3_05",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch3_rest",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch3_rest": {
+      "scene_path": "res://scenes/mds/ch3_rest.tscn",
+      "name": "引路人的灯",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "origin": [
+        7680,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch3_06",
+          "to_gate": "right1"
+        },
+        "right1": {
+          "pos": [
+            1272,
+            470
+          ],
+          "side": "right",
+          "to": "ch3_boss",
+          "to_gate": "left1"
+        },
+        "door2": {
+          "pos": [
+            1100,
+            500
+          ],
+          "side": "door",
+          "to": "ch3_02"
+        }
+      },
+      "type": "rest"
+    },
+    "ch3_boss": {
+      "scene_path": "res://scenes/mds/ch3_boss.tscn",
+      "name": "最后的读者",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "origin": [
+        8960,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            470
+          ],
+          "side": "left",
+          "to": "ch3_rest",
+          "to_gate": "right1"
+        }
+      },
+      "type": "boss",
+      "boss": "最后的读者"
+    },
+    "ch3_vault": {
+      "scene_path": "res://scenes/mds/ch3_vault.tscn",
+      "name": "隐藏书库",
+      "type": "rest",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "origin": [
+        2560,
+        720
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "door1": {
+          "pos": [
+            640,
+            500
+          ],
+          "side": "door",
+          "to": "ch3_03",
+          "to_gate": "door1"
+        }
+      }
+    }
+  },
+  "links": [],
+  "pins": [],
+  "start_room": "ch3_01"
+}

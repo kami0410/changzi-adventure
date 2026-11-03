@@ -1,0 +1,128 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/touch_controls.gd" id="1_touch"]
+[ext_resource type="Theme" path="res://resources/ui/theme.tres" id="2_theme"]
+
+[node name="TouchControls" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_touch")
+
+[node name="Left" type="Button" parent="."]
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -100.0
+offset_right = 100.0
+offset_bottom = -24.0
+grow_vertical = 0
+focus_mode = 0
+text = "左"
+
+[node name="Right" type="Button" parent="."]
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 112.0
+offset_top = -100.0
+offset_right = 188.0
+offset_bottom = -24.0
+grow_vertical = 0
+focus_mode = 0
+text = "右"
+
+[node name="Attack" type="Button" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -116.0
+offset_top = -116.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+text = "攻"
+
+[node name="Jump" type="Button" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -116.0
+offset_top = -212.0
+offset_right = -24.0
+offset_bottom = -120.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+text = "跳"
+
+[node name="Dodge" type="Button" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -212.0
+offset_top = -116.0
+offset_right = -120.0
+offset_bottom = -24.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+text = "滚"
+
+[node name="Interact" type="Button" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -212.0
+offset_top = -212.0
+offset_right = -120.0
+offset_bottom = -120.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+text = "交"
+
+[node name="Cast1" type="Button" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -308.0
+offset_top = -116.0
+offset_right = -216.0
+offset_bottom = -24.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+text = "技1"
+
+[node name="Cast2" type="Button" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -308.0
+offset_top = -212.0
+offset_right = -216.0
+offset_bottom = -120.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+text = "技2"

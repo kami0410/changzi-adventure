@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_w"]
+
+[resource]
+script = ExtResource("1_w")
+id = &"zhuiluo"
+glyph = "☄"
+phoneme = "zhuiluo"
+meaning = "坠落"
+grammar_role = 1
+tags = Array[StringName]([&"star", &"final"])
+power = 3
+corruption = 0
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 3.0,
+&"explosion": 0.8
+})
+description = "每一颗星坠落之前，都要先被谁从天空里划掉。"

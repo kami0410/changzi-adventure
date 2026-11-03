@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PhraseData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phrase_data.gd" id="1_y63nw"]
+
+[resource]
+script = ExtResource("1_y63nw")
+id = &"record_life"
+display_name = "记录生命"
+word_ids = Array[StringName]([&"grguan", &"gr"])
+tags = Array[StringName]([&"archive", &"life"])
+description = "示例短语：记录生命"

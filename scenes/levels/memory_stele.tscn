@@ -1,0 +1,30 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/memory_stele.gd" id="1_stele"]
+[ext_resource type="Theme" path="res://resources/ui/hud_theme.tres" id="2_theme"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_stele"]
+radius = 54.0
+
+[node name="MemoryStele" type="Area2D"]
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+script = ExtResource("1_stele")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -30)
+shape = SubResource("CircleShape2D_stele")
+
+[node name="Prompt" type="Label" parent="."]
+visible = false
+offset_left = -90.0
+offset_top = -104.0
+offset_right = 90.0
+offset_bottom = -76.0
+mouse_filter = 2
+theme = ExtResource("2_theme")
+theme_override_colors/font_color = Color(0.55, 0.95, 0.85, 1)
+theme_override_font_sizes/font_size = 12
+text = "按 E 读取残碑"
+horizontal_alignment = 1

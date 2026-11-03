@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_xnlxl"]
+
+[resource]
+script = ExtResource("1_xnlxl")
+id = &"yan"
+glyph = "△"
+phoneme = "yan"
+meaning = "火"
+tags = Array[StringName]([&"flame"])
+power = 2
+decoded = true
+components = Dictionary[StringName, float]({
+&"area": 1.0,
+&"damage": 2.0
+})
+description = "烧掉旧页，才能写新页。"

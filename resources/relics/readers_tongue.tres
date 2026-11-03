@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/relic_data.gd" id="1_mw27h"]
+
+[resource]
+script = ExtResource("1_mw27h")
+id = &"readers_tongue"
+display_name = "读者之舌"
+tags = Array[StringName]([&"archive", &"authority"])
+effect_id = &"decode_bonus"
+description = "舌尖记得所有被读过的句子。"

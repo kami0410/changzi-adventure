@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WordData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/word_data.gd" id="1_gy"]
+
+[resource]
+script = ExtResource("1_gy")
+id = &"guiyan"
+glyph = "◉"
+phoneme = "gui yan"
+meaning = "鬼眼"
+grammar_role = 2
+tags = Array[StringName]([&"abyss", &"sight"])
+power = 3
+decoded = true
+components = Dictionary[StringName, float]({
+&"damage": 3.0,
+&"area": 0.8
+})
+description = "看见不该看见的东西，也是看见。"

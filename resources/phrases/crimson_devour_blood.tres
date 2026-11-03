@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PhraseData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/phrase_data.gd" id="1_3fq1k"]
+
+[resource]
+script = ExtResource("1_3fq1k")
+id = &"crimson_devour_blood"
+display_name = "猩红吞噬血"
+word_ids = Array[StringName]([&"xinghong", &"tunshi", &"xue"])
+tags = Array[StringName]([&"blood", &"abyss", &"life"])
+ink_cost = 25
+cooldown = 6.0
+description = "示例短语：猩红吞噬血"

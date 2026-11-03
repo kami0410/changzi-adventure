@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_weapon_data"]
+
+[resource]
+script = ExtResource("1_weapon_data")
+id = &"chain_blade"
+display_name = "链刃"
+kind = 0
+damage = 7
+attack_cooldown = 0.22
+attack_range = 96.0
+projectile_speed = 600.0
+special_id = &"chain_pull"
+tags = Array[StringName]([&"melee", &"chain", &"reach"])

@@ -1,0 +1,48 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/summoner_enemy.gd" id="1_enemy"]
+[ext_resource type="Resource" path="res://resources/enemies/choir_summoner.tres" id="2_data"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 20.0
+
+[node name="ChoirSummoner" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_enemy")
+data = ExtResource("2_data")
+actor_style = &"humanoid"
+aggro_range = 520.0
+deaggro_range = 860.0
+attack_range = 520.0
+attack_cooldown = 3.0
+attack_windup = 0.72
+attack_recovery = 0.4
+telegraph_color = Color(0.78, 0.64, 0.9, 1)
+cast_range = 520.0
+keep_distance = 240.0
+max_minions = 3
+
+[node name="Body" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-14, -24, 2, -38, 16, -24, 18, 20, -16, 20)
+color = Color(0.22, 0.25, 0.32, 1)
+
+[node name="Hood" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-14, -22, -4, -42, 8, -42, 16, -22, 2, -16)
+color = Color(0.1, 0.12, 0.17, 1)
+
+[node name="Eye" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(4, -26, 12, -22, 4, -18)
+color = Color(0.86, 0.75, 0.42, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_body")
+
+[node name="HealthBar" type="ProgressBar" parent="."]
+offset_left = -32.0
+offset_top = -62.0
+offset_right = 32.0
+offset_bottom = -54.0
+max_value = 54.0
+value = 54.0
+show_percentage = false

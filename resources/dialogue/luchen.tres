@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="DialogueData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/hub/dialogue_data.gd" id="1_dialogue"]
+
+[resource]
+script = ExtResource("1_dialogue")
+speaker = "陆沉"
+lines = Array[String](["昌子，你终于回来了。档案馆的灯还亮着，说明世界还没彻底忘记我们。", "天空像被撕开的书页，时间在上面漏下来。你看到的那些破碎区，都是被改写过的记录。", "别急着去战斗。先学会读。把手伸过来——我替你解开一个一直卡在你喉咙里的词。"])
