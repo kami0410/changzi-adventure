@@ -9,6 +9,9 @@ signal collected(kind: StringName, resource: Resource)
 
 var _collected := false
 var _player_near := false
+## Resolved from the tree instead of the `Flow` global so scripts precompiled
+## by a `-s` test runner do not depend on autoload registration order.
+var _game_flow: GameFlow
 
 @onready var label: Label = get_node_or_null("Label") as Label
 @onready var visual: Polygon2D = get_node_or_null("Visual") as Polygon2D
@@ -18,13 +21,25 @@ func _ready() -> void:
 	add_to_group(&"pickups")
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
-	if label != null:
-		label.text = label_text
+	_game_flow = get_node_or_null("/root/Flow") as GameFlow
+	if _game_flow != null and not _game_flow.input_device_changed.is_connected(_on_input_device_changed):
+		_game_flow.input_device_changed.connect(_on_input_device_changed)
+	if _game_flow != null and not _game_flow.keybinds_changed.is_connected(_on_keybinds_changed):
+		_game_flow.keybinds_changed.connect(_on_keybinds_changed)
+	_refresh_label()
 	if visual != null:
 		visual.color = _kind_color()
 	var tween := create_tween().set_loops()
 	tween.tween_property(self, "position:y", position.y - 6.0, 0.7).set_trans(Tween.TRANS_SINE)
 	tween.tween_property(self, "position:y", position.y, 0.7).set_trans(Tween.TRANS_SINE)
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_label()
+
+
+func _on_keybinds_changed() -> void:
+	_refresh_label()
 
 
 func _on_body_entered(body: Node) -> void:
@@ -59,7 +74,11 @@ func try_collect() -> bool:
 func _refresh_label() -> void:
 	if label == null:
 		return
-	label.text = ("E 拾取 · " + label_text) if _player_near else label_text
+	if _player_near:
+		var action := _game_flow.prompt_label(&"interact") if _game_flow != null else "E"
+		label.text = "%s 拾取 · %s" % [action, label_text]
+	else:
+		label.text = label_text
 
 
 func _kind_color() -> Color:

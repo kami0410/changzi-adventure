@@ -12,7 +12,7 @@ func run(t: Callable) -> void:
 	profile.unlocked_words.append(&"gr")
 	profile.weapon_base_levels[&"sword"] = 2
 	profile.unlocked_patterns.append(&"VERB_NOUN")
-	profile.discovered_phrases.append("grguan·gr")
+	profile.discovered_phrases.append("gr,grguan|2")
 	profile.save_profile(path)
 
 	var loaded := Profile.new()
@@ -20,7 +20,7 @@ func run(t: Callable) -> void:
 	t.call(loaded.memory_fragments, 42, "profile_fragments")
 	t.call(loaded.unlocked_words.has(&"gr"), true, "profile_words")
 	t.call(loaded.weapon_base_levels.get(&"sword", 0), 2, "profile_weapon_level")
-	t.call(loaded.discovered_phrases.has("grguan·gr"), true, "profile_phrase")
+	t.call(loaded.discovered_phrases.has("gr,grguan|2"), true, "profile_phrase")
 
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(absolute)

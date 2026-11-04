@@ -57,7 +57,10 @@ func play_sfx(id: StringName, bus: StringName = &"SFX") -> void:
 		_sfx_players.erase(player)
 		player.queue_free()
 	)
-	player.play()
+	# Headless unit tests build an AudioManager before root enters the tree;
+	# playing a stream there is an engine error, not a product failure.
+	if is_inside_tree():
+		player.play()
 
 
 func _ensure_buses() -> void:
@@ -96,7 +99,8 @@ func play_music(path: String, fade: float = 1.0) -> void:
 		await _music_tween.finished
 	_music.stream = stream
 	_music.volume_db = -30.0 if fade > 0.0 else -6.0
-	_music.play()
+	if is_inside_tree():
+		_music.play()
 	if fade > 0.0:
 		_music_tween = create_tween()
 		_music_tween.tween_property(_music, "volume_db", -6.0, fade * 0.65)
@@ -157,11 +161,20 @@ func set_music_layer(layer: int) -> void:
 
 ## Stop and release every player/tween, including short-lived SFX players.
 ## Public so exit tests can prove the cleanup without quitting the engine.
-func shutdown() -> void:
+## `settle_msec` keeps the players alive after stop() so the mixing thread can
+## drop its playback references before the streams are freed; freeing an Ogg
+## stream while a mix is in flight leaks the playback objects at engine exit.
+func shutdown(settle_msec: int = 0) -> void:
 	if _music_tween != null and _music_tween.is_valid():
 		_music_tween.kill()
 	if _duck_tween != null and _duck_tween.is_valid():
 		_duck_tween.kill()
+	_stop_player(_music)
+	_stop_player(_voice)
+	for player in _sfx_players:
+		_stop_player(player)
+	if settle_msec > 0:
+		OS.delay_msec(settle_msec)
 	for player in _sfx_players:
 		_release_player(player)
 	_sfx_players.clear()
@@ -169,6 +182,11 @@ func shutdown() -> void:
 	_release_player(_voice)
 	_music = null
 	_voice = null
+
+
+func _stop_player(player: AudioStreamPlayer) -> void:
+	if player != null and is_instance_valid(player):
+		player.stop()
 
 
 func _release_player(player: AudioStreamPlayer) -> void:
@@ -183,4 +201,6 @@ func _release_player(player: AudioStreamPlayer) -> void:
 
 
 func _exit_tree() -> void:
-	shutdown()
+	# Gameplay scenes intentionally leave audio alone (see game.gd): the
+	# autoload owns the music and stops it here, once, at engine teardown.
+	shutdown(100)

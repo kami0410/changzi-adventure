@@ -56,3 +56,4 @@ func _test_elite_reward(t: Callable) -> void:
 	for option in options:
 		kinds.append(option.get("kind", &""))
 	t.call(kinds.has(&"relic") or kinds.has(&"vitality"), true, "elite_reward_guarantees_relic")
+	profile.free()

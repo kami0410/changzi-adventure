@@ -15,6 +15,7 @@ func run(t: Callable) -> void:
 	hub.ensure_ready()
 	_test_scene(t, hub)
 	_test_npcs(t, hub)
+	_test_npc_dialogue_content(t, hub)
 	_test_dialogue(t, tree)
 	_test_luchen(t, hub)
 	_test_ayan(t, hub)
@@ -57,6 +58,29 @@ func _test_npcs(t: Callable, hub: Hub) -> void:
 	t.call(hub.get_npc(&"missing"), null, "hub_npc_missing")
 	for npc in npcs:
 		t.call(npc.dialogue != null, true, "hub_npc_dialogue_" + String(npc.npc_id))
+
+
+func _test_npc_dialogue_content(t: Callable, hub: Hub) -> void:
+	for npc in hub.get_npcs():
+		var suffix := String(npc.npc_id)
+		var data := npc.dialogue
+		t.call(data != null and data.lines.size() >= 11, true,
+			"hub_npc_dialogue_has_eleven_lines_" + suffix)
+		if data == null:
+			continue
+		t.call(data.speaker, npc.display_name, "hub_npc_dialogue_speaker_matches_" + suffix)
+		var seen: Dictionary = {}
+		var blanks := 0
+		var placeholders := 0
+		for line in data.lines:
+			if line.strip_edges().is_empty():
+				blanks += 1
+			if line.contains("%s") or line.contains("%d") or line.contains("{"):
+				placeholders += 1
+			seen[line] = true
+		t.call(blanks, 0, "hub_npc_dialogue_no_blank_lines_" + suffix)
+		t.call(placeholders, 0, "hub_npc_dialogue_no_placeholders_" + suffix)
+		t.call(seen.size(), data.lines.size(), "hub_npc_dialogue_lines_unique_" + suffix)
 
 
 func _test_dialogue(t: Callable, tree: SceneTree) -> void:
@@ -122,6 +146,16 @@ func _test_luchen(t: Callable, hub: Hub) -> void:
 	var decoded_word := hub.get_word(decoded_id)
 	t.call(decoded_word != null and decoded_word.decoded, true, "luchen_sets_hub_copy_decoded")
 	t.call(hub.profile.is_word_unlocked(decoded_id), true, "luchen_unlocks_word")
+	# The tutorial Codex holds its own run copy; Lu Chen's decode must refresh
+	# it too or the page shows a stale "未解码" card.
+	var tutorial_copy: WordData = null
+	for entry in hub._tutorial_run.inventory.words:
+		if entry != null and entry.id == decoded_id:
+			tutorial_copy = entry
+	t.call(tutorial_copy != null and tutorial_copy.decoded, true, "luchen_decodes_tutorial_copy")
+	if decoded_word != null:
+		t.call(_codex_word_meaning(hub._tutorial_codex, decoded_id), decoded_word.meaning,
+			"luchen_refreshes_tutorial_codex")
 	for index in 20:
 		hub.decode_word()
 	t.call(String(hub.decode_word()).contains("没有需要解读"), true, "luchen_reports_no_fragments")
@@ -198,7 +232,7 @@ func _test_guru(t: Callable, hub: Hub) -> void:
 	t.call(hub.dialogue_ui.is_open(), true, "guru_dialogue_opens")
 	t.call(hub.shop_ui.is_open(), false, "guru_shop_waits_for_dialogue")
 	var guard := 0
-	while hub.dialogue_ui.is_open() and guard < 10:
+	while hub.dialogue_ui.is_open() and guard < 20:
 		hub.dialogue_ui.advance()
 		guard += 1
 	t.call(hub.dialogue_ui.is_open(), false, "guru_dialogue_finishes")
@@ -249,3 +283,17 @@ func _test_layout(t: Callable, hub: Hub) -> void:
 	t.call(hub.fragment_label != null, true, "hub_fragment_label")
 	# A single-screen hub must not slide the whole frame when the player turns.
 	t.call(is_zero_approx(hub.player.camera_look_ahead), true, "hub_camera_look_ahead_off")
+
+
+func _codex_word_meaning(codex, word_id: StringName) -> String:
+	if codex == null or codex._word_grid == null:
+		return "<no-codex>"
+	for card in codex._word_grid.get_children():
+		if not card is PanelContainer:
+			continue
+		for button in card.find_children("*", "Button", true, false):
+			if StringName(button.get_meta("word_id", "")) == word_id:
+				var labels: Array[Node] = card.find_children("*", "Label", true, false)
+				if labels.size() >= 2:
+					return (labels[1] as Label).text
+	return "<missing>"

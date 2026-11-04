@@ -12,6 +12,7 @@ signal interacted(npc: Node)
 @export var sprite_scale: float = 1.0
 
 var dialogue_index: int = 0
+var _game_flow: GameFlow
 
 @onready var body_visual: Polygon2D = get_node_or_null("Body") as Polygon2D
 @onready var head_visual: Polygon2D = get_node_or_null("Head") as Polygon2D
@@ -20,8 +21,31 @@ var dialogue_index: int = 0
 
 
 func _ready() -> void:
+	# Resolved from the tree so a `-s` test runner can precompile this script
+	# before the Flow autoload is registered.
+	_game_flow = get_node_or_null("/root/Flow") as GameFlow
+	if _game_flow != null and not _game_flow.input_device_changed.is_connected(_on_input_device_changed):
+		_game_flow.input_device_changed.connect(_on_input_device_changed)
+	if _game_flow != null and not _game_flow.keybinds_changed.is_connected(_on_keybinds_changed):
+		_game_flow.keybinds_changed.connect(_on_keybinds_changed)
+	_refresh_prompt()
 	_apply_visuals()
 	set_player_near(false)
+
+
+func _refresh_prompt() -> void:
+	if prompt_label == null:
+		return
+	var key := _game_flow.prompt_label(&"interact") if _game_flow != null else "E"
+	prompt_label.text = "按 %s 交谈" % key
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_prompt()
+
+
+func _on_keybinds_changed() -> void:
+	_refresh_prompt()
 
 
 func interact() -> String:

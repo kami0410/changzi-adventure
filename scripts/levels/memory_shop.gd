@@ -11,13 +11,37 @@ const TEXTURE := preload("res://assets/sprites/props/shop.png")
 @export var interaction_radius: float = 115.0
 var _time := 0.0
 var _near := false
+var _game_flow: GameFlow
 
 @onready var prompt: Label = get_node_or_null("Prompt") as Label
 
 func _ready() -> void:
 	add_to_group("memory_shops")
+	# Resolved from the tree so a `-s` test runner can precompile this script
+	# before the Flow autoload is registered.
+	_game_flow = get_node_or_null("/root/Flow") as GameFlow
+	if _game_flow != null and not _game_flow.input_device_changed.is_connected(_on_input_device_changed):
+		_game_flow.input_device_changed.connect(_on_input_device_changed)
+	if _game_flow != null and not _game_flow.keybinds_changed.is_connected(_on_keybinds_changed):
+		_game_flow.keybinds_changed.connect(_on_keybinds_changed)
+	_refresh_prompt()
 	if prompt != null:
 		prompt.hide()
+
+
+func _refresh_prompt() -> void:
+	if prompt == null:
+		return
+	var key := _game_flow.prompt_label(&"interact") if _game_flow != null else "E"
+	prompt.text = "按 %s 用残页换物" % key
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_prompt()
+
+
+func _on_keybinds_changed() -> void:
+	_refresh_prompt()
 
 func _process(delta: float) -> void:
 	_time += delta

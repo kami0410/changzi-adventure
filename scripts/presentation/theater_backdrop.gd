@@ -1,9 +1,10 @@
 class_name TheaterBackdrop
 extends Node2D
 
-## The fourth chapter's stage. Drawn procedurally because Magpie image credits
-## were exhausted; the archive texture underneath supplies the walls while this
-## adds curtains, seats, paper audience, footlights and a moving spotlight.
+## The fourth chapter's stage. `smiling_theater.png` supplies the theatre art;
+## with generated_art = true this node only adds the spotlight cone, drifting
+## dust and the far-art tint. The procedural curtains/seats/audience branch
+## remains as a fallback for generated_art = false.
 
 @export var world_width: float = 8400.0
 @export var generated_art: bool = false

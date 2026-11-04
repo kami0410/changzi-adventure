@@ -10,6 +10,7 @@ var _title: Label
 var _body: Label
 var _options: VBoxContainer
 var _continue: Button
+var _hint: Label
 var _was_paused := false
 var _open := false
 var _choice_mode := false
@@ -20,9 +21,24 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build()
 	visible = false
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
 
 func is_open() -> bool:
 	return _open
+
+
+func _flow_node() -> GameFlow:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("Flow") as GameFlow
+	return null
+
+
+func _prompt(action: StringName) -> String:
+	var flow := _flow_node()
+	return flow.prompt_label(action) if flow != null else GameFlow.key_label(action)
 
 func open_story(eyebrow: String, title: String, lines: Array, voice_id: String = "") -> void:
 	_prepare(eyebrow, title)
@@ -31,7 +47,7 @@ func open_story(eyebrow: String, title: String, lines: Array, voice_id: String =
 	_body.text = "\n".join(lines)
 	_options.hide()
 	_continue.show()
-	_continue.text = "继续  [E]"
+	_refresh_device_prompts()
 	_show_common()
 	_play_voice()
 	if is_inside_tree():
@@ -50,9 +66,16 @@ func open_choice(eyebrow: String, title: String, body: String, options: Array) -
 		var option: Dictionary = options[index]
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(360, 78)
-		button.text = "%s\n%s" % [option.get("label", "选择"), option.get("note", "")]
 		button.pressed.connect(_choose.bind(index))
+		# Enter the tree before assigning text: a Button added with text is
+		# shaped during ENTER_TREE (~14 ms per option measured headless), while
+		# adding it empty and filling it afterwards is under a millisecond.
 		_options.add_child(button)
+		button.text = "%s\n%s" % [option.get("label", "选择"), option.get("note", "")]
+	# A resumed run skips the chapter intro story page, so this can be the first
+	# page the overlay shows after boot; refresh the key copy instead of leaving
+	# the build-time keyboard default on screen.
+	_refresh_device_prompts()
 	_show_common()
 	if _options.get_child_count() > 0 and is_inside_tree():
 		(_options.get_child(0) as Button).grab_focus()
@@ -121,10 +144,24 @@ func _show_common() -> void:
 	if is_inside_tree():
 		create_tween().tween_property(_root, "modulate:a", 1.0, 0.22)
 
+
+func _refresh_device_prompts() -> void:
+	if _hint != null:
+		_hint.text = "方向键选择，%s 确认" % _prompt(&"ui_accept")
+	if _continue != null:
+		_continue.text = "继续  [%s]" % _prompt(&"interact")
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_device_prompts()
+
 func _unhandled_input(event: InputEvent) -> void:
+	# A choice page is a required pick: B must not skip it. The plain story page
+	# is just reading, so all three "leave" actions close it.
 	if not _open or _choice_mode:
 		return
-	if event.is_action_pressed("interact") or event.is_action_pressed("pause"):
+	if event.is_action_pressed("interact") or event.is_action_pressed("pause") \
+			or event.is_action_pressed("ui_cancel"):
 		close()
 		if get_viewport() != null:
 			get_viewport().set_input_as_handled()
@@ -175,9 +212,9 @@ func _build() -> void:
 	_continue.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_continue.pressed.connect(close)
 	column.add_child(_continue)
-	var hint := Label.new()
-	hint.text = "方向键选择，Enter 确认"
-	hint.add_theme_color_override("font_color", UIPalette.INK_FAINT)
-	hint.add_theme_font_size_override("font_size", 12)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	column.add_child(hint)
+	_hint = Label.new()
+	_hint.text = "方向键选择，Enter 确认"
+	_hint.add_theme_color_override("font_color", UIPalette.INK_FAINT)
+	_hint.add_theme_font_size_override("font_size", 12)
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	column.add_child(_hint)

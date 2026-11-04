@@ -31,6 +31,8 @@ func run(t: Callable) -> void:
 	_test_unique_identities(t)
 	_test_special_behaviours(t)
 	_test_demo_drops(t)
+	_test_enemy_drop_pool(t)
+	_test_word_reward_hint(t)
 	_test_projectile_pierce(t)
 
 
@@ -112,6 +114,48 @@ func _test_demo_drops(t: Callable) -> void:
 			t.call(demo_relics.has((loot["resource"] as RelicData).id), true, "demo_chest_relic_pool_only")
 		elif loot.get("kind", &"") == &"weapon":
 			t.call(demo_weapons.has((loot["resource"] as WeaponData).id), true, "demo_chest_weapon_pool_only")
+	profile.free()
+
+
+## Enemy drops used the full-game weapon list even in Chapter 1. Sample the
+## same helper the kill path calls and make sure every id belongs to the demo.
+func _test_enemy_drop_pool(t: Callable) -> void:
+	var run := RunState.new()
+	run.reset_for_new_run(17)
+	var profile := Profile.new()
+	var demo_weapons: Dictionary = {}
+	for resource in ContentLibrary.DEMO_WEAPONS:
+		demo_weapons[(resource as WeaponData).id] = true
+	var dropped_ids: Dictionary = {}
+	for attempt in 40:
+		var weapon := RunLoot.dropped_weapon(run, profile, 0)
+		t.call(weapon != null, true, "demo_enemy_drop_returns_weapon")
+		if weapon != null:
+			dropped_ids[weapon.id] = true
+	t.call(dropped_ids.size() > 1, true, "demo_enemy_drop_varies")
+	for id in dropped_ids:
+		t.call(demo_weapons.has(id), true, "demo_enemy_drop_pool_only")
+	profile.free()
+
+
+func _test_word_reward_hint(t: Callable) -> void:
+	# A reward can be read on a controller too, so its copy must not name a
+	# keyboard-only key. Player-facing hint lives in the codex, not 按 C.
+	var run := RunState.new()
+	run.reset_for_new_run(99)
+	var profile := Profile.new()
+	var found := false
+	for room in range(1, 6):
+		for choice in RunLoot.choices(run, room, profile, 0):
+			if choice.get("kind", &"") != &"word":
+				continue
+			found = true
+			var description := String(choice.get("description", ""))
+			t.call(description.contains("按 C"), false, "demo_word_reward_hint_not_keyboard_only")
+			t.call(description.contains("语言图鉴"), true, "demo_word_reward_hint_names_codex")
+	t.call(found, true, "demo_word_reward_found")
+	# RunState is RefCounted; only the Profile node needs an explicit free.
+	profile.free()
 
 
 func _test_projectile_pierce(t: Callable) -> void:

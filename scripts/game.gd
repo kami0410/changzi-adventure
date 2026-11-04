@@ -110,6 +110,13 @@ var _reward_ui: RewardChoice
 var _reward_options: Array[Dictionary] = []
 var _reward_room: ArenaRoom
 var _overlay: Control
+## Focus owner before the current overlay opened, restored on close when the
+## control is still on screen.
+var _overlay_return_focus: Control = null
+## Settings opened from the pause menu goes back there instead of resuming
+## play; remember the page and the pause-menu item that opened it.
+var _pause_return_overlay: Control = null
+var _pause_return_focus: Control = null
 var _last_checkpoint := Vector2(120, 530)
 var _story: StoryOverlay
 var _shop_ui: RunShopUI
@@ -133,6 +140,18 @@ var _mds_world: MDSWorldGame
 var _mds_boss_arena: ArenaRoom
 var _mds_cleared_rooms: Dictionary = {}
 var _discovered_vaults: Dictionary = {}
+## Rest-room arrival flavour is display-only; one greeting per room per launch
+## keeps backtracking from replaying the same toast.
+var _rest_greeted: Dictionary = {}
+## One-shot world pickups are remembered per room so resume cannot duplicate
+## a stele reward or reopen a chest.
+var _claimed_steles: Dictionary = {}
+var _opened_chests: Dictionary = {}
+var _boss_defeated := false
+var _boss_aftermath_started := false
+## Validated checkpoint consumed by this launch; empty on a fresh run.
+var _resume_data: Dictionary = {}
+var _resume_restored := false
 var _map_overlay: MapOverlay
 var _archive_damage_multiplier := 1.0
 const BOSS_MUSIC := "res://assets/audio/music/boss.ogg"
@@ -141,39 +160,52 @@ const CORRUPTION_FRENZY_HEALTH_RATIO := 0.4
 
 func _ready() -> void:
 	get_tree().paused = false
-	run_state = Flow.start_run(randi())
+	var corrupt_resume := _prepare_resume()
+	run_state = Flow.start_run(_resume_run_value("seed", 0))
 	_authority = AuthorityController.new()
 	run_state.corruption_gain_multiplier = Difficulty.corruption_multiplier(Flow.difficulty)
 	_apply_archive_upgrades()
-	_apply_npc_blessings()
 	player.health_changed.connect(_on_player_health_changed)
 	player.died.connect(_on_player_died)
 	player.weapon_changed.connect(hud.set_active_weapon)
-	_populate_starter_inventory()
-	_apply_stored_relics()
+	if _resume_data.is_empty():
+		_apply_npc_blessings()
+		_populate_starter_inventory()
+		_apply_stored_relics()
+	elif not _restore_run_save(_resume_data):
+		# A structurally valid file can still name resources this build no
+		# longer has. Never boot into a half-restored run.
+		_resume_data = {}
+		_apply_npc_blessings()
+		_populate_starter_inventory()
+		_apply_stored_relics()
 	relic_effects.run = run_state
 	relic_effects.player = player
 	hud.bind_run_state(run_state)
 	run_state.corruption_tier_changed.connect(_on_corruption_tier_changed)
 	_apply_corruption_penalties()
+	_update_hud()
 	hud.set_region("墨雨档案馆")
 	hud.set_progress(0, 7)
 	hud.set_objective("找回失踪名册的第一页")
-	inventory_ui.bind(run_state.inventory)
-	codex_ui.bind(resolver, run_state)
-	codex_ui.set_discovered(_example_phrases)
+	inventory_ui.bind(run_state.inventory, run_state.run_seed)
+	var persistent_phrases: Array[String] = []
 	if Flow.profile != null:
-		codex_ui.set_persistent_discovered(Flow.profile.discovered_phrases)
+		persistent_phrases = Flow.profile.discovered_phrases
+	codex_ui.bind_state(resolver, run_state, _example_phrases, persistent_phrases)
 	codex_ui.phrase_equip_requested.connect(_on_codex_equip)
-	inventory_ui.close_requested.connect(_close_overlay)
-	codex_ui.close_requested.connect(_close_overlay)
-	settings_menu.closed.connect(_close_overlay)
+	# Bind the sender: a page can close as a Settings subpage while another
+	# overlay is on top, and that must not tear down the settings page too.
+	inventory_ui.close_requested.connect(_close_overlay.bind(inventory_ui))
+	codex_ui.close_requested.connect(_close_overlay.bind(codex_ui))
+	settings_menu.closed.connect(_close_overlay.bind(settings_menu))
 	_help_ui = HelpUI.new()
 	$UI.add_child(_help_ui)
-	_help_ui.closed.connect(_close_overlay)
+	_help_ui.closed.connect(_close_overlay.bind(_help_ui))
 	pause_menu.managed = true
 	(pause_menu.find_child("QuitButton", true, false) as Button).text = "返回档案馆"
 	pause_menu.pause_requested.connect(_toggle_pause)
+	pause_menu.settings_requested.connect(_on_pause_settings)
 	_setup_phrase_caster()
 	_setup_campaign()
 	_reward_ui = RewardChoice.new()
@@ -208,7 +240,315 @@ func _ready() -> void:
 		for platform in biome.get_children():
 			if platform is StaticBody2D and String(platform.name).begins_with("Platform"):
 				StylePlatform.apply(platform)
-	_start_chapter.call_deferred(0)
+	_start_chapter.call_deferred(_resume_run_value("chapter", 0))
+	if corrupt_resume:
+		hud.show_message.call_deferred("局内存档损坏，已丢弃；开始新的一局")
+
+## Reads the checkpoint requested by the title screen once. Returns true when a
+## save existed but had to be discarded, so the HUD can say so instead of
+## silently starting over.
+func _prepare_resume() -> bool:
+	if Flow == null or not Flow.resume_requested:
+		return false
+	Flow.resume_requested = false
+	var had_save := RunSave.has_save(Flow.run_save_path)
+	_resume_data = RunSave.read(Flow.run_save_path)
+	if _resume_data.is_empty():
+		return had_save
+	var run: Dictionary = _resume_data.get("run", {})
+	Flow.difficulty = clampi(int(run.get("difficulty", Flow.difficulty)), 0, Difficulty.count() - 1)
+	return false
+
+
+func _resume_run_value(key: String, fallback: int) -> int:
+	if _resume_data.is_empty():
+		return fallback
+	var run: Dictionary = _resume_data.get("run", {})
+	return int(run.get(key, fallback))
+
+
+func _restore_run_save(data: Dictionary) -> bool:
+	var run: Dictionary = data.get("run", {})
+	var inventory: Dictionary = data.get("inventory", {})
+	if run.is_empty() or inventory.is_empty():
+		return false
+	_resume_restored = true
+	run_state.run_seed = int(run.get("seed", run_state.run_seed))
+	run_state.rng.seed = run_state.run_seed
+	if run.has("rng_state"):
+		run_state.rng.state = int(run["rng_state"])
+	run_state.pages = maxi(0, int(run.get("pages", 0)))
+	run_state.max_ink = maxi(1, int(run.get("max_ink", run_state.max_ink)))
+	run_state.ink = clampi(int(run.get("ink", run_state.ink)), 0, run_state.max_ink)
+	run_state.set_corruption(int(run.get("corruption", 0)))
+	run_state.corruption_gain_multiplier = maxf(float(run.get("corruption_gain_multiplier", 1.0)), 0.01)
+	player.max_health = maxi(1, int(run.get("max_health", player.max_health)))
+	player.health = clampi(int(run.get("health", player.health)), 0, player.max_health)
+	run_state.max_health = player.max_health
+	run_state.health = player.health
+	player.health_changed.emit(player.health, player.max_health)
+	run_state.ink_changed.emit(run_state.ink)
+	run_state.pages_changed.emit(run_state.pages)
+	_kills = maxi(0, int(run.get("kills", 0)))
+	_mercy = int(run.get("mercy", 0))
+	_records = maxi(0, int(run.get("records", 0)))
+	_burned_final = bool(run.get("burned_final", false))
+	_chapter = clampi(int(run.get("chapter", 0)), 0, CampaignData.chapter_count() - 1)
+	_restore_room_progress(data)
+	_restore_inventory(inventory)
+	_restore_example_phrases(data.get("world", {}).get("example_phrases", []))
+	_restore_authority(data.get("authority", {}))
+	var world: Dictionary = data.get("world", {})
+	_restore_shop_cache(world.get("shops", {}))
+	_restore_frenzy(world.get("frenzy", {}))
+	return true
+
+
+func _restore_room_progress(data: Dictionary) -> void:
+	var progress: Dictionary = data.get("progress", {})
+	_cleared_in_chapter = maxi(0, int(progress.get("cleared_in_chapter", 0)))
+	_mds_cleared_rooms.clear()
+	for room_id in progress.get("cleared_rooms", []):
+		_mds_cleared_rooms[String(room_id)] = true
+	_discovered_vaults.clear()
+	for room_id in progress.get("vaults", []):
+		_discovered_vaults[String(room_id)] = true
+	var world: Dictionary = data.get("world", {})
+	_claimed_steles.clear()
+	for room_id in world.get("claimed_steles", []):
+		_claimed_steles[String(room_id)] = true
+	_opened_chests.clear()
+	for room_id in world.get("opened_chests", []):
+		_opened_chests[String(room_id)] = true
+	_boss_defeated = bool(world.get("boss_defeated", false))
+	_boss_aftermath_started = false
+
+
+func _restore_inventory(data: Dictionary) -> void:
+	for entry in data.get("words", []):
+		if not entry is Dictionary:
+			continue
+		var word := RunSave.word_from_dict(entry)
+		if word != null:
+			run_state.inventory.add_word(word)
+	var phrases: Array = data.get("phrases", [])
+	for slot in mini(phrases.size(), Inventory.MAX_PHRASES):
+		var phrase := RunSave.phrase_from_dict(phrases[slot], resolver)
+		if phrase != null:
+			run_state.inventory.equip_phrase(slot, phrase)
+	var weapons: Array = data.get("weapons", [])
+	for slot in mini(weapons.size(), Inventory.MAX_WEAPONS):
+		if not weapons[slot] is Dictionary:
+			continue
+		var weapon := _weapon_from_save(weapons[slot])
+		if weapon != null:
+			_equip_weapon(slot, weapon)
+	for id in data.get("relics", []):
+		var relic := ContentLibrary.relic_by_id(StringName(id))
+		if relic != null:
+			run_state.inventory.add_relic(relic)
+
+
+func _weapon_from_save(data: Dictionary) -> WeaponData:
+	var base := ContentLibrary.weapon_by_id(StringName(data.get("id", "")))
+	if base == null:
+		return null
+	var weapon := base.duplicate() as WeaponData
+	weapon.damage = maxi(1, int(data.get("damage", weapon.damage)))
+	var display_name := String(data.get("display_name", ""))
+	if not display_name.is_empty():
+		weapon.display_name = display_name
+	return weapon
+
+
+func _restore_example_phrases(entries: Array) -> void:
+	_example_phrases.clear()
+	for entry in entries:
+		if not entry is Dictionary:
+			continue
+		var phrase := RunSave.phrase_from_dict(entry, resolver)
+		if phrase != null:
+			_example_phrases.append(phrase)
+
+
+func _restore_authority(data: Dictionary) -> void:
+	var id := StringName(String(data.get("id", "")))
+	if id == &"":
+		return
+	var authority := ContentLibrary.authority_by_id(id)
+	if authority == null:
+		return
+	_authority.apply(authority, run_state)
+	_authority.revive_used = bool(data.get("revive_used", false))
+	_authority.rewrite_used = bool(data.get("rewrite_used", false))
+	hud.set_authority(authority.display_name, _authority.can_revive() or _authority.can_rewrite())
+
+
+func _restore_frenzy(data: Dictionary) -> void:
+	if data.is_empty() or not bool(data.get("active", false)):
+		return
+	_frenzy_left = maxf(float(data.get("left", 0.0)), 0.0)
+	if _frenzy_left <= 0.0:
+		return
+	_frenzy_active = true
+	_frenzy_saved_max_health = int(data.get("saved_max_health", 0))
+	_frenzy_saved_health = int(data.get("saved_health", 0))
+	_frenzy_cap = int(data.get("cap", 0))
+	_frenzy_last_seconds = -1
+	hud.set_frenzy(int(ceilf(_frenzy_left)))
+
+
+func _serialize_shop_cache() -> Dictionary:
+	var result: Dictionary = {}
+	for key in _shop_cache:
+		var offers: Array = _shop_cache[key]
+		var entries: Array = []
+		for offer in offers:
+			if not offer is Dictionary:
+				continue
+			var entry: Dictionary = (offer as Dictionary).duplicate()
+			var resource: Resource = entry.get("resource", null) as Resource
+			entry["resource_id"] = String(resource.id) if resource != null else ""
+			entry.erase("resource")
+			entries.append(entry)
+		result[String(key)] = entries
+	return result
+
+
+func _restore_shop_cache(data: Dictionary) -> void:
+	_shop_cache.clear()
+	for key in data:
+		var entries: Array[Dictionary] = []
+		for raw in data[key]:
+			if not raw is Dictionary:
+				continue
+			var entry: Dictionary = (raw as Dictionary).duplicate()
+			var resource_id := StringName(String(entry.get("resource_id", "")))
+			entry.erase("resource_id")
+			match StringName(entry.get("kind", &"")):
+				&"relic":
+					entry["resource"] = ContentLibrary.relic_by_id(resource_id)
+				&"weapon":
+					entry["resource"] = ContentLibrary.weapon_by_id(resource_id)
+				&"word":
+					var source := ContentLibrary.word_by_id(resource_id)
+					entry["resource"] = WordRuntime.for_run(source, Flow.profile) if source != null else null
+				_:
+					pass
+			entries.append(entry)
+		_shop_cache[StringName(key)] = entries
+
+
+func _build_run_save() -> Dictionary:
+	var weapons: Array = [null, null]
+	for slot in run_state.inventory.weapons.size():
+		var weapon := run_state.inventory.weapons[slot]
+		if weapon != null:
+			weapons[slot] = {
+				"id": String(weapon.id),
+				"damage": weapon.damage,
+				"display_name": weapon.display_name,
+			}
+	var phrases: Array = [{}, {}]
+	for slot in run_state.inventory.phrases.size():
+		var phrase := run_state.inventory.phrases[slot]
+		if phrase != null:
+			phrases[slot] = RunSave.phrase_to_dict(phrase)
+	var words: Array = []
+	for word in run_state.inventory.words:
+		var entry := RunSave.word_to_dict(word)
+		if not entry.is_empty():
+			words.append(entry)
+	var relics: Array = []
+	for relic in run_state.inventory.relics:
+		relics.append(String(relic.id))
+	var authority: Dictionary = {}
+	var active_authority := run_state.authority if run_state.authority != null else _authority.authority
+	if active_authority != null:
+		authority = {
+			"id": String(active_authority.id),
+			"revive_used": _authority.revive_used,
+			"rewrite_used": _authority.rewrite_used,
+		}
+	var examples: Array = []
+	for phrase in _example_phrases:
+		var entry := RunSave.phrase_to_dict(phrase)
+		if not entry.is_empty():
+			examples.append(entry)
+	return {
+		"version": RunSave.SAVE_VERSION,
+		"run": {
+			"seed": run_state.run_seed,
+			"rng_state": run_state.rng.state,
+			"difficulty": Flow.difficulty,
+			"chapter": _chapter,
+			"room": _mds_world.current_room if _mds_world != null and is_instance_valid(_mds_world) else "",
+			"health": player.health,
+			"max_health": player.max_health,
+			"ink": run_state.ink,
+			"max_ink": run_state.max_ink,
+			"corruption": run_state.corruption,
+			"corruption_gain_multiplier": run_state.corruption_gain_multiplier,
+			"pages": run_state.pages,
+			"kills": _kills,
+			"mercy": _mercy,
+			"records": _records,
+			"burned_final": _burned_final,
+		},
+		"progress": {
+			"cleared_in_chapter": _cleared_in_chapter,
+			"cleared_rooms": _mds_cleared_rooms.keys(),
+			"vaults": _discovered_vaults.keys(),
+		},
+		"inventory": {
+			"words": words,
+			"weapons": weapons,
+			"relics": relics,
+			"phrases": phrases,
+		},
+		"authority": authority,
+		"world": {
+			"claimed_steles": _claimed_steles.keys(),
+			"opened_chests": _opened_chests.keys(),
+			"boss_defeated": _boss_defeated,
+			"shops": _serialize_shop_cache(),
+			"frenzy": {
+				"active": _frenzy_active,
+				"left": _frenzy_left,
+				"saved_max_health": _frenzy_saved_max_health,
+				"saved_health": _frenzy_saved_health,
+				"cap": _frenzy_cap,
+			},
+			"example_phrases": examples,
+		},
+		"mds": _mds_world.get_save_data() if _mds_world != null and is_instance_valid(_mds_world) else {},
+	}
+
+
+## Persist the active run. Called on room entry, after rewards/events/shops and
+## on window close; never while dead, finished, or watching an ending.
+func save_run_now() -> bool:
+	if Flow == null or not Flow.auto_save or run_state == null:
+		return false
+	if _finished or _ending_pending:
+		return false
+	if _reward_ui != null and _reward_ui.visible:
+		# The room is marked cleared before the choice opens. Writing now would
+		# resume into a cleared room with the unchosen reward gone; keep the
+		# previous checkpoint so quitting at the reward screen only replays it.
+		return false
+	if not _mds_active or _mds_world == null or _mds_world.current_room.is_empty():
+		return false
+	return RunSave.write(_build_run_save(), Flow.run_save_path)
+
+
+func save_run_on_exit() -> void:
+	# Word mastery and mid-run decodes live on Profile; save them even when the
+	# run checkpoint itself is intentionally skipped (e.g. reward screen).
+	if Flow != null and Flow.auto_save:
+		Flow.save_profile()
+	save_run_now()
+
 
 ## HUD hides under any modal page so the page is the only thing to read.
 func _sync_hud_visibility() -> void:
@@ -241,13 +581,30 @@ func _process(delta: float) -> void:
 	if not _mds_active:
 		var left := _chapter_level().position.x
 		player.position.x = clampf(player.position.x, left + 30.0, left + CHAPTER_WIDTH - 30.0)
-	if player.position.y > 850:
+	# MDS rooms sit at absolute world coordinates (the hidden vault is one room
+	# below the main path), so the fall guard has to compare the room-local Y:
+	# checking the world Y would pin the player to the vault door and damage them
+	# every invulnerability window.
+	var fall_y := player.position.y
+	if _mds_active and _mds_world != null and not _mds_world.current_room.is_empty():
+		fall_y = player.global_position.y - _mds_world.world.get_origin(_mds_world.current_room).y
+	if fall_y > 850.0:
 		player.position = _last_checkpoint
 		player.velocity = Vector2.ZERO
 		player.take_damage(15)
 
 func _input(event: InputEvent) -> void:
+	# The keybind page owns every press until it commits or cancels.
+	if Flow.input_capture_active:
+		return
 	if _finished or _ending_pending:
+		return
+	# The boss authority pick is a required modal that owns its own pause. A
+	# pause press must not resume the world underneath it or open the pause
+	# menu on top of the choice.
+	if _authority_choice != null and _authority_choice.is_open():
+		if event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
+			get_viewport().set_input_as_handled()
 		return
 	if _map_overlay != null and _map_overlay.is_open():
 		if event.is_action_pressed("map") or event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
@@ -262,12 +619,31 @@ func _input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("pause"):
 		if _overlay != null:
-			_close_overlay()
+			if not _close_settings_subpage():
+				_close_overlay()
 		else:
 			_toggle_pause()
 		get_viewport().set_input_as_handled()
 		return
+	# While paused, D-pad/face-button shortcuts belong to the pause menu's
+	# focus navigation, not to gameplay overlays.
+	if pause_menu.is_open():
+		return
+	if event.is_action_pressed("ui_cancel") and _overlay != null:
+		if not _close_settings_subpage():
+			_close_overlay()
+		get_viewport().set_input_as_handled()
+		return
+	# Controller shortcuts share the D-pad with menu focus; when a page is open
+	# the D-pad must move focus instead of opening another page.
+	if _overlay != null and not event is InputEventKey:
+		return
 	if event.is_action_pressed("map"):
+		# The map owns its own pause rather than living on the overlay stack;
+		# opening it above a modal page would let closing the map resume the
+		# world with the page still visible. Modal pages keep M inert.
+		if _overlay != null:
+			return
 		if _mds_active and _map_overlay != null:
 			_map_overlay.open()
 			get_viewport().set_input_as_handled()
@@ -279,29 +655,50 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("codex"):
 		_toggle_overlay(codex_ui)
 	elif event.is_action_pressed("settings"):
-		_toggle_overlay(settings_menu)
+		# One press closes a Settings subpage first, matching B/Esc and the Hub.
+		if not _close_settings_subpage():
+			_toggle_overlay(settings_menu)
 	elif event.is_action_pressed("help"):
 		_toggle_overlay(_help_ui)
 	else:
 		return
 	get_viewport().set_input_as_handled()
 
-func _exit_tree() -> void:
-	var audio := get_node_or_null("/root/Audio") as AudioManager
-	if audio != null:
-		audio.shutdown()
-
-
+# NOTE: audio deliberately outlives this scene. AudioManager (autoload) owns
+# music/voice and shuts them down from its own _exit_tree at engine teardown;
+# stopping them here races the audio thread and leaks Ogg playback objects.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and is_inside_tree():
 		if not _ended() and not get_tree().paused and pause_menu != null:
+			save_run_now()
 			pause_menu.open_pause()
 
 
 func _toggle_pause() -> void:
 	if _finished or _ending_pending or (_reward_ui != null and _reward_ui.visible):
 		return
+	if _authority_choice != null and _authority_choice.is_open():
+		return
 	pause_menu.toggle()
+	if pause_menu.is_open():
+		save_run_now()
+
+
+func _on_pause_settings() -> void:
+	if pause_menu.is_open():
+		# Closing Settings must land back on the pause menu, still paused, with
+		# focus on the item that opened it.
+		var viewport := get_viewport()
+		_pause_return_overlay = settings_menu
+		_pause_return_focus = viewport.gui_get_focus_owner() if viewport != null else null
+		pause_menu.toggle()
+	_toggle_overlay(settings_menu)
+
+## Settings hosts AI/keybind/help on the ModalLayer. B/Esc must close that top
+## page first instead of dropping the whole settings overlay (and the pause).
+func _close_settings_subpage() -> bool:
+	return _overlay == settings_menu and settings_menu.close_subpage()
+
 
 func _toggle_overlay(overlay: Control) -> void:
 	if _overlay == overlay:
@@ -309,19 +706,60 @@ func _toggle_overlay(overlay: Control) -> void:
 		return
 	if pause_menu.is_open():
 		pause_menu.toggle()
-	if _overlay != null:
+	if _overlay == null:
+		var viewport := get_viewport()
+		_overlay_return_focus = viewport.gui_get_focus_owner() if viewport != null else null
+	else:
+		# Settings owns its subpages; hide them with it instead of leaving a
+		# modal page stranded above the replacement.
+		if _overlay == settings_menu:
+			settings_menu.close_subpages()
 		_overlay.hide()
+		# Another page replaced it, so the pause-return path no longer applies.
+		_pause_return_overlay = null
+		_pause_return_focus = null
 	_overlay = overlay
 	_overlay.show()
 	get_tree().paused = true
-	var first := _overlay.find_children("*", "Button", true, false)
-	if not first.is_empty():
-		(first[0] as Button).grab_focus()
+	_focus_overlay_entry()
 
-func _close_overlay() -> void:
+## Give the page a usable starting focus: the codex offers its first word,
+## other pages the first button that is not disabled.
+func _focus_overlay_entry() -> void:
+	if _overlay == null:
+		return
+	if _overlay.has_method("focus_entry"):
+		_overlay.call("focus_entry")
+		return
+	var first := GameFlow.first_pressable_button(_overlay)
+	if first != null:
+		first.grab_focus()
+
+func _close_overlay(overlay: Control = null) -> void:
+	# A bound sender only reports its own close; ignore it when another page
+	# (e.g. Settings hosting Help) is still the active overlay.
+	if overlay != null and _overlay != overlay:
+		return
+	var return_to_pause := _overlay != null and _overlay == _pause_return_overlay
+	var pause_focus := _pause_return_focus
+	_pause_return_overlay = null
+	_pause_return_focus = null
 	if _overlay != null:
+		if _overlay == settings_menu:
+			settings_menu.close_subpages()
 		_overlay.hide()
 		_overlay = null
+	var previous := _overlay_return_focus
+	_overlay_return_focus = null
+	if return_to_pause:
+		# Keep the game paused and reopen the pause menu; open_pause() gives the
+		# page a fallback focus (Resume) when the original item is gone.
+		pause_menu.open_pause()
+		if pause_focus != null and is_instance_valid(pause_focus) and pause_focus.is_inside_tree() and pause_focus.is_visible_in_tree():
+			pause_focus.grab_focus()
+		return
+	if previous != null and is_instance_valid(previous) and previous.is_inside_tree() and previous.is_visible_in_tree():
+		previous.grab_focus()
 	get_tree().paused = _finished or (_reward_ui != null and _reward_ui.visible)
 
 func _setup_phrase_caster() -> void:
@@ -586,7 +1024,10 @@ func _start_chapter(index: int) -> void:
 
 func _start_mds_chapter(index: int) -> void:
 	var chapter_index := clampi(index, 0, CampaignData.chapter_count() - 1)
-	_teardown_mds()
+	# A checkpoint belongs to exactly one chapter; resuming in it must keep the
+	# saved room progress instead of clearing it with the chapter reset.
+	var resume := not _resume_data.is_empty() and chapter_index == _resume_run_value("chapter", -1)
+	_teardown_mds(not resume)
 	_chapter = chapter_index
 	var chapter := CampaignData.chapter(chapter_index)
 	_chapter_plan = null
@@ -597,46 +1038,55 @@ func _start_mds_chapter(index: int) -> void:
 	_rooms.clear()
 	_boss = null
 	_mds_boss_arena = null
-	_mds_cleared_rooms.clear()
-	_discovered_vaults.clear()
-	_cleared_in_chapter = 0
+	if not resume:
+		_mds_cleared_rooms.clear()
+		_discovered_vaults.clear()
+		_claimed_steles.clear()
+		_opened_chests.clear()
+		_shop_cache.clear()
+		_cleared_in_chapter = 0
+		_boss_defeated = false
+	_boss_aftermath_started = false
 	_boss_bar_visible = false
 	_boss_entrance_started = false
 	_steles.clear()
 	_shops.clear()
 	_chests.clear()
-	_shop_cache.clear()
 	for hazard in get_tree().get_nodes_in_group("hostile_hazards"):
 		hazard.queue_free()
 	hud.set_region("%s · %s" % [chapter["region"], Difficulty.display_name(Flow.difficulty)])
-	hud.set_progress(0, 7)
+	hud.set_progress(_cleared_in_chapter if resume else 0, 7)
 	hud.set_objective(chapter["objective"])
 	hud.hide_boss()
 	Audio.play_music(chapter["music"], 1.2)
-	_screen_fx.flash(Color("79d8c8", 0.12), 0.35)
-	_ending_pending = true
-	_story.open_story("第 %d 章  /  %s" % [chapter["number"], chapter["subtitle"]], chapter["title"], chapter["intro"], chapter["voice_intro"])
-	await _story.story_finished
-	if not is_inside_tree():
-		return
-	_ending_pending = false
+	if not resume:
+		_screen_fx.flash(Color("79d8c8", 0.12), 0.35)
+		_ending_pending = true
+		_story.open_story("第 %d 章  /  %s" % [chapter["number"], chapter["subtitle"]], chapter["title"], chapter["intro"], chapter["voice_intro"])
+		await _story.story_finished
+		if not is_inside_tree():
+			return
+		_ending_pending = false
 	var camera := player.get_node_or_null("Camera2D") as Camera2D
 	var world := MDS_CHAPTER_SCENES[chapter_index].instantiate() as MDSWorldGame
 	world.process_mode = Node.PROCESS_MODE_PAUSABLE
 	world.player = player
 	world.camera = camera
 	world.world_file = MDS_WORLD_FILES[chapter_index]
-	world.starting_room = "ch%d_01" % (chapter_index + 1)
+	if resume:
+		world.set_save_data(_resume_data.get("mds", {}))
+	else:
+		world.starting_room = "ch%d_01" % (chapter_index + 1)
 	if _map_overlay != null:
 		_map_overlay.set_world(MDS_WORLD_FILES[chapter_index])
 		world.map_view = _map_overlay.map_view
 	world.room_loaded.connect(_on_mds_room_loaded)
 	add_child(world)
 	_mds_world = world
-	hud.show_message("目标：%s。按 H 看操作说明。" % String(chapter["objective"]))
+	hud.show_message("目标：%s。按 %s 看操作说明。" % [String(chapter["objective"]), Flow.prompt_label(&"help")])
 
 
-func _teardown_mds() -> void:
+func _teardown_mds(clear_progress := true) -> void:
 	if _map_overlay != null and _map_overlay.is_open():
 		_map_overlay.close()
 	if _mds_world != null and is_instance_valid(_mds_world):
@@ -644,8 +1094,9 @@ func _teardown_mds() -> void:
 	_mds_world = null
 	_mds_active = false
 	_mds_boss_arena = null
-	_mds_cleared_rooms.clear()
-	_discovered_vaults.clear()
+	if clear_progress:
+		_mds_cleared_rooms.clear()
+		_discovered_vaults.clear()
 	_rooms.clear()
 
 
@@ -670,6 +1121,17 @@ func _on_mds_room_loaded(room_id: String) -> void:
 			_shops.append(node)
 		elif node is TreasureChest:
 			_chests.append(node)
+	# One-shot pickups already taken in this room stay taken after resume.
+	if _claimed_steles.has(room_id):
+		for stele in _steles:
+			if is_instance_valid(stele):
+				stele.is_claimed = true
+				stele.queue_free()
+		_steles.clear()
+	if _opened_chests.has(room_id):
+		for chest in _chests:
+			if is_instance_valid(chest):
+				chest.open()
 	_boss_bar_visible = false
 	_boss_entrance_started = false
 	var chapter := CampaignData.chapter(_chapter)
@@ -691,8 +1153,14 @@ func _on_mds_room_loaded(room_id: String) -> void:
 		elif room_index == 7 or room_type == "boss":
 			_mds_boss_arena = arena
 			_rooms.append(arena)
-			_boss = _spawn_boss(arena, chapter, _chapter)
-			hud.set_objective("击败 %s" % chapter["boss_name"])
+			if _boss_defeated:
+				# Quit during the authority/outro sequence: finish it instead of
+				# spawning a second boss and re-paying the kill reward.
+				hud.set_objective("墨骸史官已经倒下")
+				_resume_boss_aftermath.call_deferred()
+			else:
+				_boss = _spawn_boss(arena, chapter, _chapter)
+				hud.set_objective("击败 %s" % chapter["boss_name"])
 		elif room_index >= 0 and room_index < 6 and not _mds_cleared_rooms.has(room_id):
 			_rooms.append(arena)
 			if _chapter_plan != null:
@@ -710,14 +1178,30 @@ func _on_mds_room_loaded(room_id: String) -> void:
 		hud.set_objective("搜查隐藏书库" if is_vault else "休整，或继续前进")
 		if is_vault and not _discovered_vaults.has(room_id):
 			_discovered_vaults[room_id] = true
-			hud.show_message("发现隐藏书库 · 搜查宝箱与残碑")
+			hud.show_message(VaultRoomData.pick(run_state.run_seed, room_id))
 			CombatFX.spawn(player.get_parent(), player.global_position, &"ring", Color("e6c87a"), 1.0, 130.0)
 			var audio := get_node_or_null("/root/Audio")
 			if audio != null:
 				audio.call("play_sfx", &"pickup")
+		elif not is_vault and not _rest_greeted.has(room_id):
+			_rest_greeted[room_id] = true
+			var rest_line := RestRoomData.pick(run_state.run_seed, room_id)
+			if rest_line != "":
+				hud.show_message(rest_line)
 	_last_checkpoint = player.global_position
 	hud.set_progress(_cleared_in_chapter, 7)
 	hud.hide_boss()
+	save_run_now()
+
+
+func _resume_boss_aftermath() -> void:
+	if _boss_aftermath_started or _finished or _ending_pending:
+		return
+	_boss_aftermath_started = true
+	if _authority.authority == null:
+		await _grant_chapter_authority()
+	if is_inside_tree() and not _ended():
+		_complete_chapter()
 
 
 func _plan_room(room_id: String) -> Dictionary:
@@ -730,6 +1214,12 @@ func _open_ch1_event_after_transition(room_id: String) -> void:
 	await get_tree().create_timer(0.8).timeout
 	if not is_inside_tree() or _finished or _ending_pending:
 		return
+	# Walking back out before the page opens must cancel it: opening the paused
+	# page during the next room's fade leaves the player on a black screen (the
+	# story layer sits under the fade) and stalls the transition. Re-entering
+	# the room schedules it again because it is still uncleared.
+	if not _mds_active or _mds_world == null or _mds_world.current_room != room_id:
+		return
 	_open_ch1_event(room_id)
 
 
@@ -739,33 +1229,57 @@ func _open_ch1_event(room_id: String) -> void:
 	if _event_room_id == room_id or _finished or _ending_pending:
 		return
 	_event_room_id = room_id
-	_story.open_choice("事件 · 禁文", "一页禁文在墨雨中发光。", "读它，还是把残页带走？", [
-		{"label": "读禁文", "note": "获得一个词，污染 +8"},
-		{"label": "拿残页", "note": "残页 +12"},
-	])
+	var event := Ch1EventData.pick(run_state.run_seed, room_id)
+	var decode_pool := RunLoot.owned_undecoded_words(run_state, Flow.profile, _chapter)
+	var read_note := "解明一个残页词，污染 +%d" % Ch1EventData.CORRUPTION_COST
+	if decode_pool.is_empty():
+		read_note = "残页 +%d，污染 +%d" % [Ch1EventData.FALLBACK_PAGES, Ch1EventData.CORRUPTION_COST]
+	elif decode_pool.size() > 1:
+		read_note = "从 %d 个残页词中解明一个，污染 +%d" % [decode_pool.size(), Ch1EventData.CORRUPTION_COST]
+	_story.open_choice(
+		String(event.get("eyebrow", "事件 · 禁文")),
+		String(event.get("title", "一页禁文在墨雨中发光。")),
+		String(event.get("body", "读它，还是把残页带走？")),
+		[
+			{"label": String(event.get("read_label", "读禁文")), "note": read_note},
+			{"label": String(event.get("take_label", "拿残页")),
+				"note": "残页 +%d" % Ch1EventData.PAGES_REWARD},
+		])
 	var picked: int = await _story.choice_made
 	if picked == 0:
-		run_state.add_corruption(8)
-		_grant_event_word()
-		hud.show_message("禁文入脑 · 获得一个词，污染 +8")
+		run_state.add_corruption(Ch1EventData.CORRUPTION_COST)
+		var decoded_name := _grant_event_word()
+		if decoded_name.is_empty():
+			hud.show_message(String(event["read_pages_message"]) % [
+				Ch1EventData.FALLBACK_PAGES, Ch1EventData.CORRUPTION_COST])
+		else:
+			hud.show_message(String(event["read_word_message"]) % [
+				decoded_name, Ch1EventData.CORRUPTION_COST])
 	else:
-		run_state.add_pages(12)
-		hud.show_message("带走残页 · 残页 +12")
+		run_state.add_pages(Ch1EventData.PAGES_REWARD)
+		hud.show_message(String(event["take_message"]) % Ch1EventData.PAGES_REWARD)
 	_mds_cleared_rooms[room_id] = true
 	_cleared_in_chapter += 1
 	hud.set_progress(_cleared_in_chapter, 7)
+	save_run_now()
 
 
-func _grant_event_word() -> void:
-	var pool: Array[WordData] = []
-	for word in RunLoot.demo_word_pool():
-		if not run_state.inventory.has_word(word.id):
-			pool.append(word)
+## Returns the decoded word's display label, or "" when every fragment was
+## already readable and the event pays pages instead.
+func _grant_event_word() -> String:
+	var pool := RunLoot.owned_undecoded_words(run_state, Flow.profile, _chapter)
 	if pool.is_empty():
-		run_state.add_pages(6)
-		return
+		run_state.add_pages(Ch1EventData.FALLBACK_PAGES)
+		return ""
 	var picked := pool[run_state.rng.randi_range(0, pool.size() - 1)]
-	_acquire_word(picked)
+	if not RunLoot.decode_owned_word(run_state, Flow.profile, picked):
+		run_state.add_pages(Ch1EventData.FALLBACK_PAGES)
+		return ""
+	# Decoding is cross-run Profile progress; persist it before the next room so
+	# quitting mid-run cannot lose the fragment the player just read.
+	if Flow.auto_save:
+		Flow.save_profile()
+	return RunLoot.word_label(picked)
 
 
 func _acquire_word(source: WordData) -> WordData:
@@ -822,6 +1336,9 @@ func _boss_entrance() -> void:
 	if _boss_entrance_started:
 		return
 	_boss_entrance_started = true
+	var entrance_line := BossEntranceData.pick(run_state.run_seed, _chapter)
+	if entrance_line != "":
+		hud.show_message(entrance_line)
 	if not _mds_active:
 		ChapterAtmosphere.start_boss_background(_rooms.back())
 	Audio.play_music(BOSS_MUSIC, 0.7)
@@ -879,6 +1396,7 @@ func _on_reward_chosen(index: int) -> void:
 	get_tree().paused = false
 	hud.show_message("获得：" + String(choice["title"]))
 	_reward_room = null
+	save_run_now()
 
 func _apply_reward(choice: Dictionary) -> void:
 	match choice["kind"]:
@@ -934,7 +1452,12 @@ func _discover_phrase(phrase: ResolvedPhrase) -> void:
 		codex_ui.set_persistent_discovered(Flow.profile.discovered_phrases)
 
 func _on_boss_phase(chapter: Dictionary, phase: int) -> void:
-	hud.show_message("%s · 第 %d 阶段" % [chapter["boss_name"], phase])
+	# Keep the mechanical phase banner; only the trailing flavor rotates.
+	var phase_text := "%s · 第 %d 阶段" % [chapter["boss_name"], phase]
+	var flavor := BossPhaseData.pick(run_state.run_seed, phase)
+	if not flavor.is_empty():
+		phase_text += "：" + flavor
+	hud.show_message(phase_text)
 	_screen_fx.flash(Color("d96a7a", 0.2), 0.22)
 	_hit_stop.freeze(0.07, 0.08)
 	Audio.play_voice("boss_%s_phase%d" % [chapter["boss_voice"], phase])
@@ -1088,12 +1611,12 @@ func _on_enemy_died(enemy: Node) -> void:
 	relic_effects.on_kill()
 	_update_hud()
 	if enemy is Node2D and run_state.rng.randf() < WEAPON_DROP_CHANCE:
-		var base := ContentLibrary.WEAPONS[run_state.rng.randi_range(0, ContentLibrary.WEAPONS.size() - 1)] as WeaponData
-		var dropped := RunLoot.weapon_for_run(base, Flow.profile, _chapter * 2 + 1)
-		var enemy_position := (enemy as Node2D).global_position
-		# Flying enemies die in the air; bring the page down to floor reach.
-		var drop_at := Vector2(enemy_position.x, maxf(enemy_position.y, 540.0))
-		_drop_weapon(dropped, drop_at)
+		var dropped := RunLoot.dropped_weapon(run_state, Flow.profile, _chapter)
+		if dropped != null:
+			var enemy_position := (enemy as Node2D).global_position
+			# Flying enemies die in the air; bring the page down to floor reach.
+			var drop_at := Vector2(enemy_position.x, maxf(enemy_position.y, 540.0))
+			_drop_weapon(dropped, drop_at)
 	for room in _rooms:
 		if room.is_locked():
 			var alive := 0
@@ -1105,10 +1628,12 @@ func _on_enemy_died(enemy: Node) -> void:
 func _on_boss_died(_enemy: Node, chapter_index: int) -> void:
 	if chapter_index != _chapter or _ended():
 		return
+	_boss_defeated = true
 	hud.set_progress(7, 7)
 	run_state.add_pages(maxi(1, int(round((8 + Flow.difficulty * 4) * Difficulty.reward_multiplier(Flow.difficulty)))))
 	_screen_fx.flash(Color(1.0, 0.9, 0.8, 0.3), 0.4)
 	_hit_stop.freeze(0.1, 0.1)
+	save_run_now()
 	await _grant_chapter_authority()
 	if not is_inside_tree() or _ended():
 		return
@@ -1130,6 +1655,7 @@ func _grant_chapter_authority() -> void:
 	_authority.apply(picked, run_state)
 	hud.set_authority(picked.display_name, true)
 	hud.show_message("获得权柄：%s · %s" % [picked.display_name, picked.description])
+	save_run_now()
 
 
 func _on_rewrite_requested() -> void:
@@ -1200,6 +1726,7 @@ func _apply_chapter_choice(chapter: Dictionary, index: int) -> void:
 		&"smiling_theater":
 			_burned_final = index == 1
 	_run_state_emit()
+	save_run_now()
 
 func _run_state_emit() -> void:
 	run_state.health_changed.emit(player.health, player.max_health)
@@ -1288,6 +1815,9 @@ func _open_chest(chest: TreasureChest) -> void:
 	if is_instance_valid(chest) and is_inside_tree():
 		CombatFX.spawn(get_parent(), chest.global_position + Vector2(0, -22), &"cast", Color("f0c36c"), 1.0, 52)
 		CombatFX.spawn(get_parent(), chest.global_position + Vector2(0, -16), &"ring", Color("f0c36c"), 1.0, 46)
+	if _mds_active and _mds_world != null:
+		_opened_chests[_mds_world.current_room] = true
+	save_run_now()
 
 
 func _try_open_shop() -> bool:
@@ -1305,7 +1835,8 @@ func _open_shop(shop: MemoryShop) -> void:
 	var key := shop.shop_id
 	if not _shop_cache.has(key):
 		_shop_cache[key] = RunLoot.shop_offers(run_state, _chapter, Flow.profile)
-	_shop_ui.open_shop(_shop_cache[key], run_state.pages)
+	_shop_ui.open_shop(_shop_cache[key], run_state.pages,
+		Ch1ShopData.pick(run_state.run_seed, String(key)))
 	get_tree().paused = true
 
 
@@ -1322,13 +1853,16 @@ func _on_shop_buy(index: int) -> void:
 		_shop_ui.show_error("残页不足。继续战斗，纸人会记得。")
 		return
 	_apply_reward(offer)
-	_shop_ui.mark_bought(index, run_state.pages)
+	_shop_ui.mark_bought(index, run_state.pages,
+		Ch1ShopData.pick_buy(run_state.run_seed, String(_active_shop.shop_id), index))
 	_update_hud()
+	save_run_now()
 
 
 func _on_shop_closed() -> void:
 	_active_shop = null
 	get_tree().paused = false
+	save_run_now()
 
 func _claim_nearest_stele() -> void:
 	for stele in _steles:
@@ -1351,6 +1885,9 @@ func _claim_nearest_stele() -> void:
 				_records += 1
 				_apply_reward(reward)
 				hud.show_message("记录 +1 · " + String(reward.get("title", "残碑")))
+			if _mds_active and _mds_world != null:
+				_claimed_steles[_mds_world.current_room] = true
+			save_run_now()
 			return
 
 func _on_player_health_changed(current: int, maximum: int) -> void:
@@ -1363,12 +1900,12 @@ func _on_player_died() -> void:
 		player.revive(50)
 		var authority_name := run_state.authority.display_name if run_state.authority != null else "续命"
 		hud.set_authority(authority_name, false)
-		hud.show_message("续命生效 · 恢复 50 生命")
+		hud.show_message(DeathHintData.pick(run_state.run_seed, &"authority"))
 		return
 	if relic_effects.has(&"revive_once") and not relic_effects.revive_used:
 		relic_effects.revive_used = true
 		player.revive(40)
-		hud.show_message("不灭档案替你翻回上一页")
+		hud.show_message(DeathHintData.pick(run_state.run_seed, &"relic"))
 		return
 	_screen_fx.flash(Color(0.6, 0.05, 0.08, 0.34), 0.4)
 	_hit_stop.freeze(0.12, 0.15)
@@ -1381,6 +1918,14 @@ func _finish(won: bool, forced_ending: Dictionary = {}) -> void:
 	if _finished or _ending_pending:
 		return
 	_ending_pending = true
+	# Death is final the moment it is committed. Drop the checkpoint before the
+	# 0.65 s result delay: closing the window during the animation would
+	# otherwise leave the pre-death checkpoint on disk and "继续本局" would
+	# bring the player back alive. A victory keeps its boss-defeated checkpoint
+	# so quitting during the same delay can resume the aftermath and still
+	# reach the ending.
+	if not won and Flow != null and Flow.auto_save:
+		RunSave.clear(Flow.run_save_path)
 	for hazard in get_tree().get_nodes_in_group("hostile_hazards"):
 		hazard.queue_free()
 	hud.hide_boss()
@@ -1402,7 +1947,8 @@ func _finish(won: bool, forced_ending: Dictionary = {}) -> void:
 	Audio.stop_music(0.6)
 	Audio.play_voice("ending_" + String(ending["id"]))
 	get_tree().paused = true
-	ending_screen.show_campaign_ending(won, Flow.last_reward, ending, _records, _kills, _chapter == 0)
+	ending_screen.show_campaign_ending(won, Flow.last_reward, ending, _records, _kills,
+		_chapter == 0, run_state.run_seed)
 
 func _return_to_hub() -> void:
 	get_tree().paused = false

@@ -47,9 +47,11 @@ enum Kind { COMBAT, REST, BOSS }
 @export var has_shortcut_gate: bool = false
 
 var arena: ArenaRoom
+var _game_flow: GameFlow = null
 
 
 func _ready() -> void:
+	_game_flow = get_node_or_null("/root/Flow") as GameFlow
 	_build_backdrop()
 	_build_ground()
 	_build_platforms()
@@ -57,6 +59,10 @@ func _ready() -> void:
 		_build_arena()
 	_build_interactables()
 	_build_gates()
+	if _game_flow != null and not _game_flow.input_device_changed.is_connected(_on_input_device_changed):
+		_game_flow.input_device_changed.connect(_on_input_device_changed)
+	if _game_flow != null and not _game_flow.keybinds_changed.is_connected(_on_keybinds_changed):
+		_game_flow.keybinds_changed.connect(_on_keybinds_changed)
 	if room_index == 0 or room_index == 1:
 		var save_point := Marker2D.new()
 		save_point.name = "SavePoint"
@@ -80,6 +86,7 @@ func _build_backdrop() -> void:
 		add_child(art)
 	if chapter_index == 3:
 		var theater := TheaterBackdrop.new()
+		theater.name = "TheaterBackdrop"
 		theater.world_width = WIDTH
 		theater.generated_art = true
 		add_child(theater)
@@ -116,15 +123,23 @@ func _active_layout() -> RoomLayoutData:
 func _build_ground() -> void:
 	var active := _active_layout()
 	if active != null:
+		var columns := int(WIDTH / TILE_SIZE)
+		var bottom_row := int(720.0 / TILE_SIZE)
+		# Only the surface row needs physics. Painting the nine rows below it on
+		# a collisionless layer removes ~720 useless colliders per room; the
+		# player can never reach anything below the floor tile.
+		var fill := TileMapLayer.new()
+		fill.name = "GroundFill"
+		fill.tile_set = active.tile_set
+		fill.collision_enabled = false
 		var tiles := TileMapLayer.new()
 		tiles.name = "Ground"
 		tiles.tile_set = active.tile_set
-		var columns := int(WIDTH / TILE_SIZE)
-		var bottom_row := int(720.0 / TILE_SIZE)
 		for column in columns:
-			for row in range(active.floor_row, bottom_row):
-				tiles.set_cell(Vector2i(column, row), 0, GROUND_FILL_TILE)
+			for row in range(active.floor_row + 1, bottom_row):
+				fill.set_cell(Vector2i(column, row), 0, GROUND_FILL_TILE)
 			tiles.set_cell(Vector2i(column, active.floor_row), 0, GROUND_TOP_TILE)
+		add_child(fill)
 		add_child(tiles)
 		return
 	var ground := StaticBody2D.new()
@@ -141,6 +156,10 @@ func _build_ground() -> void:
 func _build_platforms() -> void:
 	var active := _active_layout()
 	if active != null:
+		var fill := TileMapLayer.new()
+		fill.name = "PlatformsFill"
+		fill.tile_set = active.tile_set
+		fill.collision_enabled = false
 		var tiles := TileMapLayer.new()
 		tiles.name = "Platforms"
 		tiles.tile_set = active.tile_set
@@ -149,7 +168,8 @@ func _build_platforms() -> void:
 			var row: int = platform[1]
 			for column in range(start_column, start_column + 15):
 				tiles.set_cell(Vector2i(column, row), 0, PLATFORM_TOP_TILE)
-				tiles.set_cell(Vector2i(column, row + 1), 0, PLATFORM_FILL_TILE)
+				fill.set_cell(Vector2i(column, row + 1), 0, PLATFORM_FILL_TILE)
+		add_child(fill)
 		add_child(tiles)
 		return
 	var positions: Array[Vector2] = []
@@ -226,16 +246,18 @@ func _build_interactables() -> void:
 
 
 func _build_gates() -> void:
+	var interact_key := _game_flow.prompt_label(&"interact") if _game_flow != null else "E"
+	var prefix := "按 %s " % interact_key
 	if has_left_gate:
 		_add_gate("left1", Vector2(8, FLOOR_Y - 90.0))
 	if has_right_gate:
 		_add_gate("right1", Vector2(WIDTH - 8, FLOOR_Y - 90.0))
 	if has_vault_gate:
-		var vault_prompt := "按 E 返回主路" if kind == Kind.REST else "按 E 进入隐藏书库"
+		var vault_prompt := prefix + ("返回主路" if kind == Kind.REST else "进入隐藏书库")
 		var vault_x := WIDTH * 0.5 if kind == Kind.REST else WIDTH * 0.72
-		_add_doors("door1", Vector2(vault_x, FLOOR_Y - 60.0), vault_prompt, ChapterDoor.Kind.VAULT)
+		_add_doors("door1", Vector2(vault_x, FLOOR_Y - 60.0), vault_prompt, prefix, ChapterDoor.Kind.VAULT)
 	if has_shortcut_gate:
-		_add_doors("door2", Vector2(WIDTH * 0.86, FLOOR_Y - 60.0), "按 E 走捷径回到长廊", ChapterDoor.Kind.SHORTCUT)
+		_add_doors("door2", Vector2(WIDTH * 0.86, FLOOR_Y - 60.0), prefix + "走捷径回到长廊", prefix, ChapterDoor.Kind.SHORTCUT)
 
 
 func _add_gate(gate_name: String, at: Vector2) -> void:
@@ -253,7 +275,7 @@ func _add_gate(gate_name: String, at: Vector2) -> void:
 	add_child(gate)
 
 
-func _add_doors(gate_name: String, at: Vector2, prompt: String, door_kind: ChapterDoor.Kind) -> void:
+func _add_doors(gate_name: String, at: Vector2, prompt: String, prompt_prefix: String, door_kind: ChapterDoor.Kind) -> void:
 	var gate := MDSGate.new()
 	gate.name = gate_name
 	gate.position = at
@@ -262,6 +284,10 @@ func _add_doors(gate_name: String, at: Vector2, prompt: String, door_kind: Chapt
 	gate.mode = MDSGate.Mode.INTERACT
 	gate.interact_action = &"interact"
 	gate.prompt = prompt
+	var suffix := prompt.trim_prefix(prompt_prefix)
+	# The room is built once per load; keep the copy around so a controller
+	# plugged in mid-room can re-render the same door with the new key.
+	gate.set_meta(&"prompt_suffix", suffix)
 	var shape := CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
 	rect.size = Vector2(36, 120)
@@ -271,6 +297,28 @@ func _add_doors(gate_name: String, at: Vector2, prompt: String, door_kind: Chapt
 	var marker := ChapterDoor.new()
 	marker.position = at
 	marker.kind = door_kind
-	marker.caption = prompt.trim_prefix("按 E ")
+	marker.caption = suffix
 	marker.accent = Color("e6c87a") if door_kind == ChapterDoor.Kind.VAULT else Color("69e0d2")
 	add_child(marker)
+
+
+## Door prompts are plain strings on the MDS gate and are copied into a label
+## when the player steps in. Refresh both when the device changes mid-room.
+func _refresh_gate_prompts() -> void:
+	var prefix := "按 %s " % (_game_flow.prompt_label(&"interact") if _game_flow != null else "E")
+	for gate in find_children("*", "MDSGate", true, false):
+		var suffix := String(gate.get_meta(&"prompt_suffix", ""))
+		if suffix.is_empty():
+			continue
+		gate.prompt = prefix + suffix
+		var label := gate.get("_prompt") as Label
+		if label != null:
+			gate._show_prompt(label.visible)
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_gate_prompts()
+
+
+func _on_keybinds_changed() -> void:
+	_refresh_gate_prompts()

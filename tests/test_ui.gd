@@ -2,6 +2,7 @@ extends RefCounted
 
 const SLOT_LEGENDARY: StyleBox = preload("res://resources/ui/slot_legendary.tres")
 const SLOT_SELECTED: StyleBox = preload("res://resources/ui/card_selected.tres")
+const WORD_CARD_DECODED: StyleBox = preload("res://resources/ui/word_card_decoded.tres")
 
 
 func run(t: Callable) -> void:
@@ -90,7 +91,15 @@ func _test_inventory(t: Callable, tree: SceneTree) -> void:
 	_assert_fits_viewport(t, ui.find_child("Panel", true, false), "inventory_panel")
 
 	var inventory := Inventory.new()
-	ui.bind(inventory)
+	# Bind carries the run seed into the page's empty-state copy; an empty
+	# inventory shows the seeded word line, not the build-time default.
+	ui.bind(inventory, 12345)
+	t.call(ui.get_words_text(), EmptyStateData.pick(&"inventory_words", 12345),
+		"inventory_ui_empty_words_copy")
+	var no_relics: Array[RelicData] = []
+	t.call(ui._build_relics_text(no_relics),
+		EmptyStateData.pick(&"inventory_relics", 12345),
+		"inventory_ui_empty_relics_copy")
 
 	var weapon := WeaponData.new()
 	weapon.display_name = "墨弹枪"
@@ -116,6 +125,26 @@ func _test_inventory(t: Callable, tree: SceneTree) -> void:
 	inventory.add_word(word)
 	t.call(ui.get_words_text().contains("✶"), true, "inventory_ui_word_glyph")
 	t.call(ui.get_word_card_count(), 1, "inventory_ui_word_card")
+
+	# A refresh must reuse existing cards; decoding updates the kept card.
+	var word_card := ui._word_grid.get_child(0) as PanelContainer
+	# Cards are filled after entering the tree (cheap text shaping); the real
+	# labels must still show the word once the refresh returns.
+	t.call((word_card.get_meta(&"word_glyph") as Label).text, "✶",
+		"inventory_ui_card_glyph_text")
+	t.call((word_card.get_meta(&"word_name") as Label).text, "未解码",
+		"inventory_ui_card_locked_name_text")
+	t.call((word_card.get_meta(&"word_tags") as Label).text != "", true,
+		"inventory_ui_card_tags_text")
+	ui.refresh()
+	t.call(ui.get_word_card_count(), 1, "inventory_ui_refresh_no_duplicate")
+	t.call(ui._word_grid.get_child(0), word_card, "inventory_ui_card_reused")
+	word.decoded = true
+	ui.refresh()
+	t.call(word_card.get_theme_stylebox("panel"), WORD_CARD_DECODED,
+		"inventory_ui_card_decoded_in_place")
+	t.call((word_card.get_meta(&"word_name") as Label).text, "记录",
+		"inventory_ui_card_name_updated_in_place")
 
 	t.call(ui.get_selected_weapon_slot(), 0, "inventory_ui_default_selection")
 	ui.select_weapon_slot(1)

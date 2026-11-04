@@ -8,6 +8,7 @@ const THEME = preload("res://resources/ui/theme.tres")
 var _panel: PanelContainer
 var _explore_content: VBoxContainer
 var _combat_content: VBoxContainer
+var _close_button: Button
 var _open := false
 
 
@@ -19,14 +20,23 @@ func _ready() -> void:
 	visible = false
 	_build()
 	visibility_changed.connect(func():
+		# The page doubles as a Settings subpage and as the help overlay: the
+		# overlay path shows it with show(), so visibility is the source of
+		# truth. Otherwise a page reopened that way had a dead close button.
+		_open = visible
 		if visible:
 			_refresh_key_hints()
 	)
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
 	_refresh_key_hints()
+	_refresh_close_hint()
 
 
 func open() -> void:
 	_refresh_key_hints()
+	_refresh_close_hint()
 	visible = true
 	_open = true
 	var first := find_children("*", "Button", true, false)
@@ -35,7 +45,7 @@ func open() -> void:
 
 
 func close() -> void:
-	if not _open:
+	if not visible:
 		return
 	_open = false
 	visible = false
@@ -75,7 +85,7 @@ func _build() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	outer.add_child(title)
 	var hint := Label.new()
-	hint.text = "所有按键都能在「设置 → 键位设置」里改。菜单打开时游戏暂停。"
+	hint.text = "所有键盘按键与手柄按键都能在「设置 → 键位设置」里改。菜单打开时游戏暂停。"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UIPalette.INK_FAINT)
 	outer.add_child(hint)
@@ -112,12 +122,31 @@ func _make_column(title_text: String) -> VBoxContainer:
 func _make_close_row() -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	var close_button := Button.new()
-	close_button.text = "继续冒险  [Esc]"
-	close_button.custom_minimum_size = Vector2(240, 44)
-	close_button.pressed.connect(close)
-	row.add_child(close_button)
+	_close_button = Button.new()
+	_close_button.text = "继续冒险"
+	_close_button.custom_minimum_size = Vector2(240, 44)
+	_close_button.pressed.connect(close)
+	row.add_child(_close_button)
 	return row
+
+
+func _flow_node() -> GameFlow:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("Flow") as GameFlow
+	return null
+
+
+func _refresh_close_hint() -> void:
+	if _close_button == null:
+		return
+	var flow := _flow_node()
+	var key := flow.close_prompt() if flow != null else "Esc"
+	_close_button.text = "继续冒险  [%s]" % key
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_close_hint()
 
 
 func _refresh_key_hints() -> void:
@@ -155,7 +184,7 @@ func _add_line(parent: VBoxContainer, label_text: String, action_text: String) -
 	var parts := action_text.split(" / ")
 	var shown: Array[String] = []
 	for part in parts:
-		shown.append(GameFlow.key_label(StringName(part)))
+		shown.append(GameFlow.input_label(StringName(part)))
 	key_label.text = "  /  ".join(shown)
 	key_label.add_theme_color_override("font_color", UIPalette.SEAL_GOLD)
 	key_label.add_theme_font_size_override("font_size", 24)

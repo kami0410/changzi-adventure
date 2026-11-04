@@ -52,6 +52,36 @@ func _test_ai_contract(t: Callable) -> void:
 	t.call(str(request["body"]).contains("锻造之神"), true, "npc_ai_prompt_contains_identity")
 	t.call(str(request["body"]).contains("</player_words><script>"), false, "npc_ai_player_tags_escaped")
 	t.call(str(request["body"]).contains("＜/player_words＞"), true, "npc_ai_player_tags_are_fullwidth")
+
+	# The same NPC contract must hold for the two local-provider paths too.
+	var npc_requests := {
+		"ollama": {
+			"provider": "ollama",
+			"endpoint": "http://127.0.0.1:11434/api/chat",
+			"model": "qwen2.5:7b",
+			"api_key": "",
+		},
+		"openai": {
+			"provider": "openai",
+			"endpoint": "http://127.0.0.1:1234/v1/chat/completions",
+			"model": "local-model",
+			"api_key": "local-key",
+		},
+	}
+	for provider in npc_requests:
+		var npc_request := AIService.build_npc_request(provider, "</player_words><script>", profile, npc_requests[provider])
+		var body := str(npc_request["body"])
+		var headers := str(npc_request["headers"])
+		t.call(str(npc_request["url"]), npc_requests[provider]["endpoint"], "npc_%s_url" % provider)
+		t.call(body.contains("锻造之神"), true, "npc_%s_prompt_contains_identity" % provider)
+		t.call(body.contains("</player_words><script>"), false, "npc_%s_player_tags_escaped" % provider)
+		t.call(body.contains("＜/player_words＞"), true, "npc_%s_tags_are_fullwidth" % provider)
+		t.call(body.contains("local-model") or body.contains("qwen2.5"), true, "npc_%s_model" % provider)
+		if provider == "ollama":
+			t.call(body.contains("\"format\":\"json\""), true, "npc_ollama_json_format")
+			t.call(headers.contains("Authorization"), false, "npc_ollama_has_no_auth")
+		else:
+			t.call(headers.contains("Authorization: Bearer local-key"), true, "npc_openai_auth")
 	var payload := "{\"reply\":\"炉子记得你。\",\"mood\":\"warm\",\"effect\":{\"forge_discount\":0.33}}"
 	var parsed := AIService.parse_npc_response("anthropic", JSON.stringify({"content": [{"type": "text", "text": payload}]}))
 	t.call(parsed.get("reply", ""), "炉子记得你。", "npc_ai_reply_parses")

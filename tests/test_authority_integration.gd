@@ -55,11 +55,13 @@ func _test_choice_ui(t: Callable) -> void:
 	]
 	ui.open(options)
 	t.call(ui.visible, true, "authority_ui_opens")
+	t.call(ui.is_open(), true, "authority_ui_reports_open")
 	t.call(ui.get_button_count(), 2, "authority_ui_two_choices")
 	t.call(tree.paused, true, "authority_ui_pauses")
 	ui._choose(1)
 	t.call(picked, [1], "authority_ui_emits_choice")
 	t.call(ui.visible, false, "authority_ui_closes")
+	t.call(ui.is_open(), false, "authority_ui_reports_closed")
 	t.call(tree.paused, false, "authority_ui_restores_pause")
 	tree.root.remove_child(ui)
 	ui.free()

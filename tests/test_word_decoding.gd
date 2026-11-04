@@ -12,6 +12,7 @@ func run(t: Callable) -> void:
 	_test_runtime_copy(t)
 	_test_resolver_unstable(t)
 	_test_starting_fragments(t)
+	_test_event_decode(t)
 	_test_save_load(t)
 	_test_v1_migration(t)
 
@@ -61,7 +62,8 @@ func _test_resolver_unstable(t: Callable) -> void:
 
 
 func _test_starting_fragments(t: Callable) -> void:
-	var words := RunLoot.starting_words(Profile.new())
+	var profile := Profile.new()
+	var words := RunLoot.starting_words(profile)
 	var decoded := 0
 	var locked := 0
 	for word in words:
@@ -72,6 +74,43 @@ func _test_starting_fragments(t: Callable) -> void:
 	t.call(decoded, 6, "six_words_start_decoded")
 	t.call(locked, 12, "twelve_fragment_words_start_locked")
 	t.call(words.size(), 18, "starting_pool_is_six_plus_twelve")
+	profile.free()
+
+
+## The Chapter 1 event promises a word; because the demo starts with all
+## fragments owned, that reward has to decode an owned fragment instead of
+## looking for an unowned word (which would always fall back to pages).
+func _test_event_decode(t: Callable) -> void:
+	var profile := Profile.new()
+	var run := RunState.new()
+	run.reset_for_new_run(11)
+	for word in RunLoot.starting_words(profile):
+		run.inventory.add_word(word)
+	var locked := RunLoot.owned_undecoded_words(run, profile, 0)
+	t.call(locked.size(), 12, "event_decode_sees_twelve_fragments")
+	if locked.is_empty():
+		profile.free()
+		return
+	var target := locked[0]
+	var shared := ContentLibrary.word_by_id(target.id)
+	var shared_decoded := shared.decoded if shared != null else false
+	var inventory_changes := [0]
+	run.inventory.changed.connect(func() -> void: inventory_changes[0] += 1)
+	t.call(target.decoded, false, "event_decode_target_starts_locked")
+	t.call(RunLoot.decode_owned_word(run, profile, target), true, "event_decode_succeeds")
+	t.call(profile.is_word_decoded(target.id), true, "event_decode_persists_to_profile")
+	t.call(target.decoded, true, "event_decode_unlocks_run_copy")
+	t.call(RunLoot.word_label(target), target.meaning, "event_decode_label_uses_meaning")
+	t.call(inventory_changes[0], 1, "event_decode_notifies_inventory")
+	t.call(RunLoot.decode_owned_word(run, profile, target), false, "event_decode_is_idempotent")
+	t.call(inventory_changes[0], 1, "event_decode_idempotent_does_not_notify")
+	t.call(RunLoot.owned_undecoded_words(run, profile, 0).size(), 11, "event_decode_removes_target")
+	if shared != null:
+		t.call(shared.decoded, shared_decoded, "event_decode_does_not_touch_shared_word")
+	for word in RunLoot.owned_undecoded_words(run, profile, 0):
+		RunLoot.decode_owned_word(run, profile, word)
+	t.call(RunLoot.owned_undecoded_words(run, profile, 0).is_empty(), true, "event_decode_exhausts_pool")
+	profile.free()
 
 
 func _test_save_load(t: Callable) -> void:

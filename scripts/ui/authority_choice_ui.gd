@@ -82,8 +82,12 @@ func open(options: Array[AuthorityData]) -> void:
 	if scene_tree != null:
 		_was_paused = scene_tree.paused
 		scene_tree.paused = true
-	if not _buttons.is_empty():
+	if not _buttons.is_empty() and _buttons[0].is_inside_tree():
 		_buttons[0].grab_focus()
+
+
+func is_open() -> bool:
+	return _open
 
 
 func get_button_count() -> int:

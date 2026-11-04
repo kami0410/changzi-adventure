@@ -9,6 +9,8 @@ var _root: Control
 var _flow: GameFlow
 var _difficulty: OptionButton
 var _difficulty_note: Label
+var _new_game_button: Button
+var _confirm_panel: ConfirmPanel
 var _built := false
 
 func _ready() -> void:
@@ -89,6 +91,16 @@ func _build() -> void:
 	_difficulty_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_difficulty_note)
 	_on_difficulty_selected(_difficulty.selected)
+	var resume_button: Button = null
+	if _flow != null and _flow.has_run_save():
+		var resume := Button.new()
+		resume.name = "ResumeRunButton"
+		resume.text = "继续本局"
+		resume.custom_minimum_size = Vector2(280, 50)
+		resume.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		resume.pressed.connect(_resume_run)
+		column.add_child(resume)
+		resume_button = resume
 	var settings := Button.new()
 	settings.name = "SettingsButton"
 	settings.text = "设置"
@@ -97,14 +109,15 @@ func _build() -> void:
 	settings.pressed.connect(func(): settings_requested.emit())
 	column.add_child(settings)
 	if has_progress:
-		var new_game := Button.new()
-		new_game.name = "NewGameButton"
-		new_game.text = "新游戏（清除进度）"
-		new_game.custom_minimum_size = Vector2(280, 40)
-		new_game.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		new_game.pressed.connect(_confirm_new_game)
-		column.add_child(new_game)
+		_new_game_button = Button.new()
+		_new_game_button.name = "NewGameButton"
+		_new_game_button.text = "新游戏（清除进度）"
+		_new_game_button.custom_minimum_size = Vector2(280, 40)
+		_new_game_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		_new_game_button.pressed.connect(_confirm_new_game)
+		column.add_child(_new_game_button)
 	var start := Button.new()
+	start.name = "StartButton"
 	start.text = "继续旅程" if has_progress else "开始旅程"
 	start.custom_minimum_size = Vector2(280, 50)
 	start.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -116,7 +129,13 @@ func _build() -> void:
 	quit.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	quit.pressed.connect(func(): get_tree().quit())
 	column.add_child(quit)
-	start.grab_focus()
+	# A player with a checkpoint is most likely coming back to continue, so the
+	# first frame starts on "继续本局"; the rest of the flow (A only closes the
+	# title and resumes, never starting a new run) is unchanged.
+	if resume_button != null and resume_button.is_inside_tree():
+		resume_button.grab_focus()
+	elif start.is_inside_tree():
+		start.grab_focus()
 
 func _flow_node() -> GameFlow:
 	var tree := Engine.get_main_loop() as SceneTree
@@ -132,18 +151,23 @@ func inv_has_progress(flow: GameFlow) -> bool:
 
 
 func _confirm_new_game() -> void:
-	var dialog := ConfirmationDialog.new()
-	dialog.name = "NewGameConfirm"
-	dialog.dialog_text = "清除当前进度并重新开始？"
-	dialog.process_mode = Node.PROCESS_MODE_ALWAYS
-	dialog.confirmed.connect(func() -> void:
-		new_game_requested.emit()
-		if _flow != null:
-			_flow.reset_profile()
-		_start()
-	)
-	add_child(dialog)
-	dialog.popup_centered()
+	if _confirm_panel == null:
+		_confirm_panel = ConfirmPanel.new()
+		_confirm_panel.name = "NewGameConfirm"
+		add_child(_confirm_panel)
+		_confirm_panel.confirmed.connect(_start_new_game)
+	_confirm_panel.open("清除当前进度并重新开始？", "确认", "取消", _new_game_button)
+
+
+## Clears the profile first, then announces the new game. Listeners (the Hub)
+## read Flow.profile in the signal handler, so emitting earlier would bind them
+## to the profile that is about to be freed.
+func _start_new_game() -> void:
+	if _flow != null:
+		RunSave.clear(_flow.run_save_path)
+		_flow.reset_profile()
+	new_game_requested.emit()
+	_start()
 
 
 func _on_difficulty_selected(index: int) -> void:
@@ -153,8 +177,15 @@ func _on_difficulty_selected(index: int) -> void:
 		_flow.difficulty = index
 
 
+func _resume_run() -> void:
+	if _flow == null or not _flow.has_run_save():
+		return
+	_flow.resume_requested = true
+	_start()
+
+
 func _start() -> void:
-	if _flow != null and _difficulty != null:
+	if _flow != null and _difficulty != null and not _flow.resume_requested:
 		_flow.difficulty = _difficulty.selected
 	if is_inside_tree():
 		get_tree().paused = _was_paused

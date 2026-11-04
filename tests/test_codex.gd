@@ -21,6 +21,13 @@ func run(t: Callable) -> void:
 	run_state.inventory.add_word(known)
 
 	codex.bind(resolver, run_state)
+	# No discovered combos yet: the page shows the run-seed empty-state line.
+	var combos_list := codex.find_child("CombosList", true, false) as VBoxContainer
+	var empty_combo := combos_list.get_child(0) as Label
+	t.call(empty_combo != null, true, "codex_empty_combo_label")
+	t.call(empty_combo != null and empty_combo.text
+		== EmptyStateData.pick(&"codex_combos", run_state.run_seed), true,
+		"codex_empty_combo_copy")
 	var word_lines := codex.get_word_lines()
 	t.call(word_lines.size(), 2, "codex_word_count")
 	t.call(codex.get_word_card_count(), 2, "codex_word_card_count")
@@ -34,11 +41,31 @@ func run(t: Callable) -> void:
 	var decoded_card := grid.get_child(1) as PanelContainer
 	t.call(locked_card.get_theme_stylebox("panel"), WORD_CARD_LOCKED, "codex_locked_card_style")
 	t.call(decoded_card.get_theme_stylebox("panel"), WORD_CARD_DECODED, "codex_decoded_card_style")
+	# Cards are filled after entering the tree (cheap text shaping); the real
+	# labels must still show the word once the refresh returns.
+	t.call((locked_card.get_meta(&"word_glyph") as Label).text, "✶",
+		"codex_card_glyph_text")
+	t.call((locked_card.get_meta(&"word_meaning") as Label).text, "未解码",
+		"codex_card_locked_meaning_text")
+	t.call((locked_card.get_meta(&"word_meta") as Label).text != "", true,
+		"codex_card_meta_text")
+	t.call((decoded_card.get_meta(&"word_meaning") as Label).text, "生命",
+		"codex_card_decoded_meaning_text")
+	t.call((decoded_card.get_meta(&"word_button") as Button).text, "选择",
+		"codex_card_button_text")
+
+	# Refreshing an unchanged inventory must reuse the cards, not rebuild them.
+	codex.refresh()
+	t.call(codex.get_word_card_count(), 2, "codex_refresh_no_duplicate")
+	t.call(grid.get_child(0), locked_card, "codex_card_reused")
 
 	sealed.decoded = true
 	codex.refresh()
 	t.call(codex.get_word_lines()[0].contains("记录"), true, "codex_refresh_after_decode")
 	t.call((grid.get_child(0) as PanelContainer).get_theme_stylebox("panel"), WORD_CARD_DECODED, "codex_decoded_after_refresh")
+	t.call(grid.get_child(0), locked_card, "codex_card_updated_in_place")
+	t.call((locked_card.get_meta(&"word_meaning") as Label).text, "记录",
+		"codex_card_meaning_updated_in_place")
 
 	var forge_words: Array[WordData] = [sealed, known]
 	var phrase := resolver.resolve(forge_words)

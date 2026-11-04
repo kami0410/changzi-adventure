@@ -29,6 +29,29 @@ func _wait_mds(scene, timeout := 8.0) -> bool:
 	return false
 
 
+func _wait_room(scene, room_id: String, timeout := 4.0) -> bool:
+	var left: float = timeout
+	while left > 0.0:
+		if not scene._mds_world.changing_room and scene._mds_world.current_room == room_id:
+			return true
+		await create_timer(0.05).timeout
+		left -= 0.05
+	return false
+
+
+func _tap_action(action: StringName) -> void:
+	var press := InputEventAction.new()
+	press.action = action
+	press.pressed = true
+	Input.parse_input_event(press)
+	await process_frame
+	var release := InputEventAction.new()
+	release.action = action
+	release.pressed = false
+	Input.parse_input_event(release)
+	await process_frame
+
+
 func _run() -> void:
 	var flow := root.get_node("Flow") as GameFlow
 	flow.auto_save = false
@@ -107,17 +130,199 @@ func _run() -> void:
 		scene.player.velocity = Vector2.ZERO
 		check(scene.player.global_position.distance_to(chest.global_position) < 92.0, "demo_chest_in_range")
 		await create_timer(0.2).timeout
-		var press := InputEventAction.new()
-		press.action = &"interact"
-		press.pressed = true
-		Input.parse_input_event(press)
-		await process_frame
-		var release := InputEventAction.new()
-		release.action = &"interact"
-		release.pressed = false
-		Input.parse_input_event(release)
+		await _tap_action(&"interact")
 		await create_timer(0.3).timeout
 		check(chest.is_open, "demo_interact_opens_chest")
+
+	# Hidden vault, through the real interact door on the main path. Its room
+	# origin sits one room below the path in world coordinates, which used to
+	# trip the fall guard: the player was pinned to the vault door and took 15
+	# damage every invulnerability window (the reported freeze).
+	var vault_door := MDSGate.find_gate(scene._mds_world.room_node, "door1")
+	check(vault_door != null, "demo_vault_door_present")
+	if vault_door != null:
+		scene.player.global_position = vault_door.global_position
+		scene.player.velocity = Vector2.ZERO
+		await create_timer(0.3).timeout
+		await _tap_action(&"interact")
+		check(await _wait_room(scene, "ch1_vault"), "demo_vault_entered")
+		check(not scene._mds_world.changing_room, "demo_vault_load_finished")
+		check(not scene._chests.is_empty(), "demo_vault_chest_built")
+		check(not scene._steles.is_empty(), "demo_vault_stele_built")
+		var objective := scene.hud.find_child("Objective", true, false) as Label
+		check(objective != null and objective.text == "搜查隐藏书库", "demo_vault_objective_built")
+		check(scene.hud.get_message_text() != "", "demo_vault_discovery_line_not_empty")
+		check(scene.hud.get_message_text()
+			== VaultRoomData.pick(scene.run_state.run_seed, "ch1_vault"),
+			"demo_vault_discovery_line_matches_seed")
+		check(scene.hud.get_message_text().contains("搜查宝箱与残碑"),
+			"demo_vault_discovery_keeps_search_hint")
+		# Wait out a full invulnerability window, then walk. A fall-guard loop
+		# keeps resetting the position to the door and drains health.
+		var vault_hp: int = scene.player.health
+		var vault_x: float = scene.player.global_position.x
+		await create_timer(0.8).timeout
+		Input.action_press("move_right")
+		await create_timer(0.6).timeout
+		Input.action_release("move_right")
+		await create_timer(0.1).timeout
+		check(scene.player.global_position.x > vault_x + 20.0, "demo_vault_player_can_move")
+		check(scene.player.health == vault_hp, "demo_vault_no_fall_damage")
+		check(scene.player.global_position.y > scene._mds_world.world.get_origin("ch1_vault").y + 500.0,
+			"demo_vault_stands_on_floor")
+		if not scene._chests.is_empty():
+			var vault_chest: TreasureChest = scene._chests[0]
+			scene.player.global_position = vault_chest.global_position + Vector2(-40, 0)
+			await create_timer(0.2).timeout
+			await _tap_action(&"interact")
+			await create_timer(0.3).timeout
+			check(vault_chest.is_open, "demo_vault_chest_opens")
+		var vault_exit := MDSGate.find_gate(scene._mds_world.room_node, "door1")
+		check(vault_exit != null, "demo_vault_return_door_built")
+		if vault_exit != null:
+			scene.player.global_position = vault_exit.global_position
+			scene.player.velocity = Vector2.ZERO
+			await create_timer(0.3).timeout
+			await _tap_action(&"interact")
+			check(await _wait_room(scene, "ch1_03"), "demo_vault_returned_to_path")
+			var return_x: float = scene.player.global_position.x
+			Input.action_press("move_right")
+			await create_timer(0.3).timeout
+			Input.action_release("move_right")
+			await create_timer(0.1).timeout
+			check(scene.player.global_position.x > return_x + 10.0, "demo_vault_play_resumes")
+			# The guard must still catch a real fall: room-local Y, not world Y.
+			var room_origin_y: float = scene._mds_world.world.get_origin("ch1_03").y
+			scene.player.global_position = Vector2(scene.player.global_position.x, room_origin_y + 900.0)
+			await create_timer(0.2).timeout
+			check(scene.player.global_position.y - room_origin_y < 700.0,
+				"demo_fall_guard_still_returns_player")
+
+	# The rest-room paper man rotates authored copy by run seed and stall id.
+	await scene._mds_world.load_room("ch1_rest")
+	await create_timer(0.4).timeout
+	var rest_line := RestRoomData.pick(scene.run_state.run_seed, "ch1_rest")
+	check(rest_line != "", "demo_rest_room_line_not_empty")
+	check(scene.hud.get_message_text() == rest_line, "demo_rest_room_line_matches_seed")
+	# Reading a stele is a direct claim, not a modal page: the world stays
+	# unpaused, focus must not stick to a hidden control, and the player keeps
+	# control afterwards. The stone sits under a platform, so the 110 px claim
+	# radius is reached from the platform edge.
+	check(not scene._steles.is_empty(), "demo_rest_stele_present")
+	if not scene._steles.is_empty():
+		var rest_stele: MemoryStele = scene._steles[0]
+		var stele_target: float = rest_stele.global_position.x - 90.0
+		Input.action_press("move_right")
+		var stele_walk: float = 2.5
+		while stele_walk > 0.0 and scene.player.global_position.x < stele_target:
+			await create_timer(0.05).timeout
+			stele_walk -= 0.05
+		Input.action_release("move_right")
+		await create_timer(0.2).timeout
+		check(scene.player.global_position.x >= stele_target, "demo_rest_stele_reachable")
+		check(rest_stele.prompt.visible, "demo_rest_stele_prompt_visible")
+		check(not paused, "demo_rest_stele_no_page_pause")
+		check(root.gui_get_focus_owner() == null
+			or root.gui_get_focus_owner().is_visible_in_tree(),
+			"demo_rest_stele_focus_not_hidden")
+		var rest_records: int = scene._records
+		await _tap_action(&"interact")
+		await create_timer(0.3).timeout
+		check(scene._claimed_steles.has("ch1_rest"), "demo_rest_stele_claimed")
+		check(scene._records == rest_records + 1, "demo_rest_stele_counts_record")
+		check(not paused, "demo_rest_stele_unpaused")
+		check(not scene.pause_menu.is_open(), "demo_rest_stele_no_pause_menu")
+		check(scene.hud.get_message_text().begins_with("记录 +1"),
+			"demo_rest_stele_message")
+		var stele_x: float = scene.player.global_position.x
+		Input.action_press("move_left")
+		await create_timer(0.3).timeout
+		Input.action_release("move_left")
+		await create_timer(0.1).timeout
+		check(scene.player.global_position.x < stele_x - 10.0,
+			"demo_rest_stele_player_moves")
+	# Corruption tier warnings rotate by run seed but must keep the mechanics.
+	scene.run_state.set_corruption(0)
+	scene.run_state.add_corruption(26)
+	var expected_warning := CorruptionWarningData.pick(scene.run_state.run_seed, 1)
+	check(expected_warning != "", "demo_corruption_warning_not_empty")
+	check(scene.hud.get_message_text() == expected_warning,
+		"demo_corruption_warning_matches_seed")
+	check(scene.hud.get_message_text().contains("敌人伤害 +15%"),
+		"demo_corruption_warning_keeps_mechanics")
+	scene.run_state.set_corruption(0)
+	check(not scene._shops.is_empty(), "demo_rest_shop_present")
+	if not scene._shops.is_empty():
+		var stall: MemoryShop = scene._shops[0]
+		scene._open_shop(stall)
+		var expected_line := Ch1ShopData.pick(scene.run_state.run_seed, String(stall.shop_id))
+		check(expected_line != "", "demo_shop_line_not_empty")
+		check(scene._shop_ui._subtitle.text == expected_line, "demo_shop_line_matches_seed")
+		# Buying through the real handler must answer with the authored sale
+		# line for this run/stall/row, not the generic 成交。 fallback.
+		var offers: Array = scene._shop_cache.get(stall.shop_id, [])
+		check(not offers.is_empty(), "demo_shop_has_offers")
+		if not offers.is_empty():
+			scene.run_state.add_pages(100)
+			var expected_sale := Ch1ShopData.pick_buy(
+				scene.run_state.run_seed, String(stall.shop_id), 0)
+			scene._on_shop_buy(0)
+			check(scene._shop_ui._error_label.text == expected_sale, "demo_shop_sale_line_matches")
+			check(scene._shop_ui._error_label.text != "成交。", "demo_shop_sale_line_is_authored")
+		scene._shop_ui.close_shop()
+
+	# Boss entrance flavour is copy-only and stable for this run's seed.
+	var entrance_line := BossEntranceData.pick(scene.run_state.run_seed, 0)
+	check(entrance_line != "", "demo_boss_entrance_line_not_empty")
+	scene._boss_entrance_started = false
+	scene._boss_entrance()
+	await process_frame
+	check(scene.hud.get_message_text() == entrance_line,
+		"demo_boss_entrance_matches_seed")
+	check(BossEntranceData.variants(1).is_empty(),
+		"demo_boss_entrance_other_chapters_silent")
+
+	# Boss phase banners keep the mechanical "第 N 阶段" prefix and append the
+	# seed-stable flavor line for that phase.
+	var boss_chapter := CampaignData.chapter(0)
+	for phase in [2, 3]:
+		var phase_line := BossPhaseData.pick(scene.run_state.run_seed, phase)
+		scene._on_boss_phase(boss_chapter, phase)
+		check(phase_line != "", "demo_boss_phase_%d_line_not_empty" % phase)
+		check(scene.hud.get_message_text()
+			== "%s · 第 %d 阶段：%s" % [boss_chapter["boss_name"], phase, phase_line],
+			"demo_boss_phase_%d_matches_seed" % phase)
+		check(scene.hud.get_message_text().contains("第 %d 阶段" % phase),
+			"demo_boss_phase_%d_keeps_banner" % phase)
+
+	# Revive hints rotate per run but keep their mechanical text: the authority
+	# path still restores 50 health, the relic path still spends its once-per-run
+	# revive for 40.
+	var revive_authority := load("res://resources/authorities/revive.tres") as AuthorityData
+	check(revive_authority != null, "demo_revive_authority_present")
+	if revive_authority != null:
+		scene._authority.apply(revive_authority, scene.run_state)
+		scene.player.health = 0
+		scene._on_player_died()
+		check(scene.player.health == 50, "demo_revive_authority_heals_50")
+		check(scene.hud.get_message_text()
+			== DeathHintData.pick(scene.run_state.run_seed, &"authority"),
+			"demo_revive_authority_line_matches_seed")
+		check(scene.hud.get_message_text().contains("恢复 50 生命"),
+			"demo_revive_authority_keeps_mechanics")
+	var revive_relic := load("res://resources/relics/immortal_archive.tres") as RelicData
+	check(revive_relic != null, "demo_revive_relic_present")
+	if revive_relic != null:
+		scene.run_state.inventory.add_relic(revive_relic)
+		scene.relic_effects.revive_used = false
+		scene.player.health = 0
+		scene._on_player_died()
+		check(scene.player.health == 40, "demo_revive_relic_heals_40")
+		check(scene.hud.get_message_text()
+			== DeathHintData.pick(scene.run_state.run_seed, &"relic"),
+			"demo_revive_relic_line_matches_seed")
+		check(scene.hud.get_message_text().contains("不灭档案"),
+			"demo_revive_relic_keeps_relic")
 
 	print("CH1 DEMO INTEGRATION: %d checks, %d failures" % [assertions, failures])
 	quit(1 if failures > 0 else 0)

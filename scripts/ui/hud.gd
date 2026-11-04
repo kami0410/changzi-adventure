@@ -62,10 +62,52 @@ func set_authority(authority_name: String, available: bool) -> void:
 func set_active_weapon(slot: int) -> void:
 	_active_weapon = slot
 	_ensure_nodes()
+	var flow := _flow_node()
+	var attack := flow.prompt_label(&"attack") if flow != null else "J"
 	for i in 2:
 		var label := find_child("WeaponCaption%d" % (i + 1), true, false) as Label
-		label.text = "[%d] %s" % [i + 1, "手持，J 攻击" if i == slot else "按 %d 切换" % (i + 1)]
+		var switch_action := &"weapon_1" if i == 0 else &"weapon_2"
+		var switch_label := flow.prompt_label(switch_action) if flow != null else str(i + 1)
+		label.text = "[%d] %s" % [i + 1, "手持，%s 攻击" % attack if i == slot else "按 %s 切换" % switch_label]
 		label.add_theme_color_override("font_color", Color("f3d79c") if i == slot else Color("7f999c"))
+
+
+## HUD footer follows the last device: keyboard hints on keys, face buttons
+## and sticks after a controller press.
+func _refresh_controls_hint() -> void:
+	var hint := find_child("ControlsHint", true, false) as Label
+	if hint == null:
+		return
+	var flow := _flow_node()
+	if flow == null:
+		return
+	var gamepad := flow.using_gamepad
+	var move := "左摇杆" if gamepad else "%s / %s" % [
+		flow.prompt_label(&"move_left"), flow.prompt_label(&"move_right")]
+	var parts: Array[String] = [move + " 移动"]
+	for entry in [[&"jump", "跳跃"], [&"attack", "攻击"], [&"dodge", "翻滚"]]:
+		parts.append("%s %s" % [flow.prompt_label(StringName(entry[0])), String(entry[1])])
+	parts.append("%s / %s 言灵" % [flow.prompt_label(&"cast_1"), flow.prompt_label(&"cast_2")])
+	if gamepad:
+		parts.append("%s 造句" % flow.prompt_label(&"codex"))
+		parts.append("%s 背包" % flow.prompt_label(&"inventory"))
+	else:
+		parts.append("%s 背包" % flow.prompt_label(&"inventory"))
+		parts.append("%s 造句" % flow.prompt_label(&"codex"))
+		parts.append("%s 说明" % flow.prompt_label(&"help"))
+		parts.append("%s 地图" % flow.prompt_label(&"map"))
+	parts.append("%s 暂停" % flow.prompt_label(&"pause"))
+	hint.text = "    ".join(parts)
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_controls_hint()
+	set_active_weapon(_active_weapon)
+
+
+func _on_keybinds_changed() -> void:
+	_refresh_controls_hint()
+	set_active_weapon(_active_weapon)
 
 
 ## During the 30-second corruption frenzy the corruption line becomes the
@@ -114,6 +156,12 @@ func _ready() -> void:
 	apply_text_scale(profile.text_scale if profile != null else 16)
 	if _run != null:
 		_refresh()
+	_refresh_controls_hint()
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
+	if flow != null and not flow.keybinds_changed.is_connected(_on_keybinds_changed):
+		flow.keybinds_changed.connect(_on_keybinds_changed)
 	if OS.has_feature("mobile"):
 		var slots := find_child("BottomSlots", true, false) as Control
 		slots.offset_top = -212
@@ -145,11 +193,14 @@ func get_main_font_size() -> int:
 
 
 func _profile() -> Profile:
+	var flow := _flow_node()
+	return flow.profile if flow != null else null
+
+
+func _flow_node() -> GameFlow:
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree != null and tree.root != null:
-		var flow := tree.root.get_node_or_null("Flow") as GameFlow
-		if flow != null:
-			return flow.profile
+		return tree.root.get_node_or_null("Flow") as GameFlow
 	return null
 
 

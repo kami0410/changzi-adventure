@@ -275,13 +275,14 @@ func _test_ai_intent(t: Callable) -> void:
 	t.call(validated.get("shape", &""), &"meteor", "v3_validator_accepts_new_shapes")
 	t.call(validated.get("components", {}).get(&"explosion", 0.0), 3.0, "v3_validator_keeps_explosion")
 	t.call(validated.has("vfx"), true, "v3_validator_passes_vfx")
-	var parts := _caster([_enemy(Vector2(150, -28))] as Array[Enemy])
+	var target := _enemy(Vector2(150, -28))
+	var parts := _caster([target] as Array[Enemy])
 	var caster: PhraseCaster = parts[0]
 	caster.equip_phrase(0, phrase)
 	caster.cast(0)
 	t.call(caster.last_context.vfx_scale, 1.6, "v3_vfx_size_reaches_cast")
 	t.call(caster.last_context.burn, 3, "v3_ai_burn_reaches_cast")
-	_free(parts)
+	_free(parts + [target])
 
 
 func _test_freeform_words(t: Callable) -> void:

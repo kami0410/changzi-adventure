@@ -38,29 +38,44 @@ var _word_grid: GridContainer = null
 var _relics_title: Label = null
 var _relics_label: Label = null
 var _corruption_label: Label = null
+var _close_button: Button = null
+var _close_hint_label: Label = null
 
 var _inventory: Inventory = null
+var _run_seed: int = 0
 var _hovered_weapon_slot: int = -1
 var _hovered_phrase_slot: int = -1
 var _selected_weapon_slot: int = 0
 var _selected_phrase_slot: int = 0
 var _nodes_ready: bool = false
+## Cards are kept between refreshes and updated in place. Rebuilding the whole
+## grid on every Inventory.changed cost ~13 ms per card in a 40+ word run.
+var _word_cards: Dictionary = {}
+var _word_empty: Label = null
 
 
 func _ready() -> void:
 	_ensure_nodes()
 	_refresh()
 	var header := find_child("Header", true, false)
-	var close_button := Button.new()
-	close_button.text = "返回 [Tab / Esc]"
-	close_button.pressed.connect(func(): close_requested.emit())
-	header.add_child(close_button)
+	_close_button = Button.new()
+	_close_button.pressed.connect(func(): close_requested.emit())
+	header.add_child(_close_button)
+	_refresh_close_hint()
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
+	if flow != null and not flow.keybinds_changed.is_connected(_refresh_close_hint):
+		flow.keybinds_changed.connect(_refresh_close_hint)
 
 
-func bind(inventory: Inventory) -> void:
+func bind(inventory: Inventory, run_seed: int = 0) -> void:
 	if _inventory != null and _inventory.changed.is_connected(_on_inventory_changed):
 		_inventory.changed.disconnect(_on_inventory_changed)
+	if _inventory != inventory:
+		_clear_word_cards()
 	_inventory = inventory
+	_run_seed = run_seed
 	if _inventory != null and not _inventory.changed.is_connected(_on_inventory_changed):
 		_inventory.changed.connect(_on_inventory_changed)
 	_refresh()
@@ -169,6 +184,9 @@ func _ensure_nodes() -> void:
 	_relics_title = find_child("RelicsTitle", true, false) as Label
 	_relics_label = find_child("Relics", true, false) as Label
 	_corruption_label = find_child("Corruption", true, false) as Label
+	var footer := find_child("Footer", true, false)
+	if footer != null:
+		_close_hint_label = footer.get_node_or_null("Hint") as Label
 
 	_setup_slot(_weapon_card_1, 0, true)
 	_setup_slot(_weapon_card_2, 1, true)
@@ -219,18 +237,90 @@ func _refresh() -> void:
 func _rebuild_word_cards(words: Array[WordData]) -> void:
 	if _word_grid == null:
 		return
-	_clear(_word_grid)
+	var present: Dictionary = {}
+	for word in words:
+		if word != null:
+			present[word.id] = true
+	for key in _word_cards.keys():
+		if present.has(key):
+			continue
+		var stale: PanelContainer = _word_cards[key]
+		_word_cards.erase(key)
+		if is_instance_valid(stale):
+			if stale.get_parent() != null:
+				stale.get_parent().remove_child(stale)
+			if stale.is_inside_tree():
+				stale.queue_free()
+			else:
+				stale.free()
+
 	if words.is_empty():
-		var empty := Label.new()
-		empty.text = "尚未收集任何词。"
-		empty.add_theme_color_override("font_color", COLOR_DIM)
-		empty.add_theme_font_size_override("font_size", 12)
-		_word_grid.add_child(empty)
+		if _word_empty == null:
+			_word_empty = Label.new()
+			_word_empty.text = EmptyStateData.pick(&"inventory_words", _run_seed)
+			_word_empty.add_theme_color_override("font_color", COLOR_DIM)
+			_word_empty.add_theme_font_size_override("font_size", 12)
+		if _word_empty.get_parent() == null:
+			_word_grid.add_child(_word_empty)
 		return
+	if _word_empty != null:
+		if _word_empty.get_parent() != null:
+			_word_empty.get_parent().remove_child(_word_empty)
+		_word_empty.queue_free()
+		_word_empty = null
+
 	for word in words:
 		if word == null:
 			continue
-		_word_grid.add_child(_make_word_card(word))
+		var entry: Variant = _word_cards.get(word.id)
+		if entry == null:
+			var card := _make_word_card(word)
+			_word_cards[word.id] = card
+			_word_grid.add_child(card)
+			# Text is assigned only after the card is in the tree; shaping text
+			# during ENTER_TREE costs ~10 ms per card, the assignment after is
+			# near-free.
+			_fill_word_card_text(card, word)
+		else:
+			_update_word_card(entry as PanelContainer, word)
+
+
+## Remove every cached word card, e.g. when binding a different inventory.
+func _clear_word_cards() -> void:
+	for entry in _word_cards.values():
+		var card := entry as PanelContainer
+		if not is_instance_valid(card):
+			continue
+		if card.get_parent() != null:
+			card.get_parent().remove_child(card)
+		if card.is_inside_tree():
+			card.queue_free()
+		else:
+			card.free()
+	_word_cards.clear()
+
+
+func _update_word_card(card: PanelContainer, word: WordData) -> void:
+	if card == null:
+		return
+	if bool(card.get_meta(&"rendered_decoded")) != word.decoded:
+		card.add_theme_stylebox_override("panel",
+			WORD_CARD_DECODED if word.decoded else WORD_CARD_LOCKED)
+		var glyph := card.get_meta(&"word_glyph") as Label
+		if glyph != null:
+			glyph.add_theme_color_override("font_color", COLOR_CYAN if word.decoded else COLOR_LOCKED)
+		var name_label := card.get_meta(&"word_name") as Label
+		if name_label != null:
+			name_label.add_theme_color_override("font_color", COLOR_BONE if word.decoded else COLOR_DIM)
+		card.set_meta(&"rendered_decoded", word.decoded)
+	var name_text := word.meaning if word.decoded else "未解码"
+	var name_label_ref := card.get_meta(&"word_name") as Label
+	if name_label_ref != null and name_label_ref.text != name_text:
+		name_label_ref.text = name_text
+	var tags_text := _word_tags(word)
+	var tags_ref := card.get_meta(&"word_tags") as Label
+	if tags_ref != null and tags_ref.text != tags_text:
+		tags_ref.text = tags_text
 
 
 func _make_word_card(word: WordData) -> PanelContainer:
@@ -244,14 +334,14 @@ func _make_word_card(word: WordData) -> PanelContainer:
 	card.add_child(box)
 
 	var glyph := Label.new()
-	glyph.text = word.glyph if word.glyph != "" else "？？？"
+	glyph.text = ""
 	glyph.add_theme_font_size_override("font_size", 24)
 	glyph.add_theme_color_override("font_color", COLOR_CYAN if word.decoded else COLOR_LOCKED)
 	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(glyph)
 
 	var name_label := Label.new()
-	name_label.text = word.meaning if word.decoded else "未解码"
+	name_label.text = ""
 	name_label.add_theme_font_size_override("font_size", 12)
 	name_label.add_theme_color_override("font_color", COLOR_BONE if word.decoded else COLOR_DIM)
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -259,14 +349,33 @@ func _make_word_card(word: WordData) -> PanelContainer:
 	box.add_child(name_label)
 
 	var tags := Label.new()
-	tags.text = _word_tags(word)
+	tags.text = ""
 	tags.add_theme_font_size_override("font_size", 12)
 	tags.add_theme_color_override("font_color", COLOR_DIM)
 	tags.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tags.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(tags)
 
+	# Cached so a kept card can be updated without rebuilding the grid.
+	card.set_meta(&"word_glyph", glyph)
+	card.set_meta(&"word_name", name_label)
+	card.set_meta(&"word_tags", tags)
+	card.set_meta(&"rendered_decoded", word.decoded)
+
 	return card
+
+
+## Fills the card after it enters the tree; see the note in _rebuild_word_cards.
+func _fill_word_card_text(card: PanelContainer, word: WordData) -> void:
+	var glyph := card.get_meta(&"word_glyph") as Label
+	if glyph != null:
+		glyph.text = word.glyph if word.glyph != "" else "？？？"
+	var name_label := card.get_meta(&"word_name") as Label
+	if name_label != null:
+		name_label.text = word.meaning if word.decoded else "未解码"
+	var tags := card.get_meta(&"word_tags") as Label
+	if tags != null:
+		tags.text = _word_tags(word)
 
 
 func _refresh_slot_styles() -> void:
@@ -419,7 +528,7 @@ func _phrase_rarity(phrase: ResolvedPhrase) -> StringName:
 
 func _build_words_text() -> String:
 	if _inventory == null or _inventory.words.is_empty():
-		return "尚未收集任何词。"
+		return EmptyStateData.pick(&"inventory_words", _run_seed)
 	var parts: Array[String] = []
 	for word in _inventory.words:
 		if word == null:
@@ -433,7 +542,7 @@ func _build_words_text() -> String:
 
 func _build_relics_text(relics: Array[RelicData]) -> String:
 	if relics.is_empty():
-		return "尚未获得遗物。"
+		return EmptyStateData.pick(&"inventory_relics", _run_seed)
 	var parts: Array[String] = []
 	for relic in relics:
 		if relic == null:
@@ -442,16 +551,25 @@ func _build_relics_text(relics: Array[RelicData]) -> String:
 	return "\n".join(parts)
 
 
-func _clear(container: Node) -> void:
-	if container == null:
-		return
-	for child in container.get_children():
-		var deferred := child.is_inside_tree()
-		container.remove_child(child)
-		if deferred:
-			child.queue_free()
-		else:
-			child.free()
+func _flow_node() -> GameFlow:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("Flow") as GameFlow
+	return null
+
+
+func _refresh_close_hint() -> void:
+	var flow := _flow_node()
+	var alt := "%s / Esc" % GameFlow.key_label(&"inventory")
+	var key := flow.close_prompt(alt) if flow != null else alt
+	if _close_button != null:
+		_close_button.text = "返回 [%s]" % key
+	if _close_hint_label != null:
+		_close_hint_label.text = "%s 关闭" % key
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_close_hint()
 
 
 func _on_inventory_changed() -> void:

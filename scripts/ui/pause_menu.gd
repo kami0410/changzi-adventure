@@ -2,11 +2,14 @@ class_name PauseMenu
 extends CanvasLayer
 
 signal pause_requested
+signal settings_requested
 var managed := false
 var _root: Control = null
 var _resume_button: Button = null
+var _settings_button: Button = null
 var _restart_button: Button = null
 var _quit_button: Button = null
+var _footer: Label = null
 var _nodes_ready: bool = false
 var _confirm: ConfirmationDialog = null
 
@@ -47,18 +50,34 @@ func _scene_tree() -> SceneTree:
 	return tree
 
 
+func _flow_node() -> GameFlow:
+	var tree := _scene_tree()
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("Flow") as GameFlow
+	return null
+
+
 func _ensure_nodes() -> void:
 	if _nodes_ready:
 		return
 	_nodes_ready = true
 	_root = find_child("Root", true, false) as Control
 	_resume_button = find_child("ResumeButton", true, false) as Button
+	_settings_button = find_child("SettingsButton", true, false) as Button
 	_restart_button = find_child("RestartButton", true, false) as Button
 	_quit_button = find_child("QuitButton", true, false) as Button
+	_footer = find_child("Footer", true, false) as Label
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
+	if flow != null and not flow.keybinds_changed.is_connected(_refresh_footer):
+		flow.keybinds_changed.connect(_refresh_footer)
 	if _root != null:
 		_root.process_mode = Node.PROCESS_MODE_ALWAYS
 	if _resume_button != null and not _resume_button.pressed.is_connected(_on_resume_pressed):
 		_resume_button.pressed.connect(_on_resume_pressed)
+	if _settings_button != null and not _settings_button.pressed.is_connected(_on_settings_pressed):
+		_settings_button.pressed.connect(_on_settings_pressed)
 	if _restart_button != null and not _restart_button.pressed.is_connected(_on_restart_pressed):
 		_restart_button.pressed.connect(_on_restart_pressed)
 	if _quit_button != null and managed:
@@ -74,6 +93,18 @@ func _sync_visibility() -> void:
 		_root.visible = tree != null and tree.paused
 		if _root.visible and _resume_button != null and _resume_button.is_inside_tree():
 			_resume_button.grab_focus()
+		_refresh_footer()
+
+
+func _refresh_footer() -> void:
+	if _footer == null:
+		return
+	var flow := _flow_node()
+	_footer.text = "按 %s 继续" % (flow.prompt_label(&"pause") if flow != null else "P / Esc")
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_footer()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -81,6 +112,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		if managed:
 			return
 		toggle()
+		if is_inside_tree() and get_viewport() != null:
+			get_viewport().set_input_as_handled()
+		return
+	# Controller B is ui_cancel, not pause; let it back out of the page.
+	if is_open() and event.is_action_pressed("ui_cancel"):
+		if managed:
+			pause_requested.emit()
+		else:
+			toggle()
 		if is_inside_tree() and get_viewport() != null:
 			get_viewport().set_input_as_handled()
 
@@ -92,6 +132,10 @@ func _on_resume_pressed() -> void:
 			pause_requested.emit()
 		else:
 			toggle()
+
+
+func _on_settings_pressed() -> void:
+	settings_requested.emit()
 
 
 func _on_restart_pressed() -> void:
@@ -113,7 +157,10 @@ func _ask_confirm(text: String, action: Callable) -> void:
 	if _confirm.confirmed.is_connected(action):
 		_confirm.confirmed.disconnect(action)
 	_confirm.confirmed.connect(action, CONNECT_ONE_SHOT)
-	_confirm.popup_centered()
+	# A unit test can build the pause menu before the root is in the tree; a
+	# native Window cannot pop there. In game the menu is always inside it.
+	if is_inside_tree():
+		_confirm.popup_centered()
 
 
 func _do_restart() -> void:
@@ -121,6 +168,9 @@ func _do_restart() -> void:
 	if tree == null:
 		return
 	tree.paused = false
+	if Flow != null and Flow.auto_save:
+		# Restart is a fresh run, not a resume of the run being abandoned.
+		RunSave.clear(Flow.run_save_path)
 	tree.reload_current_scene()
 
 

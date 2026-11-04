@@ -1,6 +1,8 @@
 class_name AISettingsUI
 extends Control
 
+signal closed
+
 var _ai: AIService
 var _enabled: CheckButton
 var _provider: OptionButton
@@ -89,7 +91,7 @@ func _ready() -> void:
 	buttons.add_child(test)
 	var close := Button.new()
 	close.text = "关闭"
-	close.pressed.connect(func(): hide())
+	close.pressed.connect(close_page)
 	buttons.add_child(close)
 	column.add_child(buttons)
 	_status = Label.new()
@@ -114,8 +116,30 @@ func open() -> void:
 		_timeout.value = float(cfg.get("timeout", 25.0))
 	show()
 	_status.text = "当前：%s" % ("已启用" if _ai != null and _ai.is_configured() else "未启用或缺少配置")
-	if _endpoint != null:
+	# A pad cannot type into a LineEdit, so start on the enable switch instead;
+	# keyboard players keep the endpoint field as the natural entry point.
+	var flow := get_node_or_null("/root/Flow") as GameFlow
+	if flow != null and flow.using_gamepad:
+		if _enabled != null:
+			_enabled.grab_focus()
+	elif _endpoint != null:
 		_endpoint.grab_focus()
+
+func close_page() -> void:
+	if not visible:
+		return
+	hide()
+	closed.emit()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not visible:
+		return
+	# Reached when the page is opened outside Settings; inside the game the
+	# Settings owner handles B first and closes this page through close_subpage.
+	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause"):
+		close_page()
+		if is_inside_tree() and get_viewport() != null:
+			get_viewport().set_input_as_handled()
 
 func _add_field(parent: Node, label_text: String, placeholder: String) -> LineEdit:
 	var row := HBoxContainer.new()

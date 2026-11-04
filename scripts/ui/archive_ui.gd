@@ -14,6 +14,7 @@ var _open := false
 var _built := false
 var _fragment_label: Label
 var _status: Label
+var _close_button: Button
 var _rows: Dictionary = {}
 
 
@@ -24,6 +25,10 @@ func _ready() -> void:
 	visible = false
 	_build()
 	_built = true
+	_refresh_close_hint()
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
 
 
 func bind(new_profile: Profile) -> void:
@@ -40,11 +45,9 @@ func open() -> void:
 		_built = true
 	_open = true
 	visible = true
+	_refresh_close_hint()
 	_refresh()
-	if is_inside_tree():
-		var first := find_children("*", "Button", true, false)
-		if not first.is_empty() and first[0] is Button:
-			(first[0] as Button).grab_focus()
+	_focus_first_pressable()
 
 
 func close() -> void:
@@ -108,12 +111,12 @@ func _build() -> void:
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	outer.add_child(buttons)
-	var close_button := Button.new()
-	close_button.text = "合上档案  [Esc]"
-	close_button.custom_minimum_size = Vector2(260, 44)
-	close_button.add_theme_font_size_override("font_size", 24)
-	close_button.pressed.connect(close)
-	buttons.add_child(close_button)
+	_close_button = Button.new()
+	_close_button.text = "合上档案"
+	_close_button.custom_minimum_size = Vector2(260, 44)
+	_close_button.add_theme_font_size_override("font_size", 24)
+	_close_button.pressed.connect(close)
+	buttons.add_child(_close_button)
 
 
 func _make_track_row(entry: Dictionary) -> PanelContainer:
@@ -198,6 +201,53 @@ func _refresh() -> void:
 		var button := row["button"] as Button
 		button.text = "升级"
 		button.disabled = profile == null or profile.memory_fragments < cost
+	_keep_focus_pressable()
+
+
+## A focused disabled Button swallows A, so an early visit with too few
+## fragments must not park focus on an unaffordable upgrade row.
+func _focus_first_pressable() -> void:
+	if not is_inside_tree():
+		return
+	for entry in ArchiveData.TRACKS:
+		var row: Dictionary = _rows.get(StringName(entry.get(&"id", &"")), {})
+		var button := row.get("button") as Button
+		if button != null and is_instance_valid(button) and not button.disabled:
+			button.grab_focus()
+			return
+	if _close_button != null and is_instance_valid(_close_button):
+		_close_button.grab_focus()
+
+
+func _flow_node() -> GameFlow:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("Flow") as GameFlow
+	return null
+
+
+func _refresh_close_hint() -> void:
+	if _close_button == null:
+		return
+	var flow := _flow_node()
+	var key := flow.close_prompt() if flow != null else "Esc"
+	_close_button.text = "合上档案  [%s]" % key
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_close_hint()
+
+
+func _keep_focus_pressable() -> void:
+	if not _open or not is_inside_tree():
+		return
+	var owner := get_viewport().gui_get_focus_owner()
+	if owner == null or not is_ancestor_of(owner):
+		return
+	var button := owner as Button
+	if button == null or not button.disabled:
+		return
+	_focus_first_pressable()
 
 
 func _unhandled_input(event: InputEvent) -> void:

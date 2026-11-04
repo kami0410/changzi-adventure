@@ -35,6 +35,15 @@ func _test_mds_chapter(scene, chapter_index: int) -> void:
 	var mds = scene._mds_world
 	var prefix := "ch%d" % (chapter_index + 1)
 	check(mds.current_room == "%s_01" % prefix, "chapter_%d_mds_starts" % (chapter_index + 1))
+	if chapter_index == 3:
+		# Chapter 4 art audit: the MDS rooms must keep using the dedicated
+		# painting, with TheaterBackdrop only adding its light overlay.
+		var art := mds.room_node.get_node_or_null("BackgroundArt") as Sprite2D
+		check(art != null and art.texture != null
+			and art.texture.resource_path.ends_with("smiling_theater.png"),
+			"chapter_4_background_uses_painting")
+		var theater := mds.room_node.get_node_or_null("TheaterBackdrop") as TheaterBackdrop
+		check(theater != null and theater.generated_art, "chapter_4_theater_overlay_is_lightweight")
 	scene._map_overlay.open()
 	check(scene._map_overlay.is_open(), "chapter_%d_map_opens" % (chapter_index + 1))
 	check(scene._map_overlay.map_view.is_room_revealed("%s_01" % prefix), "chapter_%d_map_reveals_start" % (chapter_index + 1))

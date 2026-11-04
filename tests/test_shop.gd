@@ -31,6 +31,26 @@ func run(t: Callable) -> void:
 	t.call(picked, [0], "shop_ui_emits_buy")
 	ui.mark_bought(0, 15)
 	t.call(ui._buttons[0].disabled, true, "shop_ui_disables_bought")
+
+	# Reopening reuses the card pool (text is assigned after the cards are in
+	# the tree; rebuilding them every open cost ~50 ms).
+	var first_buttons: Array[Button] = ui._buttons.duplicate()
+	ui.close_shop()
+	ui.open_shop(offers, 15)
+	t.call(ui._buttons.size(), 3, "shop_ui_reopen_buttons")
+	t.call(ui._buttons[0], first_buttons[0], "shop_ui_reuses_cards")
+	t.call(ui._buttons[2], first_buttons[2], "shop_ui_reuses_all_cards")
+	t.call(ui._buttons[0].visible, true, "shop_ui_reused_card_visible")
+	t.call(ui._buttons[0].text.contains(String(offers[0]["title"])), true,
+		"shop_ui_reused_card_text")
+	var short_offers: Array[Dictionary] = [offers[0], offers[1]]
+	ui.open_shop(short_offers, 15)
+	t.call(ui._buttons.size(), 2, "shop_ui_active_buttons_shrink")
+	t.call(ui._pool.size(), 3, "shop_ui_pool_kept")
+	t.call(ui._pool[2].visible, false, "shop_ui_extra_card_hidden")
+	ui.open_shop(offers, 15)
+	t.call(ui._buttons.size(), 3, "shop_ui_active_buttons_grow")
+	t.call(ui._buttons[2].visible, true, "shop_ui_extra_card_visible")
 	tree.root.remove_child(ui)
 	ui.free()
 	profile.free()

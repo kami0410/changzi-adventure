@@ -7,6 +7,7 @@ func run(t: Callable) -> void:
 	_test_defaults(t)
 	_test_unconfigured_request(t)
 	_test_configuration_gates(t)
+	_test_provider_paths(t)
 	_test_response_parsing(t)
 	_test_settings_reachable_from_title(t)
 
@@ -39,6 +40,37 @@ func _test_configuration_gates(t: Callable) -> void:
 	ai.free()
 
 
+## All three optional providers keep their own request shape; none of them
+## becomes reachable while the service is disabled.
+func _test_provider_paths(t: Callable) -> void:
+	for provider in AIService.PROVIDERS:
+		var defaults := AIService.provider_defaults(provider)
+		var config := AIService.normalized_config({
+			"enabled": true,
+			"provider": provider,
+			"endpoint": defaults["endpoint"],
+			"model": defaults["model"],
+			"api_key": "test-key",
+		})
+		var request := AIService.build_request(provider, "让雷落在火里", config)
+		t.call(String(request.get("url", "")), defaults["endpoint"], "ai_%s_default_endpoint" % provider)
+		t.call(String(request.get("body", "")).contains(defaults["model"]), true, "ai_%s_default_model" % provider)
+		t.call(str(request.get("headers", "")).contains("test-key"), provider != "ollama", "ai_%s_key_transport" % provider)
+		var ai := AIService.new()
+		ai.config = config
+		t.call(ai.is_configured(), true, "ai_%s_configured_with_key" % provider)
+		ai.free()
+	var openai_without_key := AIService.normalized_config({
+		"enabled": true, "provider": "openai",
+		"endpoint": "http://127.0.0.1:1234/v1/chat/completions", "model": "local-model", "api_key": "",
+	})
+	var ai := AIService.new()
+	ai.config = openai_without_key
+	t.call(ai.is_configured(), true, "ai_openai_key_optional")
+	ai.free()
+	t.call(AIService.normalized_config({"provider": "unknown"})["provider"], "ollama", "ai_unknown_provider_falls_back_to_ollama")
+
+
 func _test_response_parsing(t: Callable) -> void:
 	var bad := AIService.parse_response("ollama", "not json")
 	t.call(bad.has("error"), true, "bad_json_is_rejected")
@@ -64,4 +96,5 @@ func _test_settings_reachable_from_title(t: Callable) -> void:
 		if hub.settings_menu != null:
 			t.call(hub.settings_menu.visible, true, "settings_open_from_title")
 			hub.settings_menu.close()
+	hub.profile.free()
 	hub.free()

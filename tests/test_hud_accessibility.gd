@@ -7,6 +7,7 @@ func run(t: Callable) -> void:
 	_test_integer_scaling(t)
 	_test_hud_text_scale(t)
 	_test_settings_text_option(t)
+	_test_settings_volume(t)
 	_test_danger_shapes(t)
 
 
@@ -55,6 +56,35 @@ func _test_settings_text_option(t: Callable) -> void:
 	settings.free()
 	tree.root.remove_child(hud)
 	hud.free()
+
+
+## The master volume belongs with the other persisted settings: moving the
+## slider must update the profile and the Master bus, and startup must apply
+## the stored value.
+func _test_settings_volume(t: Callable) -> void:
+	var flow := Engine.get_main_loop().root.get_node_or_null("Flow") as GameFlow
+	if flow == null:
+		return
+	var original_profile := flow.profile
+	var profile := Profile.new()
+	flow.profile = profile
+	var original_db := AudioServer.get_bus_volume_db(0)
+	var tree := Engine.get_main_loop() as SceneTree
+	var settings := preload("res://scenes/ui/settings_menu.tscn").instantiate() as SettingsMenu
+	tree.root.add_child(settings)
+	settings.open()
+	settings._on_volume_changed(0.35)
+	t.call(flow.profile.master_volume, 0.35, "settings_saves_master_volume")
+	t.call(absf(AudioServer.get_bus_volume_db(0) - linear_to_db(0.35)) < 0.01, true, "settings_applies_master_volume")
+	flow.profile.master_volume = 0.2
+	flow.apply_master_volume()
+	t.call(absf(AudioServer.get_bus_volume_db(0) - linear_to_db(0.2)) < 0.01, true, "startup_applies_master_volume")
+	settings.close()
+	tree.root.remove_child(settings)
+	settings.free()
+	flow.profile = original_profile
+	profile.free()
+	AudioServer.set_bus_volume_db(0, original_db)
 
 
 func _test_danger_shapes(t: Callable) -> void:

@@ -13,12 +13,19 @@ artifacts/
 # Secrets
 *.keystore
 *.jks
+# Windows code-signing material must never be committed
+*.pfx
+*.p12
+*.pvk
 
 # Python tooling
 __pycache__/
 *.pyc
 # Magpie default output when no path is given
 generated-images/
+
+# Supervisor harness logs
+.supervisor/
 
 # OS / editor
 .DS_Store

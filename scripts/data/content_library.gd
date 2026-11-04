@@ -105,6 +105,13 @@ const WORDS: Array[Resource] = [
 static func words() -> Array[Resource]:
 	return WORDS.duplicate()
 
+static func word_by_id(id: StringName) -> WordData:
+	for resource in WORDS:
+		var word := resource as WordData
+		if word != null and word.id == id:
+			return word
+	return null
+
 const PHRASES: Array[Resource] = [
 	preload("res://resources/phrases/broken_devour_abyss.tres"),
 	preload("res://resources/phrases/broken_life.tres"),
@@ -167,6 +174,13 @@ const WEAPONS: Array[Resource] = [
 static func weapons() -> Array[Resource]:
 	return WEAPONS.duplicate()
 
+static func weapon_by_id(id: StringName) -> WeaponData:
+	for resource in WEAPONS:
+		var weapon := resource as WeaponData
+		if weapon != null and weapon.id == id:
+			return weapon
+	return null
+
 ## Chapter 1 demo exposes six weapons and six relics, each with a distinct
 ## behaviour. The rest stay in WEAPONS/RELICS for chapters 2–4 and the full game.
 const DEMO_WEAPONS: Array[Resource] = [
@@ -222,6 +236,13 @@ const AUTHORITIES: Array[Resource] = [
 
 static func authorities() -> Array[Resource]:
 	return AUTHORITIES.duplicate()
+
+static func authority_by_id(id: StringName) -> AuthorityData:
+	for resource in AUTHORITIES:
+		var authority := resource as AuthorityData
+		if authority != null and authority.id == id:
+			return authority
+	return null
 
 const BOSSES: Array[Resource] = [
 	preload("res://resources/bosses/ink_archivist.tres"),

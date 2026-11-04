@@ -11,10 +11,16 @@ var _panel: PanelContainer
 var _label: Label
 var _active := false
 var _built := false
+var _step := 0
 
 
 func _ready() -> void:
 	_build()
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
+	if flow != null and not flow.keybinds_changed.is_connected(_refresh_hint):
+		flow.keybinds_changed.connect(_refresh_hint)
 
 
 func _build() -> void:
@@ -46,23 +52,27 @@ func start_if_needed() -> void:
 	_active = true
 	visible = true
 	_panel.visible = true
-	_set_hint("第 1 步 · 按 C 打开语言图鉴。")
+	_step = 1
+	_refresh_hint()
 
 
 func on_codex_opened() -> void:
 	if _active:
-		_set_hint("第 2 步 · 选 2 个词，预览法术，然后装备到 [Q]。")
+		_step = 2
+		_refresh_hint()
 
 
 func on_phrase_equipped() -> void:
 	if _active:
-		_set_hint("第 3 步 · 走到训练碑前按 E 试放短语。")
+		_step = 3
+		_refresh_hint()
 
 
 func on_training_hit() -> void:
 	if not _active:
 		return
 	_active = false
+	_step = 0
 	visible = false
 	if _panel != null:
 		_panel.visible = false
@@ -82,9 +92,27 @@ func get_hint() -> String:
 	return _label.text if _label != null else ""
 
 
-func _set_hint(text: String) -> void:
-	if _label != null:
-		_label.text = text
+## Rebuild the current step's copy so a device switch mid-tutorial replaces
+## the stale C / E hints with the pad buttons the player now holds.
+func _refresh_hint() -> void:
+	if not _active or _label == null:
+		return
+	match _step:
+		1:
+			_label.text = "第 1 步 · 按 %s 打开语言图鉴。" % _prompt(&"codex")
+		2:
+			_label.text = "第 2 步 · 选 2 个词，预览法术，然后装备到 [%s]。" % _prompt(&"cast_1")
+		3:
+			_label.text = "第 3 步 · 走到训练碑前按 %s 试放短语。" % _prompt(&"interact")
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_hint()
+
+
+func _prompt(action: StringName) -> String:
+	var flow := _flow_node()
+	return flow.prompt_label(action) if flow != null else GameFlow.key_label(action)
 
 
 func _profile() -> Profile:

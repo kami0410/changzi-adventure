@@ -35,6 +35,14 @@ var _persistent_signatures: Array[String] = []
 var _word_lines: Array[String] = []
 var _combo_lines: Array[String] = []
 var _nodes_ready: bool = false
+## Cards are kept between refreshes and updated in place. Rebuilding the whole
+## grid on every Inventory.changed cost ~20 ms per card in a 40+ word run, so a
+## single word pickup froze for over a second while the page was hidden.
+var _word_cards: Dictionary = {}
+var _word_empty: Label = null
+## Fingerprint of the resolved combo cards; unaddressed inventory changes must
+## not rebuild them.
+var _combo_fingerprint := ""
 
 var _selected_words: Array[WordData] = []
 var _last_forge_phrase: ResolvedPhrase = null
@@ -43,32 +51,69 @@ var _equip_buttons: Array[Button] = []
 var _free_text: LineEdit = null
 var _ai_button: Button = null
 var _ai_status: Label = null
+## True while _ai_status shows the "configure AI under <key>" hint, so a
+## device switch or rebind can rebuild that key without touching AI results.
+var _ai_config_hint := false
+var _close_button: Button = null
+## Set while a multi-source boot update assigns its fields, so the grids are
+## rebuilt once at the end instead of after every setter.
+var _suspend_refresh := false
 
 
 func _ready() -> void:
 	_ensure_nodes()
-	refresh()
+	# The page starts hidden inside Main and is populated by bind_state before
+	# the first frame; a standalone instance still builds its empty state.
+	if visible:
+		refresh()
 	var header := find_child("Header", true, false)
-	var close_button := Button.new()
-	close_button.text = "返回 [C / Esc]"
-	close_button.pressed.connect(func(): close_requested.emit())
-	header.add_child(close_button)
+	_close_button = Button.new()
+	_close_button.pressed.connect(func(): close_requested.emit())
+	header.add_child(_close_button)
+	_refresh_close_hint()
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
+	if flow != null and not flow.keybinds_changed.is_connected(_refresh_equip_labels):
+		flow.keybinds_changed.connect(_refresh_equip_labels)
+	if flow != null and not flow.keybinds_changed.is_connected(_refresh_close_hint):
+		flow.keybinds_changed.connect(_refresh_close_hint)
+	if flow != null and not flow.keybinds_changed.is_connected(_refresh_ai_config_hint):
+		flow.keybinds_changed.connect(_refresh_ai_config_hint)
 	var ai := get_node_or_null("/root/AI") as AIService
 	if ai != null:
 		ai.intent_ready.connect(_on_ai_intent)
 		ai.intent_failed.connect(_on_ai_failed)
 		ai.status_changed.connect(func(text: String):
-			if _ai_status != null:
-				_ai_status.text = text
+			_set_ai_status(text)
 		)
 
 
 func bind(resolver: PhraseResolver, run: RunState) -> void:
 	if _run != null and _run.inventory.changed.is_connected(_on_inventory_changed):
 		_run.inventory.changed.disconnect(_on_inventory_changed)
+	if _run != run:
+		# Card order follows the bound run's inventory. Reusing a previous
+		# run's cards would keep its acquisition order, so rebuild once here.
+		_clear_word_cards()
+		_combo_fingerprint = ""
 	_resolver = resolver
 	_run = run
 	_sync_inventory_signal()
+	refresh()
+
+
+## Boot/restore entry point: the run, this run's discovered phrases and the
+## Profile's saved signatures all arrive together. Applying them through the
+## individual setters rebuilt the same word/combo grids three times while the
+## page was still hidden, which dominated resume launch time.
+func bind_state(resolver: PhraseResolver, run: RunState,
+		discovered: Array[ResolvedPhrase], persistent_signatures: Array[String]) -> void:
+	_suspend_refresh = true
+	bind(resolver, run)
+	set_discovered(discovered)
+	set_persistent_discovered(persistent_signatures)
+	_suspend_refresh = false
 	refresh()
 
 
@@ -85,6 +130,8 @@ func set_persistent_discovered(signatures: Array[String]) -> void:
 
 
 func refresh() -> void:
+	if _suspend_refresh:
+		return
 	_ensure_nodes()
 	if _word_grid == null:
 		return
@@ -159,17 +206,34 @@ static func _short_number(value: float) -> String:
 func _on_ai_requested() -> void:
 	var text := _free_text.text.strip_edges() if _free_text != null else ""
 	if text.is_empty():
-		_ai_status.text = "先说一句话。"
+		_set_ai_status("先说一句话。")
 		return
 	_on_free_text_submitted(text)
 	var ai := get_node_or_null("/root/AI") as AIService
 	if ai == null or not ai.is_configured():
-		_ai_status.text = "AI 未配置，这句话按离线推演。要配置，按 F10 打开设置里的“AI 言灵”。"
+		_show_ai_config_hint()
 		return
 	if _ai_button != null:
 		_ai_button.disabled = true
-	_ai_status.text = "AI 正在读这句话…"
+	_set_ai_status("AI 正在读这句话…")
 	ai.request_intent(text)
+
+
+func _set_ai_status(text: String, config_hint: bool = false) -> void:
+	_ai_config_hint = config_hint
+	if _ai_status != null:
+		_ai_status.text = text
+
+
+func _show_ai_config_hint() -> void:
+	var flow := _flow_node()
+	var settings_key := flow.prompt_label(&"settings") if flow != null else "F10"
+	_set_ai_status("AI 未配置，这句话按离线推演。要配置，按 %s 打开设置里的“AI 言灵”。" % settings_key, true)
+
+
+func _refresh_ai_config_hint() -> void:
+	if _ai_config_hint:
+		_show_ai_config_hint()
 
 
 func _on_ai_intent(sentence: String, intent: Dictionary) -> void:
@@ -178,11 +242,11 @@ func _on_ai_intent(sentence: String, intent: Dictionary) -> void:
 	if _run == null:
 		return
 	if _free_text != null and _free_text.text.strip_edges() != sentence:
-		_ai_status.text = "AI 返回了上一句的结果，已忽略。"
+		_set_ai_status("AI 返回了上一句的结果，已忽略。")
 		return
 	var phrase := SpellSynthesizer.compile_intent(sentence, intent, _run.inventory.words)
 	if phrase == null:
-		_ai_status.text = "AI 意图未通过本地校验，已保留离线推演。"
+		_set_ai_status("AI 意图未通过本地校验，已保留离线推演。")
 		return
 	_selected_words.clear()
 	_refresh_words()
@@ -191,13 +255,13 @@ func _on_ai_intent(sentence: String, intent: Dictionary) -> void:
 	_update_forge_actions()
 	var shape_name: String = SpellStyle.NAMES.get(StringName(intent.get("shape", "")), String(intent.get("shape", "")))
 	var abyss := "。AI 没读懂，深渊补完了后半句：很强，污染极高" if bool(phrase.synthesis.get(&"abyssal", false)) else ""
-	_ai_status.text = "AI 解读为“%s”（%s），把握 %d%%%s" % [String(intent.get("name", "")), shape_name, int(round(float(intent.get("confidence", 1.0)) * 100.0)), abyss]
+	_set_ai_status("AI 解读为“%s”（%s），把握 %d%%%s" % [String(intent.get("name", "")), shape_name, int(round(float(intent.get("confidence", 1.0)) * 100.0)), abyss])
 
 
 func _on_ai_failed(_sentence: String, error: String) -> void:
 	if _ai_button != null:
 		_ai_button.disabled = false
-	_ai_status.text = "AI 没有回应（%s），保留离线推演的结果。" % error
+	_set_ai_status("AI 没有回应（%s），保留离线推演的结果。" % error)
 
 
 func _on_free_text_submitted(text: String) -> void:
@@ -268,34 +332,131 @@ func _ensure_nodes() -> void:
 func _refresh_words() -> void:
 	if _word_grid == null:
 		return
-	_word_lines.clear()
-	_clear(_word_grid)
+	# Selection, AI replies and inventory changes all end here. Keep the word
+	# focused across card updates; a controller must not land on a freed control
+	# with A unresponsive.
+	var focused_word := &""
+	if is_inside_tree() and _word_grid.is_visible_in_tree():
+		var viewport := get_viewport()
+		var owner := viewport.gui_get_focus_owner() if viewport != null else null
+		if owner != null and _word_grid.is_ancestor_of(owner):
+			focused_word = StringName(owner.get_meta(&"word_id", &""))
 
 	var words: Array[WordData] = []
 	if _run != null:
 		words = _run.inventory.words
 	if _words_title != null:
 		_words_title.text = "词表（%d / %d）" % [words.size(), ContentLibrary.WORDS.size()]
-	if words.is_empty():
-		var empty := Label.new()
-		empty.text = "尚未收集任何词。"
-		empty.add_theme_color_override("font_color", COLOR_DIM)
-		empty.add_theme_font_size_override("font_size", 12)
-		_word_grid.add_child(empty)
-		return
 
+	# Drop cards whose word no longer belongs to the bound run (rebinding).
+	var present: Dictionary = {}
+	for word in words:
+		if word != null:
+			present[word.id] = true
+	for key in _word_cards.keys():
+		if present.has(key):
+			continue
+		var stale: PanelContainer = _word_cards[key]
+		_word_cards.erase(key)
+		if is_instance_valid(stale):
+			if stale.get_parent() != null:
+				stale.get_parent().remove_child(stale)
+			if stale.is_inside_tree():
+				stale.queue_free()
+			else:
+				stale.free()
+
+	if words.is_empty():
+		if _word_empty == null:
+			_word_empty = Label.new()
+			_word_empty.text = EmptyStateData.pick(&"codex_words", _run_seed_value())
+			_word_empty.add_theme_color_override("font_color", COLOR_DIM)
+			_word_empty.add_theme_font_size_override("font_size", 12)
+		if _word_empty.get_parent() == null:
+			_word_grid.add_child(_word_empty)
+		return
+	if _word_empty != null:
+		if _word_empty.get_parent() != null:
+			_word_empty.get_parent().remove_child(_word_empty)
+		_word_empty.queue_free()
+		_word_empty = null
+
+	_word_lines.clear()
 	for word in words:
 		if word == null:
 			continue
 		_word_lines.append(_word_line(word))
-		_word_grid.add_child(_make_word_card(word))
+		var entry: Variant = _word_cards.get(word.id)
+		if entry == null:
+			var card := _make_word_card(word)
+			_word_cards[word.id] = card
+			_word_grid.add_child(card)
+			# Text is assigned only after the card is in the tree: shaping a
+			# Button during ENTER_TREE costs ~10 ms per card, while the same
+			# assignment afterwards is near-free.
+			_fill_word_card_text(card, word)
+		else:
+			_update_word_card(entry as PanelContainer, word)
+	if focused_word != &"":
+		for node in _word_grid.find_children("*", "Button", true, false):
+			var button := node as Button
+			if button != null and StringName(button.get_meta(&"word_id", &"")) == focused_word:
+				button.grab_focus.call_deferred()
+				break
+
+
+## Remove every cached word card, e.g. when binding a different run.
+func _clear_word_cards() -> void:
+	for entry in _word_cards.values():
+		var card := entry as PanelContainer
+		if not is_instance_valid(card):
+			continue
+		if card.get_parent() != null:
+			card.get_parent().remove_child(card)
+		if card.is_inside_tree():
+			card.queue_free()
+		else:
+			card.free()
+	_word_cards.clear()
+
+
+## Update a kept card in place, touching labels/styles only when the rendered
+## value actually changed.
+func _update_word_card(card: PanelContainer, word: WordData) -> void:
+	if card == null:
+		return
+	var selected := _selected_words.has(word)
+	if bool(card.get_meta(&"rendered_selected")) != selected:
+		card.add_theme_stylebox_override("panel",
+			WORD_CARD_SELECTED if selected else (WORD_CARD_DECODED if word.decoded else WORD_CARD_LOCKED))
+		var button := card.get_meta(&"word_button") as Button
+		if button != null:
+			button.text = "取消选择" if selected else "选择"
+		card.set_meta(&"rendered_selected", selected)
+	if bool(card.get_meta(&"rendered_decoded")) != word.decoded:
+		if not selected:
+			card.add_theme_stylebox_override("panel",
+				WORD_CARD_DECODED if word.decoded else WORD_CARD_LOCKED)
+		var glyph := card.get_meta(&"word_glyph") as Label
+		if glyph != null:
+			glyph.add_theme_color_override("font_color", COLOR_CYAN if word.decoded else COLOR_LOCKED)
+		var meaning := card.get_meta(&"word_meaning") as Label
+		if meaning != null:
+			meaning.add_theme_color_override("font_color", COLOR_BONE if word.decoded else COLOR_DIM)
+		card.set_meta(&"rendered_decoded", word.decoded)
+	var meaning_text := word.meaning if word.decoded else "未解码"
+	var meaning_label := card.get_meta(&"word_meaning") as Label
+	if meaning_label != null and meaning_label.text != meaning_text:
+		meaning_label.text = meaning_text
+	var meta_text := _word_meta(word)
+	var meta_label := card.get_meta(&"word_meta") as Label
+	if meta_label != null and meta_label.text != meta_text:
+		meta_label.text = meta_text
 
 
 func _refresh_combos() -> void:
 	if _combos_list == null:
 		return
-	_combo_lines.clear()
-	_clear(_combos_list)
 	var combos: Array[ResolvedPhrase] = []
 	var seen: Dictionary = {}
 	for phrase in _discovered:
@@ -310,11 +471,25 @@ func _refresh_combos() -> void:
 		if phrase != null:
 			combos.append(phrase)
 			seen[signature] = true
+	# Inventory changes that do not touch the discovered/persistent combos must
+	# not rebuild these cards; the previous helper rebuilt them on every word.
+	var fingerprint := "combos"
+	for phrase in combos:
+		fingerprint += "|%s:%d:%.1f:%d:%s" % [
+			phrase.signature, phrase.ink_cost, phrase.cooldown,
+			phrase.corruption_gain, phrase.unstable,
+		]
+	if fingerprint == _combo_fingerprint:
+		return
+	_combo_fingerprint = fingerprint
+
+	_combo_lines.clear()
+	_clear(_combos_list)
 	if _combos_title != null:
 		_combos_title.text = "已发现组合（本局 %d / 全部 %d）" % [_discovered.size(), combos.size()]
 	if combos.is_empty():
 		var empty := Label.new()
-		empty.text = "尚未发现组合。在造句台组合 2–3 个词后，配方会记录在这里。"
+		empty.text = EmptyStateData.pick(&"codex_combos", _run_seed_value())
 		empty.add_theme_color_override("font_color", COLOR_DIM)
 		empty.add_theme_font_size_override("font_size", 12)
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -367,14 +542,14 @@ func _make_word_card(word: WordData) -> PanelContainer:
 	card.add_child(box)
 
 	var glyph := Label.new()
-	glyph.text = word.glyph if word.glyph != "" else "？？？"
+	glyph.text = ""
 	glyph.add_theme_font_size_override("font_size", 24)
 	glyph.add_theme_color_override("font_color", COLOR_CYAN if word.decoded else COLOR_LOCKED)
 	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(glyph)
 
 	var meaning := Label.new()
-	meaning.text = word.meaning if word.decoded else "未解码"
+	meaning.text = ""
 	meaning.add_theme_font_size_override("font_size", 12)
 	meaning.add_theme_color_override("font_color", COLOR_BONE if word.decoded else COLOR_DIM)
 	meaning.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -382,7 +557,7 @@ func _make_word_card(word: WordData) -> PanelContainer:
 	box.add_child(meaning)
 
 	var meta := Label.new()
-	meta.text = _word_meta(word)
+	meta.text = ""
 	meta.add_theme_font_size_override("font_size", 12)
 	meta.add_theme_color_override("font_color", COLOR_DIM)
 	meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -390,14 +565,38 @@ func _make_word_card(word: WordData) -> PanelContainer:
 	box.add_child(meta)
 
 	var select_button := Button.new()
-	select_button.text = "取消选择" if _selected_words.has(word) else "选择"
+	select_button.text = ""
 	select_button.focus_mode = Control.FOCUS_ALL
 	select_button.add_theme_font_size_override("font_size", 12)
 	select_button.set_meta("word_id", word.id)
 	select_button.pressed.connect(_toggle_word.bind(word))
 	box.add_child(select_button)
 
+	# Cached so _update_word_card can change a kept card without rebuilding it.
+	card.set_meta(&"word_glyph", glyph)
+	card.set_meta(&"word_meaning", meaning)
+	card.set_meta(&"word_meta", meta)
+	card.set_meta(&"word_button", select_button)
+	card.set_meta(&"rendered_selected", _selected_words.has(word))
+	card.set_meta(&"rendered_decoded", word.decoded)
+
 	return card
+
+
+## Fills the card after it enters the tree; see the note in _refresh_words.
+func _fill_word_card_text(card: PanelContainer, word: WordData) -> void:
+	var glyph := card.get_meta(&"word_glyph") as Label
+	if glyph != null:
+		glyph.text = word.glyph if word.glyph != "" else "？？？"
+	var meaning := card.get_meta(&"word_meaning") as Label
+	if meaning != null:
+		meaning.text = word.meaning if word.decoded else "未解码"
+	var meta := card.get_meta(&"word_meta") as Label
+	if meta != null:
+		meta.text = _word_meta(word)
+	var button := card.get_meta(&"word_button") as Button
+	if button != null:
+		button.text = "取消选择" if _selected_words.has(word) else "选择"
 
 
 func _make_combo_card(phrase: ResolvedPhrase) -> PanelContainer:
@@ -618,7 +817,7 @@ func _build_forge_actions() -> void:
 	_ai_status.name = "AIStatus"
 	_ai_status.add_theme_font_size_override("font_size", 12)
 	_ai_status.add_theme_color_override("font_color", UIPalette.INK_SOFT)
-	_ai_status.text = "AI 未配置，使用离线推演。"
+	_set_ai_status("AI 未配置，使用离线推演。")
 	box.add_child(_ai_status)
 	var actions := HBoxContainer.new()
 	actions.name = "ForgeActions"
@@ -626,7 +825,7 @@ func _build_forge_actions() -> void:
 	box.add_child(actions)
 	for slot in 2:
 		var button := Button.new()
-		button.text = "装备到 [%s]" % ("Q" if slot == 0 else "F")
+		button.text = _equip_label(slot)
 		button.focus_mode = Control.FOCUS_ALL
 		button.add_theme_font_size_override("font_size", 12)
 		button.disabled = true
@@ -671,6 +870,59 @@ func _clear_selection() -> void:
 	var title := find_child("ForgeTitle", true, false) as Label
 	if title != null:
 		title.text = "造句：选 1–4 个词，或直接写一句话"
+
+
+## Entry focus for pad/keyboard players: the first word's select button so a
+## phrase can be built right away, else the close button.
+func focus_entry() -> void:
+	if _word_grid != null:
+		for node in _word_grid.find_children("*", "Button", true, false):
+			var button := node as Button
+			if button != null and not button.disabled and button.is_visible_in_tree():
+				button.grab_focus()
+				return
+	if _close_button != null and _close_button.is_visible_in_tree():
+		_close_button.grab_focus()
+
+
+func _flow_node() -> GameFlow:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("Flow") as GameFlow
+	return null
+
+
+## Empty-state copy is stable per run seed; a page built before bind (tools,
+## unit tests) falls back to seed 0 instead of reading the live run RNG.
+func _run_seed_value() -> int:
+	return _run.run_seed if _run != null else 0
+
+
+func _refresh_close_hint() -> void:
+	if _close_button == null:
+		return
+	var flow := _flow_node()
+	var alt := "%s / Esc" % GameFlow.key_label(&"codex")
+	var key := flow.close_prompt(alt) if flow != null else alt
+	_close_button.text = "返回 [%s]" % key
+
+
+func _equip_label(slot: int) -> String:
+	var flow := _flow_node()
+	var action := &"cast_1" if slot == 0 else &"cast_2"
+	var key := flow.prompt_label(action) if flow != null else ("Q" if slot == 0 else "F")
+	return "装备到 [%s]" % key
+
+
+func _refresh_equip_labels() -> void:
+	for slot in _equip_buttons.size():
+		_equip_buttons[slot].text = _equip_label(slot)
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_close_hint()
+	_refresh_equip_labels()
+	_refresh_ai_config_hint()
 
 
 func _on_inventory_changed() -> void:

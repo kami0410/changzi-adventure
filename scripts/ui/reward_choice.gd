@@ -56,7 +56,7 @@ func _build() -> void:
 	_reroll.hide()
 	column.add_child(_reroll)
 	var hint := Label.new()
-	hint.text = "战斗已暂停。用方向键挑一页，按 Enter 收下。"
+	hint.text = "战斗已暂停。用方向键挑一页，按确认键收下。"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UIPalette.BONE_DIM)
 	column.add_child(hint)
@@ -109,7 +109,7 @@ func open_choices(choices: Array[Dictionary]) -> void:
 		(column.get_child(1) as Label).add_theme_color_override("font_color", UIPalette.INK)
 		(column.get_child(2) as Label).add_theme_color_override("font_color", UIPalette.INK_SOFT)
 	show()
-	if _cards.get_child_count() > 0:
+	if _cards.get_child_count() > 0 and (_cards.get_child(0) as Button).is_inside_tree():
 		(_cards.get_child(0) as Button).grab_focus()
 	modulate.a = 0.0
 	create_tween().tween_property(self, "modulate:a", 1.0, 0.18)

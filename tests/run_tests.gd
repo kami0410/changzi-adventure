@@ -28,7 +28,11 @@ func _initialize() -> void:
 		if _filter != "" and not file_name.contains(_filter):
 			continue
 		var script = load("res://tests/" + file_name)
-		if script == null:
+		# A script with a parse error still loads as a GDScript object, but
+		# calling new() on it raises a runtime error that aborts _initialize
+		# before quit(), so the runner hangs instead of reporting the failure.
+		# can_instantiate() is false for that case; check it before new().
+		if script == null or not script.can_instantiate():
 			failed += 1
 			push_error("Failed to load test script: " + file_name)
 			continue

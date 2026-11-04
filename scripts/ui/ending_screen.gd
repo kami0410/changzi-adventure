@@ -1,17 +1,56 @@
 class_name EndingScreen
 extends Control
 
+var _hint: Label = null
+var _return_button: Button = null
+var _run_seed: int = 0
+var _won := false
+
 
 func _ready() -> void:
 	visible = false
-	var button := Button.new()
-	button.text = "返回档案馆 [R]"
-	button.pressed.connect(func():
+	_hint = find_child("Hint", true, false) as Label
+	_return_button = Button.new()
+	_return_button.pressed.connect(func():
 		get_tree().paused = false
 		Flow.return_to_hub()
 		get_tree().change_scene_to_file("res://scenes/hub/hub.tscn")
 	)
-	$Center/Panel/Margin/VBox.add_child(button)
+	$Center/Panel/Margin/VBox.add_child(_return_button)
+	_refresh_prompts()
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
+	if flow != null and not flow.keybinds_changed.is_connected(_refresh_prompts):
+		flow.keybinds_changed.connect(_refresh_prompts)
+
+
+func _flow_node() -> GameFlow:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("Flow") as GameFlow
+	return null
+
+
+## The ending may sit on screen while the player picks up the other device.
+func _refresh_prompts() -> void:
+	# The hint can be refreshed before _ready in tests/tools; resolve it then.
+	if _hint == null:
+		_hint = find_child("Hint", true, false) as Label
+	var flow := _flow_node()
+	var key := flow.prompt_label(&"restart") if flow != null else GameFlow.key_label(&"restart")
+	if _hint != null:
+		var template := EndingHintData.pick(_run_seed, _won)
+		if template.is_empty():
+			_hint.text = "按 %s 回到最后的档案馆" % key
+		else:
+			_hint.text = EndingHintData.format_hint(template, key)
+	if _return_button != null:
+		_return_button.text = "返回档案馆 [%s]" % key
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_prompts()
 
 
 func show_ending(won: bool, reward: int) -> void:
@@ -19,7 +58,9 @@ func show_ending(won: bool, reward: int) -> void:
 	show_campaign_ending(won, reward, ending, 0, 0)
 
 
-func show_campaign_ending(won: bool, reward: int, ending: Dictionary, records: int, kills: int, demo: bool = false) -> void:
+func show_campaign_ending(won: bool, reward: int, ending: Dictionary, records: int, kills: int, demo: bool = false, run_seed: int = 0) -> void:
+	_won = won
+	_run_seed = run_seed
 	var title := get_node_or_null("Center/Panel/Margin/VBox/Title") as Label
 	var body := get_node_or_null("Center/Panel/Margin/VBox/Body") as Label
 	var reward_label := get_node_or_null("Center/Panel/Margin/VBox/Reward") as Label
@@ -29,6 +70,7 @@ func show_campaign_ending(won: bool, reward: int, ending: Dictionary, records: i
 		body.text = String(ending.get("body", "")) + "\n\n读过 %d 座残碑，击败 %d 个敌人。" % [records, kills]
 	if reward_label != null:
 		reward_label.text = "记忆碎片 +%d" % reward
+	_refresh_prompts()
 	visible = true
 	var button := $Center/Panel/Margin/VBox.get_child(-1) as Button
 	if button != null and button.is_inside_tree():

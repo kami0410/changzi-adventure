@@ -14,11 +14,15 @@ var is_open := false
 var _near := false
 var _time := 0.0
 var _open_time := 0.0
+## Resolved from the tree so a `-s` test runner can precompile this script
+## before the Flow autoload is registered.
+var _game_flow: GameFlow
 
 
 func _ready() -> void:
 	z_index = 2
 	add_to_group("treasure_chests")
+	_game_flow = get_node_or_null("/root/Flow") as GameFlow
 
 
 func open() -> bool:
@@ -38,6 +42,15 @@ func set_player_near(near: bool) -> void:
 	queue_redraw()
 
 
+## Device-aware hint; drawn every frame so a controller connected mid-room
+## changes the glyph without extra bookkeeping.
+func prompt_text() -> String:
+	if _game_flow == null:
+		_game_flow = get_node_or_null("/root/Flow") as GameFlow
+	var action := _game_flow.prompt_label(&"interact") if _game_flow != null else "E"
+	return "%s  开启" % action
+
+
 func _process(delta: float) -> void:
 	_time += delta
 	if is_open:
@@ -54,7 +67,7 @@ func _draw() -> void:
 			draw_rect(Rect2(cos(angle) * radius - 1.0, -4.0 + sin(angle) * radius - 1.0, 2.0, 2.0), Color(0.95, 0.76, 0.38, 0.3 + pulse * 0.3))
 		draw_texture(TEXTURE, Vector2(-24, -32))
 		if _near:
-			draw_string(FONT, Vector2(-48, -40), "E  开启", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("f6d98b"))
+			draw_string(FONT, Vector2(-48, -40), prompt_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("f6d98b"))
 	else:
 		var fade := clampf(1.0 - _open_time / 1.4, 0.0, 1.0)
 		draw_texture(TEXTURE, Vector2(-24, -32), Color(0.45, 0.42, 0.45, 1.0))

@@ -127,16 +127,9 @@ func corruption_cooldown_multiplier() -> float:
 
 
 func corruption_tier_warning() -> String:
-	match corruption_tier():
-		1:
-			return "污染低语：敌人伤害 +15%，短语墨耗 +15%。"
-		2:
-			return "污染侵蚀：敌人伤害 +30%，短语墨耗 +30%，冷却 +20%。"
-		3:
-			return "深渊缠身：敌人伤害 +45%，短语墨耗 +45%，冷却 +35%。"
-		4:
-			return "污染失控。昌子再也压不住喉咙里的东西。"
-	return ""
+	# Copy rotates per run + tier; the mechanics text inside each variant is
+	# fixed, and the pick never consumes the run RNG.
+	return CorruptionWarningData.pick(run_seed, corruption_tier())
 
 
 func set_authority(value: AuthorityData) -> void:

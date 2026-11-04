@@ -15,6 +15,7 @@ var _nodes_ready := false
 var _shop: Shop = null
 var _profile: Profile = null
 var _message := ""
+var _return_focus: Control = null
 
 
 func _ready() -> void:
@@ -34,16 +35,38 @@ func bind(shop: Shop, profile: Profile) -> void:
 func open() -> void:
 	_ensure_nodes()
 	_message = "滚轮翻货。只收记忆碎片，不赊账。"
+	var viewport := get_viewport() if is_inside_tree() else null
+	_return_focus = viewport.gui_get_focus_owner() if viewport != null else null
 	if _root != null:
 		_root.visible = true
 	refresh()
+	# A controller must land on a real purchase row; without this the page opens
+	# with no focus and A/B appear dead until the player uses the mouse.
+	_focus_first_item()
 
 
 func close() -> void:
 	if _root == null or not _root.visible:
 		return
 	_root.visible = false
+	var previous := _return_focus
+	_return_focus = null
 	closed.emit()
+	if previous != null and is_instance_valid(previous) and previous.is_inside_tree() and previous.is_visible_in_tree():
+		previous.grab_focus()
+
+
+func _focus_first_item() -> void:
+	if not is_inside_tree():
+		return
+	if _items != null:
+		for child in _items.find_children("*", "Button", true, false):
+			var button := child as Button
+			if button != null and not button.disabled:
+				button.grab_focus()
+				return
+	if _close_button != null:
+		_close_button.grab_focus()
 
 
 func is_open() -> bool:
@@ -64,11 +87,12 @@ func buy(item_id: StringName) -> bool:
 		purchased.emit(item_id)
 		return true
 	if entry.is_empty():
-		_message = "没有这件货。"
+		_message = ShopFailData.format(ShopFailData.pick(&"missing", item_id))
 	elif _shop.owned_by(entry, _profile):
-		_message = "这件货已经在你的手里了。"
+		_message = ShopFailData.format(ShopFailData.pick(&"owned", item_id))
 	else:
-		_message = "记忆碎片不足：需要 %d，你只有 %d。" % [cost, _profile.memory_fragments]
+		_message = ShopFailData.format(
+			ShopFailData.pick(&"insufficient", item_id), cost, _profile.memory_fragments)
 	if _message_label != null:
 		_message_label.text = _message
 	purchase_failed.emit(item_id)
@@ -111,11 +135,32 @@ func _ensure_nodes() -> void:
 func _rebuild_items() -> void:
 	if _items == null or _shop == null:
 		return
+	# Buying rebuilds every row, which frees the button that had focus. Keep the
+	# focused item id so A can be pressed again without touching the mouse.
+	var focused_id: StringName = &""
+	var viewport := get_viewport() if is_inside_tree() else null
+	var owner := viewport.gui_get_focus_owner() if viewport != null else null
+	if owner != null and _items.is_ancestor_of(owner):
+		focused_id = StringName(owner.get_meta(&"shop_item_id", &""))
 	for child in _items.get_children():
 		_items.remove_child(child)
 		child.queue_free()
 	for entry in _shop.stock:
 		_items.add_child(_make_row(entry))
+	if _root != null and _root.visible:
+		_focus_item(focused_id)
+
+
+func _focus_item(item_id: StringName) -> void:
+	if not is_inside_tree():
+		return
+	if item_id != &"":
+		for child in _items.find_children("*", "Button", true, false):
+			var button := child as Button
+			if button != null and not button.disabled and StringName(button.get_meta(&"shop_item_id", &"")) == item_id:
+				button.grab_focus()
+				return
+	_focus_first_item()
 
 
 func _make_row(entry: Dictionary) -> HBoxContainer:
@@ -151,6 +196,7 @@ func _make_row(entry: Dictionary) -> HBoxContainer:
 
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(104.0, 44.0)
+	button.set_meta(&"shop_item_id", item_id)
 	if _shop != null and _shop.owned_by(entry, _profile):
 		button.text = "已拥有"
 		button.disabled = true

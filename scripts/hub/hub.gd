@@ -41,6 +41,7 @@ var settings_menu: SettingsMenu
 var tutorial_flow: TutorialFlow
 var training_dummy: TrainingDummy
 var _tutorial_codex: CodexUI
+var _codex_return_focus: Control = null
 var _tutorial_run: RunState
 var _tutorial_phrase: ResolvedPhrase
 var _inspire_key_down := false
@@ -56,12 +57,14 @@ var _function_discount := 0.0
 @onready var dialogue_ui: DialogueUI = get_node_or_null("UI/DialogueUI") as DialogueUI
 @onready var shop_ui: ShopUI = get_node_or_null("UI/ShopUI") as ShopUI
 @onready var fragment_label: Label = get_node_or_null("Overlay/TopLeft/Margin/VBox/FragmentLabel") as Label
+@onready var hint_label: Label = get_node_or_null("Overlay/TopLeft/Margin/VBox/Hint") as Label
 
 
 func _ready() -> void:
 	if profile == null and Flow != null and Flow.profile != null:
 		profile = Flow.profile
 	ensure_ready()
+	_connect_prompt_refresh()
 	for child in get_children():
 		if child is NPC and (child.npc_id == &"wenjin" or child.npc_id == &"baiyu"):
 			child.visible = false
@@ -115,6 +118,11 @@ func _play_hub_audio() -> void:
 
 
 func _on_title_started() -> void:
+	if Flow != null and Flow.resume_requested:
+		# "继续本局" goes straight back into the checkpoint instead of the Hub.
+		_play_hub_audio()
+		run_requested.emit()
+		return
 	_play_hub_audio()
 	if tutorial_flow != null:
 		tutorial_flow.start_if_needed()
@@ -148,6 +156,7 @@ func ensure_ready() -> void:
 	_build_archive()
 	_build_tutorial()
 	_refresh_fragment_label()
+	_refresh_hint()
 
 
 func _resolve_nodes() -> void:
@@ -161,6 +170,48 @@ func _resolve_nodes() -> void:
 		shop_ui = get_node_or_null("UI/ShopUI") as ShopUI
 	if fragment_label == null:
 		fragment_label = get_node_or_null("Overlay/TopLeft/Margin/VBox/FragmentLabel") as Label
+	if hint_label == null:
+		hint_label = get_node_or_null("Overlay/TopLeft/Margin/VBox/Hint") as Label
+
+
+## The top-left objective line names the current movement and interact keys,
+## so it has to follow both a controller switch and a rebind.
+func _connect_prompt_refresh() -> void:
+	var flow := _flow_node()
+	if flow == null:
+		return
+	if not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
+	if not flow.keybinds_changed.is_connected(_on_keybinds_changed):
+		flow.keybinds_changed.connect(_on_keybinds_changed)
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_hint()
+
+
+func _on_keybinds_changed() -> void:
+	_refresh_hint()
+
+
+func _refresh_hint() -> void:
+	if hint_label == null:
+		return
+	var flow := _flow_node()
+	var move := "左摇杆" if flow != null and flow.using_gamepad else "%s / %s" % [
+		flow.prompt_label(&"move_left") if flow != null else "A",
+		flow.prompt_label(&"move_right") if flow != null else "D"]
+	var interact := flow.prompt_label(&"interact") if flow != null else "E"
+	hint_label.text = "目标：追回失踪名册的三页 · %s 移动 · %s 交互" % [move, interact]
+
+
+## Resolved from the tree so a Hub built outside the scene tree (unit tests
+## call ensure_ready() before add_child) never uses an absolute get_node().
+func _flow_node() -> GameFlow:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("Flow") as GameFlow
+	return null
 
 
 func _connect_title_settings() -> void:
@@ -173,9 +224,14 @@ func _connect_title_settings() -> void:
 
 
 func _on_new_game_requested() -> void:
-	profile = Flow.profile
-	_tutorial_run = null
-	_refresh_fragment_label()
+	# Flow.reset_profile() swaps the profile instance; the old one is freed.
+	# Bind everything that cached it (shop page, word copies, tutorial codex)
+	# to the new profile before the next frame.
+	var new_profile := Flow.profile if Flow != null else profile
+	if new_profile != null:
+		set_profile(new_profile)
+	else:
+		_rebind_tutorial_run()
 
 
 func _build_tutorial() -> void:
@@ -190,24 +246,40 @@ func _build_tutorial() -> void:
 	_tutorial_codex = preload("res://scenes/ui/codex.tscn").instantiate() as CodexUI
 	ModalLayer.host(self).add_child(_tutorial_codex)
 	_tutorial_codex.visible = false
-	_tutorial_run = RunState.new()
-	_tutorial_run.reset_for_new_run(1)
-	for word in RunLoot.starting_words(profile):
-		_tutorial_run.inventory.add_word(word)
-	_tutorial_codex.bind(PhraseResolver.new(), _tutorial_run)
-	_tutorial_codex.set_persistent_discovered(profile.discovered_phrases if profile != null else [])
+	_rebind_tutorial_run()
 	_tutorial_codex.phrase_equip_requested.connect(_on_tutorial_phrase_equipped)
 	_tutorial_codex.close_requested.connect(_close_tutorial_codex)
+
+
+## Rebuilds the tutorial's run copy from the current profile. "New game"
+## keeps the codex page alive but must not leave it bound to freed words.
+func _rebind_tutorial_run() -> void:
+	_tutorial_phrase = null
+	if _tutorial_codex == null:
+		_tutorial_run = null
+		return
+	_tutorial_run = RunState.new()
+	_tutorial_run.reset_for_new_run(1)
+	if profile != null:
+		for word in RunLoot.starting_words(profile):
+			_tutorial_run.inventory.add_word(word)
+		_tutorial_codex.set_persistent_discovered(profile.discovered_phrases)
+	_tutorial_codex.bind(PhraseResolver.new(), _tutorial_run)
 
 
 func _open_tutorial_codex() -> void:
 	if _tutorial_codex == null:
 		return
+	if not _tutorial_codex.visible:
+		var viewport := get_viewport()
+		_codex_return_focus = viewport.gui_get_focus_owner() if viewport != null else null
 	_tutorial_codex.visible = true
 	get_tree().paused = true
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	tutorial_flow.on_codex_opened()
 	_refresh_player_freeze()
+	# A pad opening the codex must land on a word, not on empty canvas.
+	_tutorial_codex.focus_entry()
 
 
 func _close_tutorial_codex() -> void:
@@ -217,6 +289,10 @@ func _close_tutorial_codex() -> void:
 		get_tree().paused = false
 	process_mode = Node.PROCESS_MODE_INHERIT
 	_refresh_player_freeze()
+	var previous := _codex_return_focus
+	_codex_return_focus = null
+	if previous != null and is_instance_valid(previous) and previous.is_inside_tree() and previous.is_visible_in_tree():
+		previous.grab_focus()
 
 
 func _on_tutorial_phrase_equipped(_slot: int, phrase: ResolvedPhrase) -> void:
@@ -281,12 +357,22 @@ func _process(_delta: float) -> void:
 	ensure_ready()
 	if player == null:
 		return
+	# A controller button being captured in Settings is not a Hub action.
+	if Flow.input_capture_active:
+		return
 	if settings_menu != null and settings_menu.visible:
-		if Input.is_action_just_pressed("settings") or Input.is_action_just_pressed("ui_cancel"):
-			settings_menu.close()
+		# Esc/B are handled by SettingsMenu itself (top subpage first). Only
+		# the dedicated settings key is polled here so one press never closes
+		# both a subpage and the settings page.
+		if Input.is_action_just_pressed("settings"):
+			if not settings_menu.close_subpage():
+				settings_menu.close()
 		return
 	if _tutorial_codex != null and _tutorial_codex.visible:
-		if Input.is_action_just_pressed("codex") or Input.is_action_just_pressed("ui_cancel"):
+		# Match the other Hub pages (settings/dialogue/shop/archive/help/inspire):
+		# the pause key backs out of the page instead of doing nothing.
+		if Input.is_action_just_pressed("codex") or Input.is_action_just_pressed("ui_cancel") \
+				or Input.is_action_just_pressed("pause"):
 			_close_tutorial_codex()
 		return
 	_update_prompts()
@@ -308,9 +394,14 @@ func _process(_delta: float) -> void:
 	if archive_ui != null and archive_ui.is_open():
 		return
 	var y_down := Input.is_action_pressed("npc_inspire")
+	var opened_inspiration := false
 	if y_down and not _inspire_key_down and dialogue_ui != null and dialogue_ui.is_open():
-		_open_active_inspiration()
+		opened_inspiration = _open_active_inspiration()
 	_inspire_key_down = y_down
+	if opened_inspiration:
+		# Y is both interact and npc_inspire by default. The same press must not
+		# fall through and re-open the dialogue behind the inspiration panel.
+		return
 	if not Input.is_action_just_pressed("interact"):
 		return
 	if dialogue_ui != null and dialogue_ui.is_open():
@@ -400,7 +491,9 @@ func talk_to_npc(npc: NPC) -> void:
 			lines.append(String(upgrade_sword_base().get("message", "")))
 		_:
 			pass
-	lines.append("按 Y 或点击「言灵对话」，对 TA 说一句只属于你的话。")
+	# The "言灵对话" button already shows the live key for the current device;
+	# baking a key into the line would go stale after a device switch.
+	lines.append("也可以选「言灵对话」，对 TA 说一句只属于你的话。")
 	_active_npc_id = npc.npc_id
 	if lines.is_empty():
 		lines.append("……")
@@ -458,19 +551,20 @@ func _build_npc_inspiration() -> void:
 			ai.npc_reply_failed.connect(_on_npc_ai_failed)
 
 
-func _open_active_inspiration() -> void:
+func _open_active_inspiration() -> bool:
 	if _active_npc_id == &"":
-		return
+		return false
 	var npc_id := _active_npc_id
 	var npc := get_npc(npc_id)
 	if npc == null:
-		return
+		return false
 	if dialogue_ui != null and dialogue_ui.is_open():
 		dialogue_ui.close()
 	_active_npc_id = npc_id
 	_build_npc_inspiration()
 	npc_inspire_ui.open(npc)
 	_refresh_player_freeze()
+	return true
 
 
 func open_npc_inspiration(npc_id: StringName) -> bool:
@@ -767,6 +861,15 @@ func decode_word() -> String:
 	var hub_word := get_word(word.id)
 	if hub_word != null:
 		WordRuntime.mark_decoded(hub_word)
+	# The tutorial Codex keeps its own run copy of every starting word. Decode
+	# that copy too and notify the grid, or the page keeps showing the old
+	# "未解码" card until the Hub rebuilds its tutorial run.
+	if _tutorial_run != null:
+		for entry in _tutorial_run.inventory.words:
+			if entry != null and entry.id == word.id and not entry.decoded:
+				WordRuntime.mark_decoded(entry)
+				_tutorial_run.inventory.changed.emit()
+				break
 	_save_shared_profile()
 	if description != "":
 		description = "\n" + description
@@ -834,6 +937,11 @@ func set_profile(new_profile: Profile) -> void:
 		_owned_profile.queue_free()
 		_owned_profile = null
 	profile = new_profile
+	# Word copies cache Profile decode state; rebuild them so a fresh profile
+	# does not inherit the old run's decoded flags.
+	_words.clear()
+	_load_words()
+	_rebind_tutorial_run()
 	if shop_ui != null:
 		shop_ui.bind(shop, profile)
 	_refresh_fragment_label()

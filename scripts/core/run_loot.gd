@@ -43,6 +43,50 @@ static func word_label(word: WordData) -> String:
 	return "%s（未解码）" % (word.glyph if word.glyph != "" else "？？？")
 
 
+## Fragments the run already owns but has not decoded yet. The demo grants all
+## twelve fragments at run start, so a "new word" reward must decode one of
+## those instead of trying to add a word the player already owns.
+static func owned_undecoded_words(run: RunState, profile: Profile, chapter: int = 0) -> Array[WordData]:
+	var result: Array[WordData] = []
+	if run == null:
+		return result
+	var allowed: Dictionary = {}
+	for entry in _word_pool(chapter):
+		var data := entry as WordData
+		if data != null:
+			allowed[data.id] = true
+	for word in run.inventory.words:
+		if word == null or word.decoded or not allowed.has(word.id):
+			continue
+		if profile != null and profile.is_word_decoded(word.id):
+			continue
+		result.append(word)
+	return result
+
+
+## Decodes an owned fragment in place: the Profile owns the cross-run state,
+## while the run's copy feeds this run's Codex, inventory and phrase preview.
+static func decode_owned_word(run: RunState, profile: Profile, word: WordData) -> bool:
+	if run == null or word == null:
+		return false
+	var target: WordData = null
+	for entry in run.inventory.words:
+		if entry != null and entry.id == word.id:
+			target = entry
+			break
+	if target == null or target.decoded:
+		return false
+	if profile != null:
+		profile.decode_word(word.id)
+	WordRuntime.mark_decoded(target)
+	# Decoding mutates the run's word copy in place. The Codex and Inventory
+	# grids are built from that copy, so notify them to rebuild; otherwise the
+	# word keeps showing "未解码" until some unrelated inventory change.
+	if run.inventory != null:
+		run.inventory.changed.emit()
+	return true
+
+
 static func _weapon_pool(chapter: int) -> Array[Resource]:
 	return ContentLibrary.DEMO_WEAPONS if chapter == 0 else ContentLibrary.WEAPONS
 
@@ -81,6 +125,18 @@ static func weapon_for_run(source: WeaponData, profile: Profile, room_number: in
 	if room_number > 0:
 		weapon.display_name += " +%d" % room_number
 	return weapon
+
+
+## Enemy drop: the same chapter pool used by rewards and chests, so Chapter 1
+## never leaks a full-game weapon into the demo.
+static func dropped_weapon(run: RunState, profile: Profile, chapter: int = 0) -> WeaponData:
+	if run == null:
+		return null
+	var pool := _weapon_pool(chapter)
+	if pool.is_empty():
+		return null
+	var base := pool[run.rng.randi_range(0, pool.size() - 1)] as WeaponData
+	return weapon_for_run(base, profile, chapter * 2 + 1)
 
 
 static func chest_loot(run: RunState, profile: Profile, chapter: int = 0) -> Dictionary:
@@ -195,12 +251,15 @@ static func choices(run: RunState, room_number: int, profile: Profile, chapter: 
 			available_words[run.rng.randi_range(0, available_words.size() - 1)] as WordData, profile)
 		var word_note := word.description if word.decoded else "一枚尚未解读的残页。在 Hub 找陆沉解读。"
 		result.append({"kind": &"word", "resource": word, "title": "新词 · " + word_label(word),
-			"description": word_note + "\n加入词库，按 C 组合新短语。"})
+			"description": word_note + "\n加入词库，可在语言图鉴里组合新短语。"})
 	else:
 		var weapon_pool := _weapon_pool(chapter)
 		var base := weapon_pool[run.rng.randi_range(0, weapon_pool.size() - 1)] as WeaponData
 		var weapon := weapon_for_run(base, profile, room_number)
 		result.append({"kind": &"weapon", "resource": weapon, "title": weapon.display_name,
 			"description": "伤害 %d · 间隔 %.2f 秒\n与当前武器交换；旧武器掉在身后，可拾回。" % [weapon.damage, weapon.attack_cooldown]})
-	result.append({"kind": &"rest", "title": "修补记忆", "description": "恢复 35 生命与 45 墨量。\n污染降低 12。"})
+	var rest := RestOfferData.pick(run.run_seed, room_number)
+	if rest.is_empty():
+		rest = {"title": "修补记忆", "description": RestOfferData.EFFECT_TEXT}
+	result.append({"kind": &"rest", "title": rest["title"], "description": rest["description"]})
 	return result

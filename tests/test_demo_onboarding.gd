@@ -8,6 +8,7 @@ func run(t: Callable) -> void:
 	_test_tutorial_flow(t)
 	_test_training_dummy(t)
 	_test_title_entries(t)
+	_test_new_game_order(t)
 	_test_pause_confirmation(t)
 
 
@@ -79,13 +80,46 @@ func _test_title_entries(t: Callable) -> void:
 	t.call(title.find_child("NewGameButton", true, false) != null, true, "title_has_new_game_with_progress")
 	title.new_game_requested.connect(func(): pass)
 	title._confirm_new_game()
-	var confirm := title.find_child("NewGameConfirm", true, false) as ConfirmationDialog
+	var confirm := title.find_child("NewGameConfirm", true, false) as ConfirmPanel
 	t.call(confirm != null, true, "new_game_asks_confirmation")
+	t.call(confirm != null and confirm.is_open(), true, "new_game_confirmation_open")
 	if confirm != null:
-		confirm.hide()
+		confirm.cancel()
+		t.call(not confirm.is_open(), true, "new_game_confirmation_cancel_closes")
 	title.free()
 	Flow.profile = original
 	profile.free()
+
+
+## The Hub reads Flow.profile inside the new_game_requested handler. If the
+## signal fires before reset_profile(), it binds to the instance being freed.
+func _test_new_game_order(t: Callable) -> void:
+	var original_profile: Profile = Flow.profile
+	var original_path := Flow.profile_path
+	var original_run := Flow.run_save_path
+	var original_save := Flow.auto_save
+	Flow.auto_save = false
+	Flow.profile_path = "user://test_new_game_profile.cfg"
+	Flow.run_save_path = "user://test_new_game_run.cfg"
+	var previous := Profile.new()
+	Flow.profile = previous
+	var seen: Array[Profile] = []
+	var title := TitleScreen.new()
+	title._flow = Flow
+	title.new_game_requested.connect(func(): seen.append(Flow.profile))
+	title._start_new_game()
+	t.call(seen.size(), 1, "new_game_emits_once")
+	t.call(seen.size() == 1 and seen[0] == Flow.profile, true, "new_game_signal_sees_new_profile")
+	t.call(Flow.profile != previous, true, "new_game_replaces_profile")
+	t.call(Flow.profile != null and Flow.profile.memory_fragments == 0, true, "new_game_profile_is_fresh")
+	title.free()
+	var created: Profile = Flow.profile
+	Flow.profile = original_profile
+	Flow.profile_path = original_path
+	Flow.run_save_path = original_run
+	Flow.auto_save = original_save
+	if created != null:
+		created.free()
 
 
 func _test_pause_confirmation(t: Callable) -> void:

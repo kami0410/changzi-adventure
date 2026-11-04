@@ -36,6 +36,7 @@ var _input: LineEdit
 var _submit: Button
 var _status: Label
 var _busy_label: Label
+var _close_button: Button
 var _npc_id: StringName = &""
 var _profile: Dictionary = {}
 var _open := false
@@ -46,6 +47,10 @@ func _ready() -> void:
 	layer = 20
 	_build()
 	_root.visible = false
+	_refresh_close_hint()
+	var flow := get_node_or_null("/root/Flow")
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
 
 
 func open(npc: NPC) -> void:
@@ -72,8 +77,25 @@ func open(npc: NPC) -> void:
 	_input.text = ""
 	_status.text = "对 TA 说一句话。言灵会改变 TA 的态度，也可能改变 TA 的职能。"
 	_busy_label.text = ""
+	_refresh_close_hint()
 	_root.visible = true
 	_open = true
+	# A pad cannot type into the LineEdit, so land on the first service button
+	# instead; keyboard players keep the text field as the natural entry point.
+	var flow := get_node_or_null("/root/Flow")
+	if flow != null and flow.using_gamepad:
+		_focus_first_function()
+	else:
+		_input.grab_focus()
+
+
+func _focus_first_function() -> void:
+	for card in _function_box.get_children():
+		for node in card.find_children("*", "Button", true, false):
+			var button := node as Button
+			if button != null and not button.disabled and not button.is_queued_for_deletion():
+				button.grab_focus()
+				return
 	_input.grab_focus()
 
 
@@ -87,6 +109,18 @@ func close() -> void:
 
 func is_open() -> bool:
 	return _open
+
+
+func _refresh_close_hint() -> void:
+	if _close_button == null:
+		return
+	var flow := get_node_or_null("/root/Flow") as GameFlow
+	var key := flow.close_prompt() if flow != null else "Esc"
+	_close_button.text = "离开 [%s]" % key
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	_refresh_close_hint()
 
 
 func show_reply(text: String, mood: String = "neutral") -> void:
@@ -155,12 +189,12 @@ func _build() -> void:
 	_title_label.add_theme_font_size_override("font_size", 24)
 	_title_label.add_theme_color_override("font_color", COLOR_CYAN)
 	names.add_child(_title_label)
-	var close_button := Button.new()
-	close_button.text = "离开 [Esc]"
-	close_button.custom_minimum_size = Vector2(176, 44)
-	close_button.add_theme_font_size_override("font_size", 24)
-	close_button.pressed.connect(close)
-	header.add_child(close_button)
+	_close_button = Button.new()
+	_close_button.text = "离开"
+	_close_button.custom_minimum_size = Vector2(176, 44)
+	_close_button.add_theme_font_size_override("font_size", 24)
+	_close_button.pressed.connect(close)
+	header.add_child(_close_button)
 
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL

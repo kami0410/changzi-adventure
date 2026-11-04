@@ -32,6 +32,7 @@ var _speaker := ""
 var _lines: Array[String] = []
 var _index := 0
 var _open := false
+var _return_focus: Control = null
 
 
 func _ready() -> void:
@@ -39,6 +40,9 @@ func _ready() -> void:
 	_ensure_nodes()
 	if _root != null:
 		_root.visible = false
+	var flow := _flow_node()
+	if flow != null and not flow.input_device_changed.is_connected(_on_input_device_changed):
+		flow.input_device_changed.connect(_on_input_device_changed)
 
 
 func open_dialogue(speaker: String, lines: Array) -> void:
@@ -51,11 +55,17 @@ func open_dialogue(speaker: String, lines: Array) -> void:
 		_lines.append("……")
 	_index = 0
 	_open = true
+	var viewport := get_viewport() if is_inside_tree() else null
+	_return_focus = viewport.gui_get_focus_owner() if viewport != null else null
 	if _root != null:
 		_root.visible = true
 	if _inspire_button != null:
 		_inspire_button.visible = _inspiration_enabled
 	_refresh()
+	# Focus the continue button so a controller's A advances the page the same
+	# way Y does; otherwise the whole dialogue is unreachable without a mouse.
+	if _continue_button != null and _continue_button.is_inside_tree():
+		_continue_button.grab_focus()
 	_maybe_guru_laugh(0.45)
 
 
@@ -79,7 +89,11 @@ func close() -> void:
 		_root.visible = false
 	if _inspire_button != null:
 		_inspire_button.visible = false
+	var previous := _return_focus
+	_return_focus = null
 	closed.emit()
+	if previous != null and is_instance_valid(previous) and previous.is_inside_tree() and previous.is_visible_in_tree():
+		previous.grab_focus()
 
 
 func is_open() -> bool:
@@ -142,7 +156,27 @@ func _refresh() -> void:
 	if _progress_label != null:
 		_progress_label.text = "%d / %d" % [_index + 1, _lines.size()]
 	if _continue_button != null:
-		_continue_button.text = "结束  [E]" if _index + 1 >= _lines.size() else "继续  [E]"
+		var key := _prompt(&"interact")
+		_continue_button.text = "结束  [%s]" % key if _index + 1 >= _lines.size() else "继续  [%s]" % key
+	if _inspire_button != null:
+		_inspire_button.text = "言灵对话  [%s]" % _prompt(&"npc_inspire")
+
+
+func _on_input_device_changed(_using_gamepad: bool) -> void:
+	if _open:
+		_refresh()
+
+
+func _prompt(action: StringName) -> String:
+	var flow := _flow_node()
+	return flow.prompt_label(action) if flow != null else GameFlow.key_label(action)
+
+
+func _flow_node() -> GameFlow:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("Flow") as GameFlow
+	return null
 
 
 func _refresh_portrait() -> void:
@@ -175,6 +209,17 @@ func _refresh_portrait() -> void:
 
 func _on_inspire_pressed() -> void:
 	inspiration_requested.emit()
+
+
+## B / Esc leaves the conversation. Keyboard players also have the close
+## button; Y (interact) still advances, as the button label says.
+func _unhandled_input(event: InputEvent) -> void:
+	if not _open:
+		return
+	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause"):
+		close()
+		if is_inside_tree() and get_viewport() != null:
+			get_viewport().set_input_as_handled()
 
 
 ## 咕噜's laughter is a gag that should surprise, never loop: it fires on some

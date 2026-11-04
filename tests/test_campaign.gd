@@ -68,6 +68,11 @@ func _test_story_overlay(t: Callable) -> void:
 	var picked := [-1]
 	overlay.choice_made.connect(func(index: int): picked[0] = index)
 	overlay.open_choice("选择", "留下哪一页？", "选择会改变结局。", [{"label": "保存", "note": "仁慈"}, {"label": "焚毁", "note": "自由"}])
+	# Option text is assigned after the button enters the tree (see
+	# StoryOverlay.open_choice); both lines must still be present immediately.
+	t.call(overlay._options.get_child_count(), 2, "story_choice_option_count")
+	t.call(overlay._options.get_child(0).text, "保存\n仁慈", "story_choice_first_text")
+	t.call(overlay._options.get_child(1).text, "焚毁\n自由", "story_choice_second_text")
 	overlay.choose(1)
 	t.call(picked[0], 1, "story_overlay_emits_choice")
 	t.call(overlay.is_open(), false, "story_overlay_closes_after_choice")
