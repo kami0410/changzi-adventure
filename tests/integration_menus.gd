@@ -738,6 +738,56 @@ func _run() -> void:
 	broke_shop_profile.free()
 	await _settle()
 
+	# Trust tiers: the dialogue attitude, the AI prompt, the shelf discount and
+	# the 托付 forge favour all read the same derived tier, and none of them
+	# stack a second benefit on top of an authored blessing.
+	var trust_snapshot: Dictionary = hub.profile.npc_trust.duplicate(true)
+	var blessing_snapshot: Dictionary = hub.profile.npc_blessings.duplicate(true)
+	var fragments_snapshot: int = int(hub.profile.memory_fragments)
+	var base_snapshot: Dictionary = hub.profile.weapon_base_levels.duplicate(true)
+	var shop_discount_snapshot: float = hub.shop.discount
+	hub.profile.add_npc_trust(&"guru", 12.0)
+	hub.profile.add_npc_trust(&"ayan", 12.0)
+	var guru_npc = hub.get_npc(&"guru")
+	hub.talk_to_npc(guru_npc)
+	await _settle()
+	check(hub.dialogue_ui.is_open(), "hub_trust_dialogue_open")
+	check(hub.dialogue_ui._lines.size() >= 2
+		and hub.dialogue_ui._lines[1] == NPCProfiles.trust_line(&"guru", 3),
+		"hub_trust_dialogue_attitude")
+	check(String(hub._npc_prompt_profile(&"guru").get("trust_tier", "")) == "托付",
+		"hub_trust_prompt_tier")
+	check(String(hub._npc_prompt_profile(&"guru").get("trust_attitude", ""))
+		== NPCProfiles.trust_line(&"guru", 3), "hub_trust_prompt_attitude")
+	hub.dialogue_ui.close()
+	await _settle()
+
+	hub.profile.memory_fragments = 999
+	hub.perform_npc_function(&"guru", &"shop")
+	await _settle()
+	check(is_equal_approx(hub.shop.discount, 0.15), "hub_trust_shop_discount")
+	hub.shop_ui.close()
+	var forge_level_before: int = hub.profile.weapon_base_level(hub.SWORD_ID)
+	var trust_forge: Dictionary = hub.upgrade_sword_base()
+	check(bool(trust_forge.get("success", false)), "hub_trust_forge_succeeds")
+	check(int(trust_forge.get("cost", -1)) == 0, "hub_trust_forge_is_free")
+	check(hub.profile.weapon_base_level(hub.SWORD_ID) == forge_level_before + 1,
+		"hub_trust_forge_raises_base")
+	check(String(trust_forge.get("message", "")).contains("这次不算钱"),
+		"hub_trust_forge_message")
+	var second_forge: Dictionary = hub.upgrade_sword_base()
+	check(int(second_forge.get("cost", 0)) > 0, "hub_trust_forge_once_per_visit")
+	check(not String(second_forge.get("message", "")).contains("这次不算钱"),
+		"hub_trust_forge_second_not_free")
+	hub.profile.npc_trust = trust_snapshot
+	hub.profile.npc_blessings = blessing_snapshot
+	hub.profile.memory_fragments = fragments_snapshot
+	hub.profile.weapon_base_levels = base_snapshot
+	hub.shop.discount = shop_discount_snapshot
+	hub._trust_forge_used = false
+	hub.shop_ui.bind(hub.shop, hub.profile)
+	await _settle()
+
 	# Hub settings (its own ModalLayer + _process path): F10 opens it, every
 	# subpage opens with A, closes with B, and returns focus to its opener.
 	hub.settings_menu = null
@@ -828,6 +878,39 @@ func _run() -> void:
 	# unfreezes the Hub, the same close-back contract as the pause menu.
 	var title_settings := title.find_child("SettingsButton", true, false) as Button
 	check(title_settings != null, "title_has_settings_button")
+
+	# Ending gallery: Profile ids decide the unlock state, locked entries stay
+	# placeholders, A opens from the title and B returns focus to its button.
+	var title_gallery := title.find_child("EndingGalleryButton", true, false) as Button
+	check(title_gallery != null, "title_has_ending_gallery_button")
+	var endings_snapshot: Array[String] = hub.profile.endings.duplicate()
+	hub.profile.endings.clear()
+	hub.profile.record_ending(&"restored")
+	if title_gallery != null:
+		title_gallery.grab_focus()
+		await _settle()
+		await _press_button(JOY_BUTTON_A)
+		await _release_button(JOY_BUTTON_A)
+		var gallery := title.find_child("EndingGallery", true, false) as EndingGalleryUI
+		check(gallery != null and gallery.is_open(), "title_gallery_opens")
+		check(gallery != null and gallery.get_entry_count() == CampaignData.ending_count(),
+			"title_gallery_entries")
+		check(gallery != null and gallery.is_unlocked(0) and not gallery.is_unlocked(1),
+			"title_gallery_unlock_state")
+		check(gallery != null and gallery.get_entry_text(1).contains("尚未记录"),
+			"title_gallery_locked_placeholder")
+		# Directional input must not walk focus out from under the modal onto
+		# the title buttons behind the shade.
+		await _press_button(JOY_BUTTON_DPAD_UP)
+		await _release_button(JOY_BUTTON_DPAD_UP)
+		check(gallery != null and _focus_owner() == gallery._close_button,
+			"title_gallery_focus_trapped")
+		await _press_button(JOY_BUTTON_B)
+		await _release_button(JOY_BUTTON_B)
+		check(gallery != null and not gallery.is_open(), "title_gallery_b_closes")
+		check(_focus_owner() == title_gallery, "title_gallery_focus_back")
+	hub.profile.endings = endings_snapshot
+
 	if title_settings != null:
 		title_settings.grab_focus()
 		await _settle()

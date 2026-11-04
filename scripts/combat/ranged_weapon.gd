@@ -35,7 +35,8 @@ func _spawn_projectile(host: Node, direction: Vector2, damage_scale: float) -> v
 	var projectile := PROJECTILE_SCENE.instantiate() as Projectile
 	if projectile == null:
 		return
-	projectile.damage = maxi(int(round(float(data.damage) * damage_scale)), 1)
+	projectile.damage = maxi(int(round(
+		float(data.damage) * damage_scale * damage_dealt_multiplier)), 1)
 	projectile.speed = data.projectile_speed
 	projectile.direction = direction
 	projectile.pierce = WeaponSpecial.projectile_pierce(data.special_id)

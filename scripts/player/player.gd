@@ -56,6 +56,8 @@ const RUN_FPS := 12.0
 @export var camera_look_ahead: float = 32.0
 ## Multiplier applied to every incoming hit; game.gd raises it with corruption.
 var damage_taken_multiplier: float = 1.0
+## Multiplier applied to every weapon hit; game.gd sets it from run authorities.
+var damage_dealt_multiplier: float = 1.0
 
 ## Local y of the player's feet: the bottom of the collision capsule.
 const FOOT_Y := 16.0
@@ -357,6 +359,7 @@ func _on_attack_requested() -> void:
 	if weapon == null:
 		return
 	weapon.attack_direction = facing
+	weapon.damage_dealt_multiplier = damage_dealt_multiplier
 	if not weapon.try_attack():
 		return
 	_combo_index = _combo_index + 1 if _combo_window_left > 0.0 else 1

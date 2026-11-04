@@ -9,6 +9,8 @@ signal hit(target: Node)
 var cooldown_left: float = 0.0
 ## 连段/蓄力倍率；Player 每次攻击后重置，避免永久放大。
 var damage_multiplier: float = 1.0
+## 权柄等整局规则倍率；由 Player 在出手时写入，不参与连段重置。
+var damage_dealt_multiplier: float = 1.0
 
 
 func _process(delta: float) -> void:
@@ -36,7 +38,8 @@ func apply_hit(target: Node) -> void:
 		return
 	if not target.has_method("take_damage"):
 		return
-	var damage := maxi(int(roundf(data.damage * damage_multiplier * special_damage_multiplier())), 1)
+	var damage := maxi(int(roundf(
+		data.damage * damage_multiplier * special_damage_multiplier() * damage_dealt_multiplier)), 1)
 	target.call("take_damage", damage)
 	if is_inside_tree():
 		var audio := get_node_or_null("/root/Audio")

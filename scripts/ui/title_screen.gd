@@ -11,6 +11,8 @@ var _difficulty: OptionButton
 var _difficulty_note: Label
 var _new_game_button: Button
 var _confirm_panel: ConfirmPanel
+var _gallery: EndingGalleryUI
+var _gallery_button: Button
 var _built := false
 
 func _ready() -> void:
@@ -108,6 +110,13 @@ func _build() -> void:
 	settings.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	settings.pressed.connect(func(): settings_requested.emit())
 	column.add_child(settings)
+	_gallery_button = Button.new()
+	_gallery_button.name = "EndingGalleryButton"
+	_gallery_button.text = "结局画廊"
+	_gallery_button.custom_minimum_size = Vector2(280, 44)
+	_gallery_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_gallery_button.pressed.connect(_open_ending_gallery)
+	column.add_child(_gallery_button)
 	if has_progress:
 		_new_game_button = Button.new()
 		_new_game_button.name = "NewGameButton"
@@ -157,6 +166,16 @@ func _confirm_new_game() -> void:
 		add_child(_confirm_panel)
 		_confirm_panel.confirmed.connect(_start_new_game)
 	_confirm_panel.open("清除当前进度并重新开始？", "确认", "取消", _new_game_button)
+
+
+## The gallery lives on the title layer so it works before a run starts and
+## keeps the title's pause state; locking is Profile-only.
+func _open_ending_gallery() -> void:
+	if _gallery == null:
+		_gallery = EndingGalleryUI.new()
+		_gallery.name = "EndingGallery"
+		add_child(_gallery)
+	_gallery.open(_flow.profile if _flow != null else null, _gallery_button)
 
 
 ## Clears the profile first, then announces the new game. Listeners (the Hub)

@@ -51,6 +51,9 @@ var _pending_offline_result: Dictionary = {}
 var _ai_favors: Dictionary = {}
 var _function_free := false
 var _function_discount := 0.0
+## 托付 with 阿砚 grants one free forge per Hub visit; this flag is per scene,
+## so rebuilding the Hub (returning from a run) refreshes the favour.
+var _trust_forge_used := false
 
 @onready var player: Player = get_node_or_null("Player") as Player
 @onready var portal: HubPortal = get_node_or_null("Portal") as HubPortal
@@ -483,6 +486,10 @@ func talk_to_npc(npc: NPC) -> void:
 		var greeting := String(profile_data.get("greeting", ""))
 		if not greeting.is_empty() and (lines.is_empty() or lines[0] != greeting):
 			lines.insert(0, greeting)
+		var tier := TrustData.tier_for(profile, npc.npc_id)
+		var attitude := NPCProfiles.trust_line(npc.npc_id, tier)
+		if not attitude.is_empty():
+			lines.insert(mini(1, lines.size()), attitude)
 	match npc.npc_id:
 		&"luchen":
 			lines.append(decode_word())
@@ -590,11 +597,23 @@ func _apply_inspiration_effect(npc_id: StringName, effect: Dictionary, ai_config
 	return NPCProfiles.apply_effect_once(profile, npc_id, effect, _npc_effect_used)
 
 
+## The AI sees the same tier the offline evaluator sees. The keys are optional
+## for the request builder, so callers that pass a raw profile stay valid.
+func _npc_prompt_profile(npc_id: StringName) -> Dictionary:
+	var data := NPCProfiles.get_profile(npc_id)
+	if profile != null:
+		var tier := TrustData.tier_for(profile, npc_id)
+		data["trust_tier"] = TrustData.TIER_NAMES[tier]
+		data["trust_attitude"] = NPCProfiles.trust_line(npc_id, tier)
+	return data
+
+
 func _on_npc_inspiration_submitted(npc_id: StringName, text: String) -> void:
 	if npc_inspire_ui == null:
 		return
 	_inspire_pending_npc = npc_id
-	var result := NPCProfiles.resolve(npc_id, text)
+	var trust := profile.npc_trust_value(npc_id) if profile != null else 0.0
+	var result := NPCProfiles.resolve(npc_id, text, trust)
 	_pending_offline_result = result
 	var ai := get_node_or_null("/root/AI") as AIService
 	var ai_configured := ai != null and ai.is_configured()
@@ -602,7 +621,7 @@ func _on_npc_inspiration_submitted(npc_id: StringName, text: String) -> void:
 	if ai_configured:
 		npc_inspire_ui.set_busy(true)
 		npc_inspire_ui.show_status("正在聆听……AI 若失败，离线回应会生效一次。")
-		ai.request_npc_reply(npc_id, text, NPCProfiles.get_profile(npc_id))
+		ai.request_npc_reply(npc_id, text, _npc_prompt_profile(npc_id))
 		return
 	npc_inspire_ui.set_busy(false)
 	npc_inspire_ui.show_reply(String(result.get("reply", "……")), String(result.get("mood", "neutral")))
@@ -671,6 +690,7 @@ func _apply_ai_action(npc_id: StringName, raw: Variant) -> String:
 				npc_inspire_ui.close()
 			if shop_ui != null:
 				shop_ui.bind(shop, profile)
+				_refresh_shop_discount()
 				shop_ui.open()
 				shop_ui.announce("AI 言灵：咕噜按你的话打了 %.0f%% 折扣。" % (discount * 100.0))
 			return "咕噜把货架拖出来，按你的话给了折扣。"
@@ -750,6 +770,7 @@ func perform_npc_function(npc_id: StringName, function_id: StringName, free := f
 				npc_inspire_ui.close()
 			if shop_ui != null:
 				shop_ui.bind(shop, profile)
+				_refresh_shop_discount()
 				shop_ui.open()
 			message = "咕噜把货架拖了出来。"
 		&"rumor":
@@ -881,16 +902,22 @@ func upgrade_sword_base() -> Dictionary:
 	_ensure_profile()
 	var level := profile.weapon_base_level(SWORD_ID)
 	var base_cost := 10 + level * 10
-	var discount := clampf(profile.npc_blessing(&"ayan", "forge_discount", 0.0), 0.0, 0.85)
-	var free_upgrade := profile.npc_blessing(&"ayan", "forge_free", 0.0) >= 1.0
+	var discount := clampf(TrustData.forge_discount(profile), 0.0, 0.85)
+	var blessed_upgrade := TrustData.forge_blessing(profile) and not _trust_forge_used
+	var free_upgrade := profile.npc_blessing(&"ayan", "forge_free", 0.0) >= 1.0 or blessed_upgrade
 	var cost := 0 if free_upgrade else maxi(int(ceilf(float(base_cost) * (1.0 - discount))), 1)
 	var fragments_before := profile.memory_fragments
 	var success := false
+	var trust_blessing_spent := false
 	if profile.memory_fragments >= cost:
 		profile.memory_fragments -= cost
 		profile.force_upgrade_weapon_base(SWORD_ID)
 		if free_upgrade:
-			profile.consume_npc_blessing(&"ayan", "forge_free", 1.0)
+			# Spend an earned forge_free blessing first; the 托付 favour is the
+			# fallback, so the two never both disappear on one upgrade.
+			if not profile.consume_npc_blessing(&"ayan", "forge_free", 1.0) and blessed_upgrade:
+				_trust_forge_used = true
+				trust_blessing_spent = true
 		success = true
 	var new_level := profile.weapon_base_level(SWORD_ID)
 	var message := ""
@@ -901,7 +928,9 @@ func upgrade_sword_base() -> Dictionary:
 		]
 		if discount > 0.0:
 			message += " 阿砚没抬头：这次算你便宜点。"
-		if free_upgrade:
+		if trust_blessing_spent:
+			message += " 阿砚把锤子递给你：这次不算钱。"
+		elif free_upgrade:
 			message += " 炉火自己亮了一瞬。"
 	else:
 		message = "记忆碎片不足：升级需要 %d，你只有 %d。去破碎区带些记忆回来吧。" % [
@@ -918,12 +947,19 @@ func upgrade_sword_base() -> Dictionary:
 	}
 
 
+## The shelf price and the purchase must read the same discount; call this
+## every time the shop opens, not just on the buy.
+func _refresh_shop_discount() -> void:
+	if shop != null and profile != null:
+		shop.discount = clampf(TrustData.shop_discount(profile), 0.0, 0.8)
+
+
 func buy_from_shop(item_id: StringName) -> bool:
 	ensure_ready()
 	_ensure_profile()
 	if shop == null:
 		return false
-	shop.discount = clampf(profile.npc_blessing(&"guru", "shop_discount", 0.0), 0.0, 0.8)
+	_refresh_shop_discount()
 	var success := shop.buy(item_id, profile)
 	_refresh_fragment_label()
 	return success
@@ -1042,6 +1078,7 @@ func _on_dialogue_finished() -> void:
 	var npc_id := _active_npc_id
 	_active_npc_id = &""
 	if npc_id == &"guru" and shop_ui != null:
+		_refresh_shop_discount()
 		shop_ui.open()
 	_refresh_player_freeze()
 

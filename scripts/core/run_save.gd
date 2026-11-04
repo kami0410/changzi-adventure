@@ -112,7 +112,7 @@ static func _has_valid_shape(saved: Dictionary) -> bool:
 	var authority: Dictionary = saved.get("authority", {})
 	if authority.has("id") and not (authority["id"] is String or authority["id"] is StringName):
 		return false
-	for key in ["revive_used", "rewrite_used"]:
+	for key in ["revive_used", "rewrite_used", "archive_used"]:
 		if authority.has(key) and not authority[key] is bool:
 			return false
 

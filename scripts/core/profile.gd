@@ -29,6 +29,9 @@ var text_scale: int = 16
 var demo_cleared := false
 ## Relics bought from 咕噜, waiting to be carried into the next run.
 var stored_relics: Array[StringName] = []
+## One item preserved by the 归档 authority when a run ends in death. Handed to
+## the next fresh run exactly once, then cleared.
+var archived_item: Dictionary = {}
 ## Unbounded Archive altar levels: track id -> level.
 var archive_levels: Dictionary = {}
 ## Per-word mastery XP; level = xp / 5, uncapped with diminishing returns.
@@ -155,6 +158,20 @@ func store_relic(relic_id: StringName) -> bool:
 func consume_stored_relics() -> Array[StringName]:
 	var result: Array[StringName] = stored_relics.duplicate()
 	stored_relics.clear()
+	return result
+
+
+func store_archived_item(kind: StringName, item_id: StringName) -> bool:
+	if item_id == &"" or not (kind == &"relic" or kind == &"weapon"):
+		return false
+	archived_item = {"kind": String(kind), "id": String(item_id)}
+	return true
+
+
+## Hands the archived item to the next fresh run exactly once.
+func consume_archived_item() -> Dictionary:
+	var result := archived_item.duplicate()
+	archived_item.clear()
 	return result
 
 
@@ -285,6 +302,7 @@ func save_profile(path: String = "user://profile.cfg") -> void:
 	config.set_value("progress", "demo_cleared", demo_cleared)
 	config.set_value("settings", "text_scale", text_scale)
 	config.set_value("progress", "stored_relics", stored_relics)
+	config.set_value("progress", "archived_item", archived_item)
 	config.set_value("progress", "archive_levels", archive_levels)
 	config.set_value("progress", "word_mastery", word_mastery)
 	config.set_value("progress", "weapon_base_levels", weapon_base_levels)
@@ -361,6 +379,13 @@ func load_profile(path: String = "user://profile.cfg") -> bool:
 	text_scale = clampi(_as_int(config.get_value("settings", "text_scale", 16), 16), 12, 20)
 
 	stored_relics = _read_names(config.get_value("progress", "stored_relics", []))
+
+	archived_item = {}
+	var saved_archived := _as_dictionary(config.get_value("progress", "archived_item", {}))
+	var archived_kind := _as_string(saved_archived.get("kind", ""))
+	var archived_id := _as_string(saved_archived.get("id", ""))
+	if (archived_kind == "relic" or archived_kind == "weapon") and not archived_id.is_empty():
+		archived_item = {"kind": archived_kind, "id": archived_id}
 
 	archive_levels = {}
 	var saved_levels := _as_dictionary(config.get_value("progress", "archive_levels", {}))

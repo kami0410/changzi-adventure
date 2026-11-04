@@ -99,11 +99,15 @@ var _chests: Array[TreasureChest] = []
 var _kills := 0
 var _finished := false
 var _ending_pending := false
+## Set the moment a final death is committed, before the archive pick pauses the
+## tree. Blocks checkpoints so closing the window mid-pick cannot revive the run.
+var _death_committed := false
 var _example_phrases: Array[ResolvedPhrase] = []
 var _boss: InkArchivist
 var _boss_bar_visible := false
 var _authority := AuthorityController.new()
 var _authority_choice: AuthorityChoiceUI
+var _archive_choice: ArchiveChoiceUI
 var _cleared_in_chapter := 0
 var _help_ui: HelpUI
 var _reward_ui: RewardChoice
@@ -172,6 +176,7 @@ func _ready() -> void:
 		_apply_npc_blessings()
 		_populate_starter_inventory()
 		_apply_stored_relics()
+		_apply_archived_item()
 	elif not _restore_run_save(_resume_data):
 		# A structurally valid file can still name resources this build no
 		# longer has. Never boot into a half-restored run.
@@ -179,6 +184,7 @@ func _ready() -> void:
 		_apply_npc_blessings()
 		_populate_starter_inventory()
 		_apply_stored_relics()
+		_apply_archived_item()
 	relic_effects.run = run_state
 	relic_effects.player = player
 	hud.bind_run_state(run_state)
@@ -216,6 +222,8 @@ func _ready() -> void:
 	$UI.add_child(_story)
 	_authority_choice = AuthorityChoiceUI.new()
 	$UI.add_child(_authority_choice)
+	_archive_choice = ArchiveChoiceUI.new()
+	$UI.add_child(_archive_choice)
 	_map_overlay = MapOverlay.new()
 	$UI.add_child(_map_overlay)
 	_shop_ui = RunShopUI.new()
@@ -381,7 +389,8 @@ func _restore_authority(data: Dictionary) -> void:
 	_authority.apply(authority, run_state)
 	_authority.revive_used = bool(data.get("revive_used", false))
 	_authority.rewrite_used = bool(data.get("rewrite_used", false))
-	hud.set_authority(authority.display_name, _authority.can_revive() or _authority.can_rewrite())
+	_authority.archive_used = bool(data.get("archive_used", false))
+	hud.set_authority(authority.display_name, _authority.can_use())
 
 
 func _restore_frenzy(data: Dictionary) -> void:
@@ -469,6 +478,7 @@ func _build_run_save() -> Dictionary:
 			"id": String(active_authority.id),
 			"revive_used": _authority.revive_used,
 			"rewrite_used": _authority.rewrite_used,
+			"archive_used": _authority.archive_used,
 		}
 	var examples: Array = []
 	for phrase in _example_phrases:
@@ -530,7 +540,7 @@ func _build_run_save() -> Dictionary:
 func save_run_now() -> bool:
 	if Flow == null or not Flow.auto_save or run_state == null:
 		return false
-	if _finished or _ending_pending:
+	if _finished or _ending_pending or _death_committed:
 		return false
 	if _reward_ui != null and _reward_ui.visible:
 		# The room is marked cleared before the choice opens. Writing now would
@@ -552,7 +562,7 @@ func save_run_on_exit() -> void:
 
 ## HUD hides under any modal page so the page is the only thing to read.
 func _sync_hud_visibility() -> void:
-	var modal := _overlay != null or pause_menu.is_open() or _story.is_open() 		or (_reward_ui != null and _reward_ui.visible) or (_shop_ui != null and _shop_ui.visible) 		or (_map_overlay != null and _map_overlay.is_open()) or ending_screen.visible
+	var modal: bool = _overlay != null or pause_menu.is_open() or _story.is_open() 		or (_reward_ui != null and _reward_ui.visible) or (_shop_ui != null and _shop_ui.visible) 		or (_map_overlay != null and _map_overlay.is_open()) or ending_screen.visible 		or (_archive_choice != null and _archive_choice.is_open())
 	hud.visible = not modal
 
 
@@ -569,7 +579,9 @@ func _process(delta: float) -> void:
 	_update_stele_prompts()
 	relic_effects.tick(delta, get_tree().get_nodes_in_group("enemies"))
 	phrase_caster.cooldown_scale = relic_effects.cooldown_scale()
-	phrase_caster.damage_scale = 3.0 * relic_effects.damage_scale() * _archive_damage_multiplier
+	var authority_damage := _authority.damage_multiplier(run_state)
+	phrase_caster.damage_scale = 3.0 * relic_effects.damage_scale() * _archive_damage_multiplier * authority_damage
+	player.damage_dealt_multiplier = authority_damage
 	phrase_caster.tick(delta)
 	if Input.is_action_just_pressed("cast_1"):
 		_try_cast(0)
@@ -603,6 +615,12 @@ func _input(event: InputEvent) -> void:
 	# pause press must not resume the world underneath it or open the pause
 	# menu on top of the choice.
 	if _authority_choice != null and _authority_choice.is_open():
+		if event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
+			get_viewport().set_input_as_handled()
+		return
+	# The death archive pick is also mandatory; B/Esc must not close it or open
+	# the pause menu underneath the death settlement.
+	if _archive_choice != null and _archive_choice.is_open():
 		if event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
 			get_viewport().set_input_as_handled()
 		return
@@ -678,6 +696,8 @@ func _toggle_pause() -> void:
 	if _finished or _ending_pending or (_reward_ui != null and _reward_ui.visible):
 		return
 	if _authority_choice != null and _authority_choice.is_open():
+		return
+	if _archive_choice != null and _archive_choice.is_open():
 		return
 	pause_menu.toggle()
 	if pause_menu.is_open():
@@ -812,7 +832,10 @@ func _apply_npc_blessings() -> void:
 	var pending := Flow.profile.consume_pending_run_bonuses()
 	if Flow.auto_save:
 		Flow.save_profile()
-	var start_pages := mini(int(round(float(pending.get("start_pages", 0.0)))), 20)
+	# Trust tiers add pages from every NPC, on top of the one-shot 言灵 bonuses
+	# but under the same cap, so tier income cannot outgrow the authored path.
+	var start_pages := mini(
+		int(round(float(pending.get("start_pages", 0.0)))) + TrustData.start_pages(Flow.profile), 20)
 	if start_pages > 0:
 		run_state.add_pages(start_pages)
 	var start_corruption := mini(int(round(float(pending.get("start_corruption", 0.0)))), 6)
@@ -837,6 +860,95 @@ func _apply_stored_relics() -> void:
 		hud.show_message("咕噜的存货：" + " · ".join(names))
 	if Flow.auto_save:
 		Flow.save_profile()
+
+
+## 归档 authority: one item carried through death arrives at the next fresh
+## run. A weapon replaces the starting blade; a relic joins the inventory.
+func _apply_archived_item() -> void:
+	if Flow.profile == null or run_state == null:
+		return
+	var item := Flow.profile.consume_archived_item()
+	if item.is_empty():
+		return
+	var kind := String(item.get("kind", ""))
+	var id := StringName(String(item.get("id", "")))
+	if kind == "weapon":
+		var base := ContentLibrary.weapon_by_id(id)
+		if base == null:
+			return
+		var weapon := RunLoot.weapon_for_run(base, Flow.profile)
+		_equip_weapon(0, weapon)
+		hud.show_message("归档：" + weapon.display_name + " 已替换起始武器")
+	elif kind == "relic":
+		var relic := ContentLibrary.relic_by_id(id)
+		if relic == null:
+			return
+		if run_state.inventory.add_relic(relic):
+			run_state.add_corruption(relic.corruption)
+			hud.show_message("归档：" + relic.display_name + " 已放进背包")
+		else:
+			hud.show_message("归档：" + relic.display_name + " 已在背包里")
+	if Flow.auto_save:
+		Flow.save_profile()
+
+
+## Items the 归档 authority may preserve. The two weapons every run starts with
+## are skipped: archiving them would not change the next run's opening hand.
+func _archive_offers() -> Array[Dictionary]:
+	var offers: Array[Dictionary] = []
+	if run_state == null or run_state.inventory == null:
+		return offers
+	var starter_ids: Dictionary = {}
+	if player != null and player.starter_weapon != null:
+		starter_ids[player.starter_weapon.id] = true
+	starter_ids[SECOND_WEAPON.id] = true
+	var seen: Dictionary = {}
+	for weapon in run_state.inventory.weapons:
+		if weapon == null or starter_ids.has(weapon.id) or seen.has(weapon.id):
+			continue
+		seen[weapon.id] = true
+		offers.append({
+			"kind": &"weapon",
+			"id": weapon.id,
+			"name": weapon.display_name,
+			"desc": "武器 · 伤害 %d · 间隔 %.2f 秒" % [weapon.damage, weapon.attack_cooldown],
+		})
+	for relic in run_state.inventory.relics:
+		if relic == null:
+			continue
+		offers.append({
+			"kind": &"relic",
+			"id": relic.id,
+			"name": relic.display_name,
+			"desc": "遗物 · " + RelicEffects.describe(relic.effect_id),
+		})
+	return offers
+
+
+## Final death with 归档: ask before the result page. The checkpoint is already
+## gone, so quitting during this pick cannot restore the dead run.
+func _offer_archive_on_death() -> void:
+	var offers := _archive_offers()
+	if offers.is_empty():
+		return
+	if not _authority.consume_archive():
+		return
+	var authority_name := run_state.authority.display_name if run_state.authority != null else "归档"
+	hud.set_authority(authority_name, _authority.can_use())
+	_archive_choice.open(offers)
+	# The tree is paused now, so _process (and its HUD sync) will not run until
+	# the pick closes; hide the HUD explicitly or it stays on top of the modal.
+	_sync_hud_visibility()
+	var index: int = await _archive_choice.chosen
+	if not is_inside_tree():
+		return
+	if index < 0 or index >= offers.size() or Flow.profile == null:
+		return
+	var entry: Dictionary = offers[index]
+	if Flow.profile.store_archived_item(entry["kind"], entry["id"]):
+		if Flow.auto_save:
+			Flow.save_profile()
+		hud.show_message("归档：%s 将随下一局醒来" % String(entry.get("name", "物品")))
 
 
 func _populate_starter_inventory() -> void:
@@ -1646,14 +1758,19 @@ func _grant_chapter_authority() -> void:
 	await get_tree().create_timer(1.2).timeout
 	if not is_inside_tree() or _ended():
 		return
-	var options := _chapter_plan.authority_pool
+	# The authored pool plus condition unlocks (devour at high corruption,
+	# archive after enough records). Base options keep their authored order.
+	var options := AuthorityController.build_pool(
+		_chapter_plan.authority_pool, run_state, Flow.profile, _records)
+	if options.is_empty():
+		return
 	_authority_choice.open(options)
 	var index: int = await _authority_choice.chosen
 	if not is_inside_tree():
 		return
 	var picked := options[clampi(index, 0, options.size() - 1)]
 	_authority.apply(picked, run_state)
-	hud.set_authority(picked.display_name, true)
+	hud.set_authority(picked.display_name, _authority.can_use())
 	hud.show_message("获得权柄：%s · %s" % [picked.display_name, picked.description])
 	save_run_now()
 
@@ -1662,7 +1779,7 @@ func _on_rewrite_requested() -> void:
 	if not _authority.consume_rewrite():
 		return
 	var authority_name := run_state.authority.display_name if run_state.authority != null else "改写"
-	hud.set_authority(authority_name, false)
+	hud.set_authority(authority_name, _authority.can_use())
 	var room_number := _chapter * 6 + _cleared_in_chapter + 1
 	if String(_current_plan_room().get("type", "")) == "elite":
 		_reward_options = RunLoot.elite_choices(run_state, room_number, Flow.profile, _chapter)
@@ -1899,7 +2016,7 @@ func _on_player_died() -> void:
 	if _authority.consume_revive():
 		player.revive(50)
 		var authority_name := run_state.authority.display_name if run_state.authority != null else "续命"
-		hud.set_authority(authority_name, false)
+		hud.set_authority(authority_name, _authority.can_use())
 		hud.show_message(DeathHintData.pick(run_state.run_seed, &"authority"))
 		return
 	if relic_effects.has(&"revive_once") and not relic_effects.revive_used:
@@ -1907,8 +2024,18 @@ func _on_player_died() -> void:
 		player.revive(40)
 		hud.show_message(DeathHintData.pick(run_state.run_seed, &"relic"))
 		return
+	# Death is final from here on. Drop the checkpoint before the archive pick
+	# can pause the tree: a window close during that modal must not leave the
+	# pre-death checkpoint to "继续本局" back into a live run.
+	_death_committed = true
+	if Flow != null and Flow.auto_save:
+		RunSave.clear(Flow.run_save_path)
 	_screen_fx.flash(Color(0.6, 0.05, 0.08, 0.34), 0.4)
 	_hit_stop.freeze(0.12, 0.15)
+	if _authority.can_archive() and not _archive_offers().is_empty():
+		await _offer_archive_on_death()
+		if not is_inside_tree() or _ended():
+			return
 	_finish(false)
 
 func _ended() -> bool:

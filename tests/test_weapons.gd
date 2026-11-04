@@ -87,6 +87,33 @@ func run(t: Callable) -> void:
 		t.call(projectile_node is Area2D, true, "projectile_is_area2d")
 		projectile_node.free()
 
+	# Run-long authority multiplier (吞噬): scales every hit without touching
+	# the shared WeaponData resource or the combo multiplier.
+	var scaled_target := Damageable.new()
+	scaled_target.max_health = 100
+	scaled_target.health = 100
+	weapon.damage_dealt_multiplier = 1.5
+	weapon.apply_hit(scaled_target)
+	t.call(scaled_target.health, 89, "weapon_authority_multiplier_melee")
+	weapon.damage_dealt_multiplier = 1.0
+	weapon.apply_hit(scaled_target)
+	t.call(scaled_target.health, 82, "weapon_authority_multiplier_resets")
+	t.call(weapon_data.damage, 7, "weapon_authority_multiplier_leaves_data")
+
+	var ranged_host := Node2D.new()
+	ranged.damage_dealt_multiplier = 2.0
+	ranged._spawn_projectile(ranged_host, Vector2.RIGHT, 1.0)
+	var scaled_projectile: Projectile = null
+	for child in ranged_host.get_children():
+		if child is Projectile:
+			scaled_projectile = child
+			break
+	t.call(scaled_projectile != null, true, "ranged_authority_projectile_spawned")
+	if scaled_projectile != null:
+		t.call(scaled_projectile.damage, 10, "ranged_authority_multiplier_damage")
+	ranged_host.free()
+	scaled_target.free()
+
 	var loaded_weapons := 0
 	for path in WEAPON_PATHS:
 		var resource := load(path)

@@ -229,10 +229,17 @@ func _run() -> void:
 		await _tap_action(&"interact")
 		await create_timer(0.3).timeout
 		check(scene._claimed_steles.has("ch1_rest"), "demo_rest_stele_claimed")
-		check(scene._records == rest_records + 1, "demo_rest_stele_counts_record")
+		# The roll can land on a relic/word the run already owns; that authored
+		# branch heals instead of counting a record. Accept either outcome and
+		# require the message that matches it, so the check is not seed-flaky.
+		var record_message: String = scene.hud.get_message_text()
+		var record_gained: bool = scene._records == rest_records + 1
+		check(record_gained or scene._records == rest_records,
+			"demo_rest_stele_record_rule")
 		check(not paused, "demo_rest_stele_unpaused")
 		check(not scene.pause_menu.is_open(), "demo_rest_stele_no_pause_menu")
-		check(scene.hud.get_message_text().begins_with("记录 +1"),
+		check(record_message.begins_with("记录 +1") if record_gained
+			else record_message.begins_with("残碑已读过"),
 			"demo_rest_stele_message")
 		var stele_x: float = scene.player.global_position.x
 		Input.action_press("move_left")
@@ -323,6 +330,57 @@ func _run() -> void:
 			"demo_revive_relic_line_matches_seed")
 		check(scene.hud.get_message_text().contains("不灭档案"),
 			"demo_revive_relic_keeps_relic")
+
+	# 吞噬: a passive run-long rule. The live corruption value feeds both the
+	# weapon multiplier and the phrase damage scale, and the HUD reports it as
+	# available instead of spent.
+	var devour_authority := load("res://resources/authorities/devour.tres") as AuthorityData
+	check(devour_authority != null, "demo_devour_authority_present")
+	if devour_authority != null:
+		scene._authority.apply(devour_authority, scene.run_state)
+		scene.run_state.corruption = 0
+		await process_frame
+		var low_weapon: float = scene.player.damage_dealt_multiplier
+		var low_phrase: float = scene.phrase_caster.damage_scale
+		check(is_equal_approx(low_weapon, 1.0), "demo_devour_zero_corruption_neutral")
+		check(scene._authority.can_use(), "demo_devour_hud_available")
+		scene.run_state.corruption = 50
+		await process_frame
+		check(is_equal_approx(scene.player.damage_dealt_multiplier, 1.3),
+			"demo_devour_weapon_multiplier")
+		check(scene.phrase_caster.damage_scale > low_phrase,
+			"demo_devour_scales_phrases")
+		check(scene._authority.can_use(), "demo_devour_stays_available")
+		scene.run_state.corruption = 0
+		await process_frame
+		check(is_equal_approx(scene.player.damage_dealt_multiplier, low_weapon),
+			"demo_devour_multiplier_follows_purification")
+
+	# 获取条件: at the boss choice the authored revive/rewrite pool grows with
+	# 归档 (two records read) and 吞噬 (corruption >= 40), and picking one
+	# installs it on the run.
+	var archive_authority := load("res://resources/authorities/archive.tres") as AuthorityData
+	check(archive_authority != null, "demo_archive_authority_present")
+	if archive_authority != null:
+		scene._records = 2
+		scene.run_state.corruption = 45
+		scene._authority = AuthorityController.new()
+		scene._grant_chapter_authority.call_deferred()
+		await create_timer(1.6).timeout
+		check(scene._authority_choice.is_open(), "demo_authority_pool_opens")
+		check(scene._authority_choice.get_button_count() == 4,
+			"demo_authority_pool_has_conditional_entries")
+		var pool_text := ""
+		for index in scene._authority_choice.get_button_count():
+			pool_text += scene._authority_choice._buttons[index].text
+		check(pool_text.contains("归档"), "demo_authority_pool_offers_archive")
+		check(pool_text.contains("吞噬"), "demo_authority_pool_offers_devour")
+		scene._authority_choice._choose(2)
+		await process_frame
+		check(scene.run_state.authority != null
+			and scene.run_state.authority.id == &"archive",
+			"demo_authority_conditional_pick_applies")
+		check(scene._authority.can_use(), "demo_archive_hud_available")
 
 	print("CH1 DEMO INTEGRATION: %d checks, %d failures" % [assertions, failures])
 	quit(1 if failures > 0 else 0)

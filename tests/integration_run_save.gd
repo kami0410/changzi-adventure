@@ -1865,6 +1865,157 @@ func _run() -> void:
 			"run_save_title_reboot_no_checkpoint")
 		await _free_scene(title_reboot)
 
+	# --- 归档 authority: a final death pauses for one item pick, clears the
+	# checkpoint before the pick (closing the window cannot revive the run), and
+	# the chosen item reaches the next fresh run exactly once. ---
+	RunSave.clear(RUN_PATH)
+	flow.resume_requested = false
+	flow.profile.archived_item.clear()
+	flow.profile.stored_relics.clear()
+	flow.profile.pending_run_bonuses.clear()
+	var archive_pick := load("res://resources/authorities/archive.tres") as AuthorityData
+	var devour_pick := load("res://resources/authorities/devour.tres") as AuthorityData
+	check(archive_pick != null and devour_pick != null, "run_save_archive_resources")
+
+	var archive_first = load("res://scenes/main.tscn").instantiate()
+	root.add_child(archive_first)
+	current_scene = archive_first
+	await create_timer(0.4).timeout
+	_close_story(archive_first)
+	check(await _wait_mds(archive_first), "run_save_archive_death_boots")
+	check(await _wait_vulnerable(archive_first), "run_save_archive_death_vulnerable")
+	check(RunSave.has_save(RUN_PATH), "run_save_archive_death_checkpoint_before")
+	var archive_relic := ContentLibrary.relic_by_id(&"ink_heart")
+	var archive_axe := ContentLibrary.weapon_by_id(&"ink_axe")
+	check(archive_relic != null and archive_axe != null, "run_save_archive_items_exist")
+	if archive_relic != null:
+		archive_first.run_state.inventory.add_relic(archive_relic)
+	if archive_axe != null:
+		archive_first._equip_weapon(0, RunLoot.weapon_for_run(archive_axe, flow.profile))
+	archive_first._authority.apply(archive_pick, archive_first.run_state)
+	check(archive_first._authority.can_archive(), "run_save_archive_authority_ready")
+	var archive_offers: Array[Dictionary] = archive_first._archive_offers()
+	check(archive_offers.size() == 2, "run_save_archive_offers_carried_items")
+	var starter_names := false
+	for entry in archive_offers:
+		if String(entry.get("name", "")) == "断页剑" \
+				or String(entry.get("name", "")) == "墨弹枪":
+			starter_names = true
+	check(not starter_names, "run_save_archive_skips_starter_weapons")
+
+	archive_first.player.take_damage(999999)
+	check(archive_first._archive_choice.is_open(), "run_save_archive_pick_opens")
+	check(paused, "run_save_archive_pick_pauses")
+	check(not archive_first._ending_pending, "run_save_archive_defers_ending")
+	check(not RunSave.has_save(RUN_PATH),
+		"run_save_archive_clears_checkpoint_before_pick")
+	check(archive_first._death_committed, "run_save_archive_death_committed")
+	await process_frame
+	check(not archive_first.hud.visible, "run_save_archive_hides_hud")
+	check(archive_first._archive_choice.get_option_count() == 2,
+		"run_save_archive_pick_options")
+	var archive_focus: Control = archive_first.get_viewport().gui_get_focus_owner()
+	check(archive_focus == archive_first._archive_choice._buttons[0],
+		"run_save_archive_pick_focus")
+	# Start/B must not close the pick or open the pause page underneath it.
+	await _press_button(JOY_BUTTON_START)
+	await _release_button(JOY_BUTTON_START)
+	check(archive_first._archive_choice.is_open(), "run_save_archive_start_ignored")
+	check(not archive_first.pause_menu.is_open(), "run_save_archive_no_pause_page")
+	await _press_button(JOY_BUTTON_B)
+	await _release_button(JOY_BUTTON_B)
+	check(archive_first._archive_choice.is_open(), "run_save_archive_b_ignored")
+	check(paused, "run_save_archive_still_paused")
+	archive_first.save_run_on_exit()
+	check(not RunSave.has_save(RUN_PATH),
+		"run_save_archive_exit_during_pick_no_checkpoint")
+	archive_first._archive_choice._choose(0)
+	check(not paused, "run_save_archive_pick_unpauses")
+	check(String(flow.profile.archived_item.get("kind", "")) == "weapon",
+		"run_save_archive_stores_weapon_kind")
+	check(String(flow.profile.archived_item.get("id", "")) == "ink_axe",
+		"run_save_archive_stores_weapon_id")
+	check(archive_first._authority.can_archive() == false,
+		"run_save_archive_spent")
+	await create_timer(1.0).timeout
+	check(archive_first.ending_screen.visible, "run_save_archive_ending_page")
+	check(not RunSave.has_save(RUN_PATH), "run_save_archive_ending_no_checkpoint")
+	var archive_pick_disk := Profile.new()
+	check(archive_pick_disk.load_profile(PROFILE_PATH), "run_save_archive_profile_readable")
+	check(String(archive_pick_disk.archived_item.get("id", "")) == "ink_axe",
+		"run_save_archive_profile_persisted")
+	archive_pick_disk.free()
+	await _free_scene(archive_first)
+
+	# Fresh launch: the archived weapon replaces the starting blade and leaves
+	# the Profile slot empty.
+	flow.resume_requested = false
+	var archive_second = load("res://scenes/main.tscn").instantiate()
+	root.add_child(archive_second)
+	current_scene = archive_second
+	await create_timer(0.4).timeout
+	_close_story(archive_second)
+	check(await _wait_mds(archive_second), "run_save_archive_receive_boots")
+	check(archive_second.run_state.inventory.weapons[0] != null
+		and archive_second.run_state.inventory.weapons[0].id == &"ink_axe",
+		"run_save_archive_weapon_replaces_starter")
+	check(archive_second.player.weapons[0] != null
+		and archive_second.player.weapons[0].data.id == &"ink_axe",
+		"run_save_archive_weapon_equipped")
+	check(archive_second.inventory_ui.get_weapon_slot_text(0).contains("墨斧"),
+		"run_save_archive_weapon_in_inventory_ui")
+	check(flow.profile.archived_item.is_empty(), "run_save_archive_slot_consumed")
+
+	# Second cycle: archive the carried relic instead. The next run receives it
+	# in the inventory (and its corruption), not as a weapon. The carried axe is
+	# itself a legitimate offer now, so the list holds both; pick the relic.
+	archive_second.run_state.inventory.add_relic(archive_relic)
+	archive_second._authority.apply(archive_pick, archive_second.run_state)
+	var relic_offer_index := -1
+	var second_offers: Array[Dictionary] = archive_second._archive_offers()
+	for offer_index in second_offers.size():
+		if StringName(second_offers[offer_index].get("kind", &"")) == &"relic" \
+				and StringName(second_offers[offer_index].get("id", &"")) == &"ink_heart":
+			relic_offer_index = offer_index
+	check(second_offers.size() == 2 and relic_offer_index == 1,
+		"run_save_archive_relic_offer")
+	check(await _wait_vulnerable(archive_second), "run_save_archive_relic_vulnerable")
+	archive_second.player.take_damage(999999)
+	check(archive_second._archive_choice.is_open(), "run_save_archive_relic_pick_opens")
+	archive_second._archive_choice._choose(relic_offer_index)
+	check(String(flow.profile.archived_item.get("kind", "")) == "relic",
+		"run_save_archive_stores_relic_kind")
+	check(String(flow.profile.archived_item.get("id", "")) == "ink_heart",
+		"run_save_archive_stores_relic_id")
+	await create_timer(1.0).timeout
+	check(archive_second.ending_screen.visible, "run_save_archive_relic_ending_page")
+	await _free_scene(archive_second)
+
+	# Trust tiers feed the next fresh run's pages; all five at 托付 would grant
+	# 30, so the same cap of 20 must hold. No new save key is involved.
+	for trust_npc in NPCProfiles.all_ids():
+		flow.profile.add_npc_trust(trust_npc, 12.0)
+	flow.resume_requested = false
+	var archive_third = load("res://scenes/main.tscn").instantiate()
+	root.add_child(archive_third)
+	current_scene = archive_third
+	await create_timer(0.4).timeout
+	_close_story(archive_third)
+	check(await _wait_mds(archive_third), "run_save_archive_relic_boots")
+	check(archive_third.run_state.pages == TrustData.START_PAGES_CAP,
+		"run_save_trust_start_pages")
+	check(archive_third.run_state.inventory.has_relic(&"ink_heart"),
+		"run_save_archive_relic_received")
+	check(archive_third.inventory_ui.get_relics_text().contains("墨心"),
+		"run_save_archive_relic_in_inventory_ui")
+	check(archive_third.run_state.corruption >= archive_relic.corruption,
+		"run_save_archive_relic_corruption")
+	check(archive_third.run_state.inventory.weapons[0].id == &"broken_page_sword",
+		"run_save_archive_weapon_not_reapplied")
+	check(flow.profile.archived_item.is_empty(), "run_save_archive_relic_consumed")
+	await _free_scene(archive_third)
+	flow.profile.archived_item.clear()
+
 	_cleanup_files()
 	print("RUN SAVE INTEGRATION: %d checks, %d failures" % [assertions, failures])
 	quit(1 if failures > 0 else 0)

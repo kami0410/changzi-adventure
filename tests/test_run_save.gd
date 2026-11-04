@@ -95,6 +95,7 @@ func _test_malformed_shape(t: Callable) -> void:
 		{"inventory": {"words": [], "weapons": [], "relics": [], "phrases": "bad"}},
 		{"mds": {"room": "ch1_03", "position": [512.0]}},
 		{"mds": {"room": "ch1_03", "areas": []}},
+		{"authority": {"id": "archive", "archive_used": "yes"}},
 	]
 	for index in cases.size():
 		_cleanup()
@@ -110,6 +111,21 @@ func _test_malformed_shape(t: Callable) -> void:
 	_cleanup()
 	RunSave.write({"version": RunSave.SAVE_VERSION, "run": {"room": "ch1_01"}, "inventory": {}}, PATH)
 	t.call(RunSave.read(PATH).is_empty(), false, "run_save_minimal_shape_accepted")
+	_cleanup()
+
+	# A checkpoint written before 归档 existed has no archive_used key; it must
+	# still load and default the flag to false instead of being discarded.
+	var legacy_authority := _sample_data()
+	legacy_authority["authority"] = {
+		"id": "archive",
+		"revive_used": false,
+		"rewrite_used": false,
+	}
+	RunSave.write(legacy_authority, PATH)
+	var legacy_loaded := RunSave.read(PATH)
+	t.call(legacy_loaded.is_empty(), false, "run_save_legacy_authority_accepted")
+	t.call(bool(legacy_loaded.get("authority", {}).get("archive_used", false)), false,
+		"run_save_legacy_archive_defaults_false")
 	_cleanup()
 
 

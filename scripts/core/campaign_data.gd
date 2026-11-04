@@ -219,6 +219,22 @@ const CHAPTERS: Array[Dictionary] = [
 ]
 
 
+## Authored endings in gallery order (GDD §12.2). Profile stores only the id,
+## so this list is the single source for both the result page and the gallery.
+const ENDINGS: Array[Dictionary] = [
+	{"id": &"restored", "title": "复原",
+		"body": "三页名册重新对齐。失踪者的名字回到纸上，\n昌子的名字也终于有了下一行。最后的档案馆亮起了灯。"},
+	{"id": &"burned", "title": "焚毁档案",
+		"body": "名册在舞台上烧了三天三夜。世界失去了历史，\n但从此没有人能用过去命令任何人。昌子第一次听见海的声音。"},
+	{"id": &"abyss", "title": "深渊回响",
+		"body": "你写下最后一页时，墨自己动了起来。\n昌子成为污染的一部分，也成为唯一还记得世界的人。档案继续生长。"},
+	{"id": &"unfinished", "title": "未完的注脚",
+		"body": "名册补全了，却仍有一页空白。昌子合上档案，\n知道下一次潮水会带来新的名字——而昌子会记得回来。"},
+	{"id": &"interrupted", "title": "记录中断",
+		"body": "污染吞没了这一页。昌子的名字从档案中淡去，\n但记忆碎片已经被写下——下一次，你会记得更多。"},
+]
+
+
 static func chapter_count() -> int:
 	return CHAPTERS.size()
 
@@ -227,18 +243,29 @@ static func chapter(index: int) -> Dictionary:
 	return CHAPTERS[clampi(index, 0, CHAPTERS.size() - 1)]
 
 
+static func ending_count() -> int:
+	return ENDINGS.size()
+
+
+static func ending(index: int) -> Dictionary:
+	return ENDINGS[clampi(index, 0, ENDINGS.size() - 1)]
+
+
+static func ending_by_id(ending_id: StringName) -> Dictionary:
+	for entry in ENDINGS:
+		if StringName(entry.get("id", &"")) == ending_id:
+			return entry
+	return {}
+
+
 static func ending_for(won: bool, corruption: int, mercy: int, burned: bool) -> Dictionary:
+	var ending_id: StringName = &"unfinished"
 	if not won:
-		return {"id": &"interrupted", "title": "记录中断",
-			"body": "污染吞没了这一页。昌子的名字从档案中淡去，\n但记忆碎片已经被写下——下一次，你会记得更多。"}
-	if burned:
-		return {"id": &"burned", "title": "焚毁档案",
-			"body": "名册在舞台上烧了三天三夜。世界失去了历史，\n但从此没有人能用过去命令任何人。昌子第一次听见海的声音。"}
-	if corruption >= 60:
-		return {"id": &"abyss", "title": "深渊回响",
-			"body": "你写下最后一页时，墨自己动了起来。\n昌子成为污染的一部分，也成为唯一还记得世界的人。档案继续生长。"}
-	if mercy >= 2:
-		return {"id": &"restored", "title": "复原",
-			"body": "三页名册重新对齐。失踪者的名字回到纸上，\n昌子的名字也终于有了下一行。最后的档案馆亮起了灯。"}
-	return {"id": &"unfinished", "title": "未完的注脚",
-		"body": "名册补全了，却仍有一页空白。昌子合上档案，\n知道下一次潮水会带来新的名字——而昌子会记得回来。"}
+		ending_id = &"interrupted"
+	elif burned:
+		ending_id = &"burned"
+	elif corruption >= 60:
+		ending_id = &"abyss"
+	elif mercy >= 2:
+		ending_id = &"restored"
+	return ending_by_id(ending_id)

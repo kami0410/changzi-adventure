@@ -23,6 +23,12 @@ const PROFILES: Dictionary = {
 			"你刚才的发音让书架动了一下。再说一遍，慢一点。",
 			"我听见了一个名字，但不确定那是你的还是我的。",
 		],
+		"trust_lines": [
+			"档案长只对登记在册的人负责。你先把名字说清楚。",
+			"你的脚步声我已经认得。坐吧，茶还是温的。",
+			"有些页我本来不该给你看。但我想，你会替我记住。",
+			"如果有一天我连自己的名字也忘了，你会替我写回去的，对吗？",
+		],
 		"functions": [
 			{"id": &"decode", "name": "解词", "cost": 0, "desc": "让陆沉替你解开一个卡在喉咙里的词。"},
 			{"id": &"lore", "name": "讲述档案", "cost": 6, "desc": "花费 6 记忆碎片，听一段被撕掉的世界史，并随机解开一个词。"},
@@ -56,6 +62,12 @@ const PROFILES: Dictionary = {
 			"我听不懂。但炉子听懂了，这就不关我的事。",
 			"别在我铺子里说这种话。会把没成形的东西叫醒。",
 		],
+		"trust_lines": [
+			"剑放砧上。人站远点。",
+			"又是你。炉子刚热，别浪费。",
+			"这把剑的毛病，只有你看得出来。别告诉别人。",
+			"真名的事……等你准备好，再来问我一次。",
+		],
 		"functions": [
 			{"id": &"forge", "name": "锻造基底", "cost": 0, "desc": "提升断页剑基底等级，所有掉落的断页剑都会继承。"},
 			{"id": &"forge_god", "name": "神铸", "cost": 25, "desc": "花费 25 记忆碎片，唤醒一次锻造之神的本能：免费提升 1 级基底，并获得锻造祝福。"},
@@ -88,6 +100,12 @@ const PROFILES: Dictionary = {
 			"哎哟，这话有点扎耳朵。不过扎耳朵的东西通常值钱。",
 			"听不懂才好，听不懂的才没人跟我抢。",
 		],
+		"trust_lines": [
+			"生面孔？先看看货，别急着讲价。",
+			"哟，常客。今天的货给你留了一格。",
+			"有些东西我不摆上架，只留给信得过的人。",
+			"要是哪天我不在了，这堆旧记忆就归你。别让它们发霉。",
+		],
 		"functions": [
 			{"id": &"shop", "name": "看看货", "cost": 0, "desc": "打开黑市货架，用记忆碎片换词。"},
 			{"id": &"rumor", "name": "买一条传闻", "cost": 3, "desc": "花费 3 记忆碎片，听一条关于下一章的传闻，并获得一个随机未解锁词。"},
@@ -118,6 +136,12 @@ const PROFILES: Dictionary = {
 			"这句话我没法归档。你是故意的吗？",
 			"别用这种句子试探我。我改过的档案比你吃过的饭还多。",
 			"有意思。你终于开始写一些连我都猜不到的东西了。",
+		],
+		"trust_lines": [
+			"别靠太近。我不替陌生人改档案。",
+			"你还没死。看来我上次那页写得不够狠。",
+			"有一页我谁都没给看过。你例外，但只有一次。",
+			"如果最后要有人记住我们谁先动的手……那个人得是你。",
 		],
 		"functions": [
 			{"id": &"intel", "name": "买情报", "cost": 8, "desc": "花费 8 记忆碎片，获知下一章 Boss 的弱点，并让本局首次攻击附带额外伤害。"},
@@ -150,6 +174,12 @@ const PROFILES: Dictionary = {
 			"你指的方向不对。但我可以先陪你站一会儿。",
 			"有些地方，名字比路先到。你刚才就快说出它的名字了。",
 		],
+		"trust_lines": [
+			"路在脚下。你走你的，我跟不跟，看方向。",
+			"这段路我陪你走过。下次可以走得慢一点。",
+			"地图上有一块空白，我一直没画。也许该带你去看。",
+			"如果走到没有路的地方，就照着你记得的我走。",
+		],
 		"functions": [
 			{"id": &"map", "name": "绘制路线", "cost": 6, "desc": "花费 6 记忆碎片，获得下一章的路线与宝箱分布，并让本局起始多 8 残页。"},
 			{"id": &"shortcut", "name": "寻找近路", "cost": 15, "desc": "花费 15 记忆碎片，找到一条不该存在的近路：本局起始多 15 残页。"},
@@ -178,9 +208,20 @@ static func all_ids() -> Array[StringName]:
 	return result
 
 
+## One attitude line per trust tier, in TrustData order. Missing profiles or
+## lines return an empty string so callers can skip them safely.
+static func trust_line(npc_id: StringName, tier: int) -> String:
+	var lines: Array = PROFILES.get(npc_id, {}).get("trust_lines", [])
+	if lines.is_empty():
+		return ""
+	return String(lines[clampi(tier, 0, lines.size() - 1)])
+
+
 ## Offline, deterministic interpretation of a player's 言灵.
 ## AI may replace the reply text, but the mechanical floor stays local.
-static func resolve(npc_id: StringName, text: String) -> Dictionary:
+## `trust` is the NPC's pre-conversation trust: at 熟悉 and above the reply
+## carries the matching attitude line, so the offline path reflects tiers too.
+static func resolve(npc_id: StringName, text: String, trust: float = 0.0) -> Dictionary:
 	var data := get_profile(npc_id)
 	if data.is_empty():
 		return {"reply": "……", "effect": {}, "mood": "neutral", "matched": []}
@@ -213,7 +254,14 @@ static func resolve(npc_id: StringName, text: String) -> Dictionary:
 			reply_parts.append(String(fallback[cleaned.hash() % fallback.size()]))
 	else:
 		effect["trust"] = float(effect.get("trust", 0.0)) + minf(power * 0.25, 2.0)
+	var tier := TrustData.tier_index(trust)
+	if tier > 0:
+		var attitude := trust_line(npc_id, tier)
+		if not attitude.is_empty():
+			reply_parts.append(attitude)
 	var mood := "warm" if effect.get("trust", 0.0) >= 1.0 else "neutral"
+	if tier >= 2 and mood == "neutral":
+		mood = "warm"
 	if effect.get("corruption", 0.0) > 0.0:
 		mood = "abyssal"
 	var reply := " ".join(reply_parts)

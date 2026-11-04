@@ -12,7 +12,7 @@ var _buttons: Array[Button] = []
 var _was_paused := false
 var _open := false
 var _title: Label
-var _row: HBoxContainer
+var _row: GridContainer
 
 
 func _ready() -> void:
@@ -34,7 +34,7 @@ func _build() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(980, 420)
+	panel.custom_minimum_size = Vector2(1000, 660)
 	center.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "top", "right", "bottom"]:
@@ -53,8 +53,10 @@ func _build() -> void:
 	_title.add_theme_font_size_override("font_size", 36)
 	_title.add_theme_color_override("font_color", UIPalette.INK)
 	column.add_child(_title)
-	_row = HBoxContainer.new()
-	_row.add_theme_constant_override("separation", 18)
+	_row = GridContainer.new()
+	_row.columns = 2
+	_row.add_theme_constant_override("h_separation", 18)
+	_row.add_theme_constant_override("v_separation", 14)
 	column.add_child(_row)
 
 
@@ -69,12 +71,17 @@ func open(options: Array[AuthorityData]) -> void:
 		if authority == null:
 			continue
 		var button := Button.new()
-		button.custom_minimum_size = Vector2(440, 220)
-		button.text = "%s\n\n%s" % [authority.display_name, authority.description]
+		button.custom_minimum_size = Vector2(440, 200)
 		button.add_theme_font_size_override("font_size", 24)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.pressed.connect(_choose.bind(index))
+		# Fill text only after entering the tree: assigning it before add_child
+		# lays it out against a fallback theme (~15 ms per card) and now that
+		# conditional unlocks can push the pool to four cards it would miss the
+		# 120 FPS frame budget.
 		_row.add_child(button)
+		button.text = "%s\n\n%s" % [authority.display_name, authority.description]
 		_buttons.append(button)
 	visible = true
 	_open = true

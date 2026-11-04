@@ -9,4 +9,6 @@ display_name = "吞噬"
 tags = Array[StringName]([&"abyss", &"corruption"])
 effect_id = &"devour"
 corruption = 10
-description = "把污染转化为伤害，污染越高越强。"
+description = "把污染转化为伤害，污染越高越强。污染 ≥ 40 时，Boss 后会多出这条权柄。"
+unlock_condition = &"corruption"
+unlock_threshold = 40

@@ -8,4 +8,6 @@ id = &"archive"
 display_name = "归档"
 tags = Array[StringName]([&"archive"])
 effect_id = &"archive"
-description = "死亡后保留一件物品到下一局。"
+description = "死亡后保留一件物品到下一局。本局记录 ≥ 2 时，Boss 后会多出这条权柄。"
+unlock_condition = &"records"
+unlock_threshold = 2
