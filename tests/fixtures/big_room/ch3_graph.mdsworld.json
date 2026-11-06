@@ -1,0 +1,466 @@
+{
+  "format": "mds_world",
+  "version": 1,
+  "fixture": true,
+  "content_pending": true,
+  "note": "TEST FIXTURE ONLY - Chapter 3 big-map graph skeleton. This is not chapter content: it has no room scenes and it is never loaded by the game. It mirrors resources/chapters/chapter_3_demo.tres and the real region world (scenes/mds/chapter_3_bigmap.mdsworld.json, step 2) so tests can cross-check the plan shape and the door graph. Vision compression (status #14), the big-map sea motif (status #15) and the ch3_shortcut granting source (status #16) are pending decisions; this fixture models no sea layer, no vision compression, and leaves the shortcut barrier closed.",
+  "name": "Chapter 3 Big-Map Graph Fixture",
+  "settings": {
+    "grid": 32,
+    "default_room_size": [
+      1280,
+      720
+    ]
+  },
+  "layers": [
+    "Main"
+  ],
+  "areas": {
+    "Lightless Sea": {
+      "color": "#2c3a66",
+      "weather": "fog(color=#1a2440, density=0.45, ground=1, ground_height=0.25, drift=-20), rain(density=0.25, angle=-8, fall_speed=900, mist=0.2, color=Color(0.55, 0.65, 0.85, 0.35))",
+      "background": "",
+      "boss_background": "deep_water"
+    }
+  },
+  "rooms": {
+    "ch3_entry": {
+      "name": "无光海 · 无光海岸",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "type": "entrance",
+      "encounters": [],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        0,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "right1": {
+          "pos": [
+            2552,
+            1334
+          ],
+          "side": "right",
+          "to": "ch3_branch_a",
+          "to_gate": "left1"
+        },
+        "bot1": {
+          "pos": [
+            1280,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch3_branch_b",
+          "to_gate": "top1"
+        },
+        "shortcut_arrival": {
+          "pos": [
+            512,
+            1328
+          ],
+          "side": "door"
+        }
+      }
+    },
+    "ch3_branch_a": {
+      "name": "无光海 · 沉船支路",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "type": "branch",
+      "encounters": [
+        "ch3_branch_a/Arena",
+        "ch3_branch_a/Arena2"
+      ],
+      "chests": [
+        "ch3_branch_a/Chest1"
+      ],
+      "steles": [],
+      "origin": [
+        2560,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            1334
+          ],
+          "side": "left",
+          "to": "ch3_entry",
+          "to_gate": "right1"
+        },
+        "bot1": {
+          "pos": [
+            1280,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch3_hub",
+          "to_gate": "top1"
+        }
+      }
+    },
+    "ch3_branch_b": {
+      "name": "无光海 · 静水支路",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "type": "branch",
+      "encounters": [
+        "ch3_branch_b/Arena"
+      ],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        0,
+        1440
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "top1": {
+          "pos": [
+            1280,
+            8
+          ],
+          "side": "top",
+          "to": "ch3_entry",
+          "to_gate": "bot1"
+        },
+        "right1": {
+          "pos": [
+            2552,
+            1334
+          ],
+          "side": "right",
+          "to": "ch3_hub",
+          "to_gate": "left1"
+        },
+        "bot1": {
+          "pos": [
+            1600,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch3_vault",
+          "to_gate": "top1"
+        }
+      }
+    },
+    "ch3_hub": {
+      "name": "无光海 · 引路人的灯",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "type": "hub",
+      "encounters": [],
+      "chests": [],
+      "steles": [
+        "ch3_hub/Stele1"
+      ],
+      "shortcuts": [
+        "hub_shortcut_entry"
+      ],
+      "shop": "ch3_hub_shop",
+      "rest": true,
+      "origin": [
+        2560,
+        1440
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "top1": {
+          "pos": [
+            1280,
+            8
+          ],
+          "side": "top",
+          "to": "ch3_branch_a",
+          "to_gate": "bot1"
+        },
+        "left1": {
+          "pos": [
+            8,
+            1334
+          ],
+          "side": "left",
+          "to": "ch3_branch_b",
+          "to_gate": "right1"
+        },
+        "bot1": {
+          "pos": [
+            1900,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch3_well",
+          "to_gate": "top1"
+        },
+        "right1": {
+          "pos": [
+            2552,
+            1334
+          ],
+          "side": "right",
+          "to": "ch3_event",
+          "to_gate": "left1"
+        },
+        "shortcut": {
+          "pos": [
+            1600,
+            1334
+          ],
+          "side": "door",
+          "to": "ch3_entry",
+          "to_gate": "shortcut_arrival",
+          "requires": [
+            "ch3_shortcut"
+          ],
+          "one_way": true
+        }
+      }
+    },
+    "ch3_well": {
+      "name": "无光海 · 深渊裂口",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "type": "well",
+      "encounters": [
+        "ch3_well/Arena",
+        "ch3_well/Arena2"
+      ],
+      "chests": [
+        "ch3_well/Chest1"
+      ],
+      "steles": [],
+      "vertical": true,
+      "origin": [
+        2560,
+        2880
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          2160
+        ]
+      ],
+      "gates": {
+        "top1": {
+          "pos": [
+            80,
+            8
+          ],
+          "side": "top",
+          "to": "ch3_hub",
+          "to_gate": "bot1"
+        },
+        "right1": {
+          "pos": [
+            2552,
+            2054
+          ],
+          "side": "right",
+          "to": "ch3_elite",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch3_vault": {
+      "name": "无光海 · 隐藏书库",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "type": "vault",
+      "encounters": [],
+      "chests": [
+        "ch3_vault/Chest1"
+      ],
+      "steles": [
+        "ch3_vault/Stele1"
+      ],
+      "hidden": true,
+      "origin": [
+        0,
+        2880
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "top1": {
+          "pos": [
+            2080,
+            8
+          ],
+          "side": "top",
+          "to": "ch3_branch_b",
+          "to_gate": "bot1"
+        }
+      }
+    },
+    "ch3_event": {
+      "name": "无光海 · 事件区",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "type": "event",
+      "encounters": [
+        "ch3_event/event"
+      ],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        5120,
+        1440
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            1334
+          ],
+          "side": "left",
+          "to": "ch3_hub",
+          "to_gate": "right1"
+        },
+        "bot1": {
+          "pos": [
+            1280,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch3_elite",
+          "to_gate": "top1"
+        }
+      }
+    },
+    "ch3_elite": {
+      "name": "无光海 · 第三页之门",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "type": "elite",
+      "encounters": [
+        "ch3_elite/Arena"
+      ],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        5120,
+        2880
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          3840,
+          2160
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            2054
+          ],
+          "side": "left",
+          "to": "ch3_well",
+          "to_gate": "right1"
+        },
+        "top1": {
+          "pos": [
+            1920,
+            8
+          ],
+          "side": "top",
+          "to": "ch3_event",
+          "to_gate": "bot1"
+        },
+        "right1": {
+          "pos": [
+            3832,
+            2054
+          ],
+          "side": "right",
+          "to": "ch3_boss",
+          "to_gate": "left1",
+          "one_way": true
+        }
+      }
+    },
+    "ch3_boss": {
+      "name": "无光海 · 最后的读者",
+      "area": "Lightless Sea",
+      "layer": 0,
+      "type": "boss",
+      "encounters": [],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        8960,
+        2880
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          3840,
+          2160
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            2054
+          ],
+          "side": "left"
+        }
+      }
+    }
+  },
+  "links": [],
+  "pins": [],
+  "start_room": "ch3_entry"
+}

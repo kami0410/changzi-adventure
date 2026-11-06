@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BigRoomData" format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/big_room_data.gd" id="1_data"]
+[ext_resource type="TileSet" path="res://resources/tiles/ch1_tiles.tres" id="2_tiles"]
+
+[resource]
+script = ExtResource("1_data")
+size = Vector2i(2560, 1440)
+ground = Array[Dictionary]([{
+"x": 0, "y": 1424, "width": 2560, "height": 16
+}])
+platforms = Array[Dictionary]([{
+"x": 200, "y": 1344, "width": 320
+}, {
+"x": 560, "y": 1264, "width": 320
+}, {
+"x": 920, "y": 1184, "width": 320
+}, {
+"x": 1280, "y": 1104, "width": 320
+}, {
+"x": 1640, "y": 1024, "width": 320
+}, {
+"x": 1280, "y": 944, "width": 320
+}, {
+"x": 1640, "y": 864, "width": 320
+}])
+tile_set = ExtResource("2_tiles")
+backdrop_path = "res://assets/backgrounds/smiling_theater.png"
+backdrop_pixel_art = false
+backdrop_modulate = Color(0.86, 0.84, 0.96, 1)
+ambient_kind = &"embers"
+ambient_density = 0.5

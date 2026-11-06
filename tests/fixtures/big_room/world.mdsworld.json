@@ -1,0 +1,118 @@
+{
+  "format": "mds_world",
+  "version": 1,
+  "name": "Big Room Pipeline Fixture",
+  "settings": {
+    "grid": 32,
+    "default_room_size": [
+      1280,
+      720
+    ],
+    "backdrop_image": "res://assets/backgrounds/pixel/ink_archive_far.png"
+  },
+  "layers": [
+    "Main"
+  ],
+  "areas": {
+    "Wide Ruins": {
+      "color": "#2e6b66",
+      "weather": "fog(color=#2e6b66, density=0.3), fireflies(color=#b9cf7a, density=0.25, speed=0.5, blink=0.4)",
+      "backdrop_image": "res://assets/backgrounds/pixel/ink_archive_far.png",
+      "background": "aurora"
+    },
+    "Lower Vault": {
+      "color": "#6b5a2e",
+      "weather": "embers(kind=ash, density=0.3), fog(color=#5c3a26, density=0.25)",
+      "backdrop_image": "res://assets/backgrounds/pixel/ink_archive_mid.png",
+      "background": "ember_glow"
+    }
+  },
+  "rooms": {
+    "big_wide": {
+      "scene_path": "res://tests/fixtures/big_room/wide_room.tscn",
+      "name": "Wide Fixture",
+      "area": "Wide Ruins",
+      "layer": 0,
+      "origin": [
+        0,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "right1": {
+          "pos": [
+            2552,
+            1280
+          ],
+          "side": "right"
+        },
+        "door1": {
+          "pos": [
+            400,
+            1300
+          ],
+          "side": "door"
+        },
+        "shortcut": {
+          "pos": [
+            900,
+            1300
+          ],
+          "side": "door",
+          "requires": [
+            "ch2_shortcut"
+          ]
+        }
+      }
+    },
+    "big_l": {
+      "scene_path": "res://tests/fixtures/big_room/l_room.tscn",
+      "name": "L Fixture",
+      "area": "Lower Vault",
+      "layer": 0,
+      "origin": [
+        2560,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ],
+        [
+          2560,
+          720,
+          1280,
+          720
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            1280
+          ],
+          "side": "left"
+        },
+        "top1": {
+          "pos": [
+            1200,
+            8
+          ],
+          "side": "top"
+        }
+      }
+    }
+  },
+  "links": [],
+  "start_room": "big_wide"
+}

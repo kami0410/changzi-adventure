@@ -1,0 +1,466 @@
+{
+  "format": "mds_world",
+  "version": 1,
+  "fixture": true,
+  "content_pending": true,
+  "note": "TEST FIXTURE ONLY - Chapter 4 big-map graph skeleton. This is not chapter content: it has no room scenes and it is never loaded by the game. It mirrors resources/chapters/chapter_4_demo.tres so tests can cross-check the plan shape and the door graph; the real region world lives in scenes/mds/chapter_4_bigmap.mdsworld.json. Pending decisions (pass-50 audit section E) are not modeled: the stage motif stays in TheaterBackdrop plus smiling_theater.png (no theater layer here), the ch4_shortcut granting source is unauthored (the shortcut barrier stays closed), Ch4EventData is authored and the event trigger is live, Boss 4 boss_scene routes to smiling_archivist.tscn with entrance/phase copy authored (dedicated mechanic extensions are still absent), and combat density plus mask_enemy/seat_husk independent stats are untouched. The big-map boss door is one-way even though the old linear ch4_boss/left1 returns to ch4_rest.",
+  "name": "Chapter 4 Big-Map Graph Fixture",
+  "settings": {
+    "grid": 32,
+    "default_room_size": [
+      1280,
+      720
+    ]
+  },
+  "layers": [
+    "Main"
+  ],
+  "areas": {
+    "Smiling Theater": {
+      "color": "#6a2a34",
+      "weather": "embers(kind=ash, density=0.3, hot_color=#e8d2b0, cool_color=#7a5a4a, rise_speed=-20, drift=6), light_shafts(color=Color(0.85, 0.95, 0.9, 0.22), angle=6, spread=260, motes=0.5)",
+      "background": "",
+      "boss_background": "blood_moon"
+    }
+  },
+  "rooms": {
+    "ch4_entry": {
+      "name": "笑面剧场 · 剧场前厅",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "type": "entrance",
+      "encounters": [],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        0,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "right1": {
+          "pos": [
+            2552,
+            1334
+          ],
+          "side": "right",
+          "to": "ch4_branch_a",
+          "to_gate": "left1"
+        },
+        "bot1": {
+          "pos": [
+            1280,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch4_branch_b",
+          "to_gate": "top1"
+        },
+        "shortcut_arrival": {
+          "pos": [
+            512,
+            1328
+          ],
+          "side": "door"
+        }
+      }
+    },
+    "ch4_branch_a": {
+      "name": "笑面剧场 · 笑面回廊",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "type": "branch",
+      "encounters": [
+        "ch4_branch_a/Arena",
+        "ch4_branch_a/Arena2"
+      ],
+      "chests": [
+        "ch4_branch_a/Chest1"
+      ],
+      "steles": [],
+      "origin": [
+        2560,
+        0
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            1334
+          ],
+          "side": "left",
+          "to": "ch4_entry",
+          "to_gate": "right1"
+        },
+        "bot1": {
+          "pos": [
+            1280,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch4_hub",
+          "to_gate": "top1"
+        }
+      }
+    },
+    "ch4_branch_b": {
+      "name": "笑面剧场 · 空座中庭",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "type": "branch",
+      "encounters": [
+        "ch4_branch_b/Arena"
+      ],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        0,
+        1440
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "top1": {
+          "pos": [
+            1280,
+            8
+          ],
+          "side": "top",
+          "to": "ch4_entry",
+          "to_gate": "bot1"
+        },
+        "right1": {
+          "pos": [
+            2552,
+            1334
+          ],
+          "side": "right",
+          "to": "ch4_hub",
+          "to_gate": "left1"
+        },
+        "bot1": {
+          "pos": [
+            1600,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch4_vault",
+          "to_gate": "top1"
+        }
+      }
+    },
+    "ch4_hub": {
+      "name": "笑面剧场 · 熄灯的后台",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "type": "hub",
+      "encounters": [],
+      "chests": [],
+      "steles": [
+        "ch4_hub/Stele1"
+      ],
+      "shortcuts": [
+        "hub_shortcut_entry"
+      ],
+      "shop": "ch4_hub_shop",
+      "rest": true,
+      "origin": [
+        2560,
+        1440
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "top1": {
+          "pos": [
+            1280,
+            8
+          ],
+          "side": "top",
+          "to": "ch4_branch_a",
+          "to_gate": "bot1"
+        },
+        "left1": {
+          "pos": [
+            8,
+            1334
+          ],
+          "side": "left",
+          "to": "ch4_branch_b",
+          "to_gate": "right1"
+        },
+        "bot1": {
+          "pos": [
+            1900,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch4_well",
+          "to_gate": "top1"
+        },
+        "right1": {
+          "pos": [
+            2552,
+            1334
+          ],
+          "side": "right",
+          "to": "ch4_event",
+          "to_gate": "left1"
+        },
+        "shortcut": {
+          "pos": [
+            1600,
+            1334
+          ],
+          "side": "door",
+          "to": "ch4_entry",
+          "to_gate": "shortcut_arrival",
+          "requires": [
+            "ch4_shortcut"
+          ],
+          "one_way": true
+        }
+      }
+    },
+    "ch4_well": {
+      "name": "笑面剧场 · 舞台侧廊",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "type": "well",
+      "encounters": [
+        "ch4_well/Arena",
+        "ch4_well/Arena2"
+      ],
+      "chests": [
+        "ch4_well/Chest1"
+      ],
+      "steles": [],
+      "vertical": true,
+      "origin": [
+        2560,
+        2880
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          2160
+        ]
+      ],
+      "gates": {
+        "top1": {
+          "pos": [
+            80,
+            8
+          ],
+          "side": "top",
+          "to": "ch4_hub",
+          "to_gate": "bot1"
+        },
+        "right1": {
+          "pos": [
+            2552,
+            2054
+          ],
+          "side": "right",
+          "to": "ch4_elite",
+          "to_gate": "left1"
+        }
+      }
+    },
+    "ch4_vault": {
+      "name": "笑面剧场 · 隐藏书库",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "type": "vault",
+      "encounters": [],
+      "chests": [
+        "ch4_vault/Chest1"
+      ],
+      "steles": [
+        "ch4_vault/Stele1"
+      ],
+      "hidden": true,
+      "origin": [
+        0,
+        2880
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "top1": {
+          "pos": [
+            2080,
+            8
+          ],
+          "side": "top",
+          "to": "ch4_branch_b",
+          "to_gate": "bot1"
+        }
+      }
+    },
+    "ch4_event": {
+      "name": "笑面剧场 · 第四页之幕",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "type": "event",
+      "encounters": [
+        "ch4_event/event"
+      ],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        5120,
+        1440
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          2560,
+          1440
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            1334
+          ],
+          "side": "left",
+          "to": "ch4_hub",
+          "to_gate": "right1"
+        },
+        "bot1": {
+          "pos": [
+            1280,
+            1424
+          ],
+          "side": "bot",
+          "to": "ch4_elite",
+          "to_gate": "top1"
+        }
+      }
+    },
+    "ch4_elite": {
+      "name": "笑面剧场 · 血幕书库",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "type": "elite",
+      "encounters": [
+        "ch4_elite/Arena"
+      ],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        5120,
+        2880
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          3840,
+          2160
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            2054
+          ],
+          "side": "left",
+          "to": "ch4_well",
+          "to_gate": "right1"
+        },
+        "top1": {
+          "pos": [
+            1920,
+            8
+          ],
+          "side": "top",
+          "to": "ch4_event",
+          "to_gate": "bot1"
+        },
+        "right1": {
+          "pos": [
+            3832,
+            2054
+          ],
+          "side": "right",
+          "to": "ch4_boss",
+          "to_gate": "left1",
+          "one_way": true
+        }
+      }
+    },
+    "ch4_boss": {
+      "name": "笑面剧场 · 最后的舞台",
+      "area": "Smiling Theater",
+      "layer": 0,
+      "type": "boss",
+      "encounters": [],
+      "chests": [],
+      "steles": [],
+      "origin": [
+        8960,
+        2880
+      ],
+      "rects": [
+        [
+          0,
+          0,
+          3840,
+          2160
+        ]
+      ],
+      "gates": {
+        "left1": {
+          "pos": [
+            8,
+            2054
+          ],
+          "side": "left"
+        }
+      }
+    }
+  },
+  "links": [],
+  "pins": [],
+  "start_room": "ch4_entry"
+}

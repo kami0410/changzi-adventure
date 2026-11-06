@@ -89,6 +89,21 @@ func set_pages(pages: int) -> void:
 		if index < _offers.size():
 			_buttons[index].disabled = bool(_offers[index].get("bought", false)) or pages < int(_offers[index].get("cost", 0))
 
+## The cached offer went stale: the same relic/word was picked up from a
+## reward, chest or stele after this stall first rolled its stock. Disable the
+## row without charging. `bought` keeps a resumed cache from re-offering it,
+## but the label says owned, not bought — nothing changed hands.
+func mark_owned(index: int, pages: int, line := "") -> void:
+	if index < _offers.size():
+		_offers[index]["bought"] = true
+		_buttons[index].text = "已拥有：" + String(_offers[index]["title"])
+		_buttons[index].disabled = true
+	_error_label.add_theme_color_override("font_color", UIPalette.SEAL_GOLD)
+	_error_label.text = line if not line.is_empty() else "这件你已经有了。"
+	set_pages(pages)
+	_focus_next_pressable(index)
+
+
 func mark_bought(index: int, pages: int, sale_line := "") -> void:
 	if index < _offers.size():
 		_offers[index]["bought"] = true

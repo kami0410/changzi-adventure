@@ -98,6 +98,144 @@ func _wait_mds(scene, timeout := 8.0) -> bool:
 	return false
 
 
+## Hub personal events (叙事审计 E2). A real Hub conversation must replace the
+## regular greeting once the trust tier and the chapter-progress gate line up,
+## record itself only after the last line, and never grant a reward. The state
+## is restored afterwards so the later trust/forge assertions read as before.
+func _test_npc_personal_events(hub) -> void:
+	# `hub` stays untyped on purpose: a compile-time `Hub` dependency would load
+	# hub.gd (and its CodexUI chain) before the `--script` runner registers the
+	# Flow autoload, which fails with "Identifier not found: Flow".
+	var profile: Profile = hub.profile
+	var events_before: Array[String] = profile.npc_events.duplicate()
+	var trust_before: Dictionary = profile.npc_trust.duplicate(true)
+	var fragments_before: int = profile.memory_fragments
+	var cleared_before: bool = profile.demo_cleared
+	var luchen = hub.get_npc(&"luchen")
+	var ayan = hub.get_npc(&"ayan")
+	var guru = hub.get_npc(&"guru")
+	check(luchen != null and ayan != null and guru != null, "npc_event_npcs_present")
+	if luchen == null or ayan == null or guru == null:
+		return
+	var luchen_event_lines: Array = NPCEventData.event_for(&"luchen").get("lines", [])
+
+	# Trust alone is not enough: the chapter must have been finished once.
+	profile.demo_cleared = false
+	profile.add_npc_trust(&"luchen", 6.0)
+	hub.talk_to_npc(luchen)
+	await _settle()
+	check(hub.dialogue_ui.is_open(), "npc_event_gate_regular_dialogue")
+	check(hub.dialogue_ui.get_line_text() != String(luchen_event_lines[0]),
+		"npc_event_gate_needs_progress")
+	hub.dialogue_ui.close()
+	await _settle()
+	check(not profile.has_npc_event("luchen_red_folder"), "npc_event_gate_not_recorded")
+
+	profile.demo_cleared = true
+	profile.add_npc_trust(&"guru", 2.0)
+	profile.add_npc_trust(&"ayan", 12.0)
+	var fragments_at_setup: int = profile.memory_fragments
+	var luchen_trust: float = profile.npc_trust_value(&"luchen")
+	var ayan_trust: float = profile.npc_trust_value(&"ayan")
+	var guru_trust: float = profile.npc_trust_value(&"guru")
+
+	# 陆沉: the event replaces the greeting, completes, records once.
+	var luchen_lines: Array = luchen_event_lines
+	hub.talk_to_npc(luchen)
+	await _settle()
+	check(hub.dialogue_ui.is_open(), "npc_event_luchen_opens")
+	check(hub.dialogue_ui.get_line_text() == String(luchen_lines[0]),
+		"npc_event_luchen_starts_at_event")
+	check(hub.dialogue_ui._lines.size() == luchen_lines.size(),
+		"npc_event_luchen_replaces_regular_lines")
+	for i in 32:
+		if not hub.dialogue_ui.is_open():
+			break
+		hub.dialogue_ui.advance()
+	await _settle()
+	check(not hub.dialogue_ui.is_open(), "npc_event_luchen_completes")
+	check(profile.has_npc_event("luchen_red_folder"), "npc_event_luchen_recorded")
+	check(profile.memory_fragments == fragments_at_setup, "npc_event_luchen_no_fragments")
+	check(is_equal_approx(profile.npc_trust_value(&"luchen"), luchen_trust),
+		"npc_event_luchen_no_trust")
+	# The next talk is the ordinary conversation again.
+	hub.talk_to_npc(luchen)
+	await _settle()
+	check(hub.dialogue_ui.is_open(), "npc_event_luchen_regular_reopens")
+	check(hub.dialogue_ui.get_line_text() == String(
+		NPCProfiles.get_profile(&"luchen").get("greeting", "")),
+		"npc_event_luchen_regular_greeting")
+	check(hub.dialogue_ui._lines.size() > luchen_lines.size(),
+		"npc_event_luchen_regular_not_event")
+	hub.dialogue_ui.close()
+	await _settle()
+
+	# 阿砚: closing before the last line does not consume the event.
+	var ayan_event := NPCEventData.event_for(&"ayan")
+	var ayan_lines: Array = ayan_event.get("lines", [])
+	hub.talk_to_npc(ayan)
+	await _settle()
+	check(hub.dialogue_ui.is_open(), "npc_event_ayan_opens")
+	check(hub.dialogue_ui.get_line_text() == String(ayan_lines[0]),
+		"npc_event_ayan_starts_at_event")
+	hub.dialogue_ui.close()
+	await _settle()
+	check(not profile.has_npc_event("ayan_furnace"), "npc_event_ayan_early_close_unseen")
+	hub.talk_to_npc(ayan)
+	await _settle()
+	check(hub.dialogue_ui.is_open(), "npc_event_ayan_retries")
+	for i in 32:
+		if not hub.dialogue_ui.is_open():
+			break
+		hub.dialogue_ui.advance()
+	await _settle()
+	check(profile.has_npc_event("ayan_furnace"), "npc_event_ayan_recorded")
+	check(is_equal_approx(profile.npc_trust_value(&"ayan"), ayan_trust),
+		"npc_event_ayan_no_trust")
+
+	# 咕噜: the event must not tumble straight into the shop, but the ordinary
+	# conversation still opens it exactly as before.
+	var guru_event := NPCEventData.event_for(&"guru")
+	var guru_lines: Array = guru_event.get("lines", [])
+	hub.talk_to_npc(guru)
+	await _settle()
+	check(hub.dialogue_ui.is_open(), "npc_event_guru_opens")
+	check(hub.dialogue_ui.get_line_text() == String(guru_lines[0]),
+		"npc_event_guru_starts_at_event")
+	for i in 32:
+		if not hub.dialogue_ui.is_open():
+			break
+		hub.dialogue_ui.advance()
+	await _settle()
+	check(profile.has_npc_event("guru_bottle"), "npc_event_guru_recorded")
+	check(not hub.shop_ui.is_open(), "npc_event_guru_no_shop_jump")
+	check(is_equal_approx(profile.npc_trust_value(&"guru"), guru_trust),
+		"npc_event_guru_no_trust")
+	hub.talk_to_npc(guru)
+	await _settle()
+	check(hub.dialogue_ui.is_open(), "npc_event_guru_regular_reopens")
+	for i in 32:
+		if not hub.dialogue_ui.is_open():
+			break
+		hub.dialogue_ui.advance()
+	await _settle()
+	check(hub.shop_ui.is_open(), "npc_event_guru_regular_still_opens_shop")
+	hub.shop_ui.close()
+	await _settle()
+	check(profile.npc_events.size() == events_before.size() + 3,
+		"npc_event_three_flags_once")
+
+	# Restore the numeric/profile state for the later trust checks, but keep the
+	# three event ids marked: they are one-shot, so later talks must stay on the
+	# regular greeting even if the suite raises trust again.
+	profile.npc_trust = trust_before
+	profile.memory_fragments = fragments_before
+	profile.demo_cleared = cleared_before
+	hub.dialogue_ui.close()
+	hub.shop_ui.close()
+	await _settle()
+
+
 func _focus_owner() -> Control:
 	return root.gui_get_focus_owner()
 
@@ -606,6 +744,8 @@ func _run() -> void:
 		await _release_button(JOY_BUTTON_B)
 		check(not hub.dialogue_ui.is_open(), "hub_dialogue_b_closes")
 
+	await _test_npc_personal_events(hub)
+
 	# Hub shop: focus lands on the first buyable row, B closes, A buys and
 	# keeps focus on the next row so a second A also works.
 	var shop_bought: Array[StringName] = []
@@ -681,6 +821,96 @@ func _run() -> void:
 	check(not hub.archive_ui.is_open(), "hub_archive_exhaust_a_closes")
 	hub.archive_ui.bind(hub.profile)
 	broke_archive_profile.free()
+	await _settle()
+
+	# A track already at the demo cap must report the cap, not a phantom
+	# "记忆碎片不足：需要 X，你只有 Y" with Y > X. The row stops being pressable
+	# and focus moves to the close button when every track is maxed.
+	var maxed_archive_profile := Profile.new()
+	var maxed_track := StringName(ArchiveData.TRACKS[0].get(&"id", &""))
+	for entry in ArchiveData.TRACKS:
+		maxed_archive_profile.archive_levels[String(entry.get(&"id", &""))] = ArchiveData.MAX_LEVEL
+	maxed_archive_profile.memory_fragments = 100000
+	hub.archive_ui.bind(maxed_archive_profile)
+	hub.archive_ui.open()
+	await _settle()
+	var maxed_row: Dictionary = hub.archive_ui._rows[maxed_track]
+	var maxed_button := maxed_row["button"] as Button
+	var maxed_cost_label := maxed_row["cost"] as Label
+	check(maxed_button.disabled, "hub_archive_maxed_row_disabled")
+	check(maxed_button.text == "已满级", "hub_archive_maxed_row_text")
+	check(maxed_cost_label.text.contains("上限"), "hub_archive_maxed_cost_text")
+	var maxed_focus := _focus_owner() as Button
+	check(maxed_focus != null and not maxed_focus.disabled,
+		"hub_archive_maxed_focus_skips_disabled_rows")
+	var maxed_fragments := int(maxed_archive_profile.memory_fragments)
+	hub.archive_ui._buy(ArchiveData.TRACKS[0])
+	check(int(maxed_archive_profile.memory_fragments) == maxed_fragments,
+		"hub_archive_maxed_does_not_charge")
+	check(maxed_archive_profile.archive_level(maxed_track) == ArchiveData.MAX_LEVEL,
+		"hub_archive_maxed_keeps_level")
+	check(not hub.archive_ui._status.text.contains("记忆碎片不足"),
+		"hub_archive_maxed_no_false_shortage")
+	check(hub.archive_ui._status.text.contains("上限"),
+		"hub_archive_maxed_status_explains_cap")
+	var luchen_archive_desc := ""
+	for entry in NPCProfiles.get_profile(&"luchen").get("functions", []):
+		if StringName(entry.get("id", &"")) == &"archive":
+			luchen_archive_desc = String(entry.get("desc", ""))
+	check(luchen_archive_desc.contains("上限"),
+		"hub_archive_function_desc_states_cap")
+	hub.archive_ui.close()
+	hub.archive_ui.bind(hub.profile)
+	maxed_archive_profile.free()
+	await _settle()
+
+	# Buying the tenth and final level must report the cap, not quote a
+	# "next" price the demo can never charge (pass 70).
+	var cap_archive_profile := Profile.new()
+	var cap_track := StringName(ArchiveData.TRACKS[0].get(&"id", &""))
+	cap_archive_profile.archive_levels[String(cap_track)] = ArchiveData.MAX_LEVEL - 1
+	cap_archive_profile.memory_fragments = 100000
+	hub.archive_ui.bind(cap_archive_profile)
+	hub.archive_ui.open()
+	await _settle()
+	hub.archive_ui._buy(ArchiveData.TRACKS[0])
+	check(cap_archive_profile.archive_level(cap_track) == ArchiveData.MAX_LEVEL,
+		"hub_archive_final_level_reaches_cap")
+	check(hub.archive_ui._status.text.contains("上限"),
+		"hub_archive_final_level_status_explains_cap")
+	check(not hub.archive_ui._status.text.contains("下次需要"),
+		"hub_archive_final_level_no_phantom_next_cost")
+	hub.archive_ui.close()
+	hub.archive_ui.bind(hub.profile)
+	cap_archive_profile.free()
+	await _settle()
+
+	# The copy that opens the archive and the service line in 陆沉's dialogue
+	# must state the same demo cap the page enforces. The old lines promised
+	# "等级没有尽头", which the page itself contradicted.
+	var archive_open_message: String = hub.perform_npc_function(&"luchen", &"archive")
+	check(archive_open_message.contains("Lv.%d" % ArchiveData.MAX_LEVEL),
+		"hub_archive_open_message_states_cap")
+	check(not archive_open_message.contains("等级没有尽头"),
+		"hub_archive_open_message_no_endless_level_claim")
+	check(hub.archive_ui.is_open(), "hub_archive_open_message_opens_page")
+	hub.archive_ui.close()
+	hub.archive_ui.bind(hub.profile)
+	await _settle()
+	var saved_cleared: bool = bool(hub.profile.demo_cleared)
+	hub.profile.demo_cleared = false
+	hub.talk_to_npc(hub.get_npc(&"luchen"))
+	await _settle()
+	var archive_service_line := ""
+	for line in hub.dialogue_ui._lines:
+		if line.contains("档案馆升级"):
+			archive_service_line = line
+	check(archive_service_line.contains("%d 级" % ArchiveData.MAX_LEVEL),
+		"hub_archive_service_line_states_cap")
+	check(not archive_service_line.contains("没有尽头"),
+		"hub_archive_service_line_no_endless_level_claim")
+	hub.dialogue_ui.close()
+	hub.profile.demo_cleared = saved_cleared
 	await _settle()
 
 	# Same edge for the Hub shop: the last affordable purchase must not leave
@@ -786,6 +1016,45 @@ func _run() -> void:
 	hub.shop.discount = shop_discount_snapshot
 	hub._trust_forge_used = false
 	hub.shop_ui.bind(hub.shop, hub.profile)
+	await _settle()
+
+	# 神铸 charges 25 fragments for one base level plus a capped forge
+	# blessing. The line must report the blessing actually added, not always
+	# +1 (pass 70).
+	var god_fragments: int = int(hub.profile.memory_fragments)
+	var god_blessings: Dictionary = hub.profile.npc_blessings.duplicate(true)
+	var god_base: Dictionary = hub.profile.weapon_base_levels.duplicate(true)
+	hub.profile.memory_fragments = 999
+	hub.profile.npc_blessings.erase("ayan")
+	var god_base_before: int = hub.profile.weapon_base_level(hub.SWORD_ID)
+	var god_message: String = hub.perform_npc_function(&"ayan", &"forge_god")
+	check(hub.profile.weapon_base_level(hub.SWORD_ID) == god_base_before + 1,
+		"hub_forge_god_raises_base")
+	check(is_equal_approx(hub.profile.npc_blessing(&"ayan", "forge_bonus"), 1.0),
+		"hub_forge_god_grants_blessing")
+	check(god_message.contains("锻造祝福 +1"), "hub_forge_god_message_reports_gain")
+	check(int(hub.profile.memory_fragments) == 999 - 25, "hub_forge_god_costs_25")
+	# At the cap the blessing cannot grow; the message must say so.
+	hub.profile.npc_blessings["ayan"] = {"forge_bonus": NPCProfiles.FORGE_BONUS_TOTAL_CAP}
+	var capped_base_before: int = hub.profile.weapon_base_level(hub.SWORD_ID)
+	var capped_message: String = hub.perform_npc_function(&"ayan", &"forge_god")
+	check(hub.profile.weapon_base_level(hub.SWORD_ID) == capped_base_before + 1,
+		"hub_forge_god_capped_still_raises_base")
+	check(is_equal_approx(hub.profile.npc_blessing(&"ayan", "forge_bonus"),
+		NPCProfiles.FORGE_BONUS_TOTAL_CAP), "hub_forge_god_capped_stays_capped")
+	check(capped_message.contains("上限") and not capped_message.contains("锻造祝福 +1"),
+		"hub_forge_god_capped_message_is_honest")
+	# A partial blessing reports the fraction actually added.
+	hub.profile.npc_blessings["ayan"] = {
+		"forge_bonus": NPCProfiles.FORGE_BONUS_TOTAL_CAP - 0.5,
+	}
+	var partial_message: String = hub.perform_npc_function(&"ayan", &"forge_god")
+	check(is_equal_approx(hub.profile.npc_blessing(&"ayan", "forge_bonus"),
+		NPCProfiles.FORGE_BONUS_TOTAL_CAP), "hub_forge_god_partial_reaches_cap")
+	check(partial_message.contains("+0.5"), "hub_forge_god_partial_message_reports_half")
+	hub.profile.memory_fragments = god_fragments
+	hub.profile.npc_blessings = god_blessings
+	hub.profile.weapon_base_levels = god_base
 	await _settle()
 
 	# Hub settings (its own ModalLayer + _process path): F10 opens it, every

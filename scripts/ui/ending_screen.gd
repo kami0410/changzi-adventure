@@ -63,11 +63,17 @@ func show_campaign_ending(won: bool, reward: int, ending: Dictionary, records: i
 	_run_seed = run_seed
 	var title := get_node_or_null("Center/Panel/Margin/VBox/Title") as Label
 	var body := get_node_or_null("Center/Panel/Margin/VBox/Body") as Label
+	var echoes := get_node_or_null("Center/Panel/Margin/VBox/Echoes") as Label
 	var reward_label := get_node_or_null("Center/Panel/Margin/VBox/Reward") as Label
 	if title != null:
 		title.text = String(ending.get("title", "史官归位" if won else "记录中断"))
 	if body != null:
 		body.text = String(ending.get("body", "")) + "\n\n读过 %d 座残碑，击败 %d 个敌人。" % [records, kills]
+	if echoes != null:
+		# 余味只属于达成的结局；旧调用 / 未知结局没有 id，整块留空。
+		var echo_text := EndingEchoData.display_text(StringName(ending.get("id", &"")))
+		echoes.text = echo_text
+		echoes.visible = not echo_text.is_empty()
 	if reward_label != null:
 		reward_label.text = "记忆碎片 +%d" % reward
 	_refresh_prompts()

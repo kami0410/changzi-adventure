@@ -1,8 +1,8 @@
 extends RefCounted
 
-## Boss entrance flavour: every variant stays copy-only, the Chapter 1 pool
-## rotates per run without consuming the run RNG, and other chapters keep the
-## silent entrance (empty line).
+## Boss entrance flavour: every variant stays copy-only, the authored chapter
+## pools rotate per run without consuming the run RNG, and chapters without
+## authored copy keep the silent entrance (empty line).
 
 
 func run(t: Callable) -> void:
@@ -21,9 +21,10 @@ func _test_variants(t: Callable) -> void:
 		t.call(not line.contains("%"), true, "boss_entrance_line_has_no_placeholder")
 		unique[line] = true
 	t.call(unique.size(), lines.size(), "boss_entrance_lines_unique")
-	for chapter_index in [1, 2, 3]:
-		t.call(BossEntranceData.variants(chapter_index).is_empty(), true,
-			"boss_entrance_chapter_%d_has_no_flavor" % chapter_index)
+	t.call(BossEntranceData.variants(3).size() >= 8, true,
+		"boss_entrance_chapter_4_has_its_own_copy")
+	t.call(BossEntranceData.variants(4).is_empty(), true,
+		"boss_entrance_out_of_range_has_no_flavor")
 
 
 func _test_selection(t: Callable) -> void:
@@ -37,9 +38,7 @@ func _test_selection(t: Callable) -> void:
 		t.call(lines.has(line), true, "boss_entrance_pick_known_%d" % seed)
 		seen[line] = true
 	t.call(seen.size() >= 3, true, "boss_entrance_pick_rotates")
-	for chapter_index in [1, 2, 3]:
-		t.call(BossEntranceData.pick(4242, chapter_index), "",
-			"boss_entrance_chapter_%d_pick_is_empty" % chapter_index)
+	t.call(BossEntranceData.pick(4242, 4), "", "boss_entrance_out_of_range_pick_is_empty")
 
 
 func _test_rng_untouched(t: Callable) -> void:

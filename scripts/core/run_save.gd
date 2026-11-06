@@ -95,14 +95,19 @@ static func _has_valid_shape(saved: Dictionary) -> bool:
 	var progress: Dictionary = saved.get("progress", {})
 	if progress.has("cleared_in_chapter") and not _is_number(progress["cleared_in_chapter"]):
 		return false
-	for key in ["cleared_rooms", "vaults"]:
+	# The per-node keys are newer; the room-key lists are the legacy fallback
+	# read by older checkpoints, so both are optional and both must be arrays.
+	for key in ["cleared_encounters", "cleared_rooms", "vaults"]:
 		if progress.has(key) and not progress[key] is Array:
 			return false
 
 	var world: Dictionary = saved.get("world", {})
 	if world.has("boss_defeated") and not world["boss_defeated"] is bool:
 		return false
-	for key in ["claimed_steles", "opened_chests", "example_phrases"]:
+	for key in [
+		"claimed_stele_ids", "claimed_steles", "opened_chest_ids", "opened_chests",
+		"example_phrases",
+	]:
 		if world.has(key) and not world[key] is Array:
 			return false
 	for key in ["shops", "frenzy"]:

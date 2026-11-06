@@ -32,6 +32,9 @@ var shop: Shop
 
 var _words: Dictionary[StringName, WordData] = {}
 var _active_npc_id: StringName = &""
+## Set while a Hub personal event dialogue is on screen. The event is recorded
+## only when its last line is read; closing early leaves it available.
+var _pending_event_id := ""
 var _owned_profile: Profile
 var _initialized := false
 var npc_inspire_ui: NPCInspireUI
@@ -480,6 +483,11 @@ func talk_to_npc(npc: NPC) -> void:
 		return
 	if npc.npc_id == &"wenjin" or npc.npc_id == &"baiyu":
 		return
+	# A personal event replaces the regular conversation once. It reads its own
+	# scene, then the NPC goes back to the usual greeting/attitude/function lines.
+	if NPCEventData.can_trigger(profile, npc.npc_id):
+		_open_npc_event(npc)
+		return
 	var profile_data := NPCProfiles.get_profile(npc.npc_id)
 	var lines: Array[String] = npc.get_lines()
 	if not profile_data.is_empty():
@@ -493,9 +501,12 @@ func talk_to_npc(npc: NPC) -> void:
 	match npc.npc_id:
 		&"luchen":
 			lines.append(decode_word())
-			lines.append("陆沉的服务里新增了「档案馆升级」：用记忆碎片永久强化昌子，demo 上限 10 级。")
+			lines.append("陆沉的服务里新增了「档案馆升级」：用记忆碎片永久强化昌子，demo 每个方向上限 %d 级。" % ArchiveData.MAX_LEVEL)
 		&"ayan":
-			lines.append(String(upgrade_sword_base().get("message", "")))
+			# Greeting is not a purchase. The paid forge lives on the 言灵 panel's
+			# 「锻造基底」 service; this branch used to call upgrade_sword_base()
+			# directly, so saying hello spent fragments and raised the base level.
+			lines.append("断页剑基底现在是 Lv.%d。要再锻一层，在「言灵对话」里选「锻造基底」——花多少碎片，看交情。" % profile.weapon_base_level(SWORD_ID))
 		_:
 			pass
 	# The "言灵对话" button already shows the live key for the current device;
@@ -508,6 +519,31 @@ func talk_to_npc(npc: NPC) -> void:
 		dialogue_ui.set_inspiration_enabled(true)
 		dialogue_ui.open_dialogue(npc.get_speaker(), lines)
 		_refresh_player_freeze()
+
+
+func _open_npc_event(npc: NPC) -> void:
+	if dialogue_ui == null:
+		return
+	var event := NPCEventData.event_for(npc.npc_id)
+	var lines: Array[String] = []
+	for line in event.get("lines", []):
+		lines.append(String(line))
+	if lines.is_empty():
+		return
+	_pending_event_id = String(event.get("id", ""))
+	_active_npc_id = npc.npc_id
+	dialogue_ui.set_inspiration_enabled(true)
+	dialogue_ui.open_dialogue(npc.get_speaker(), lines)
+	_refresh_player_freeze()
+
+
+## Persist only after the last line. No pages, fragments, trust or items are
+## touched: the event is a story beat, not a reward.
+func _record_npc_event(event_id: String) -> void:
+	if profile == null or event_id.is_empty():
+		return
+	if profile.record_npc_event(event_id):
+		_save_shared_profile()
 
 
 func _build_help() -> void:
@@ -744,7 +780,13 @@ func perform_npc_function(npc_id: StringName, function_id: StringName, free := f
 		&"decode":
 			message = decode_word()
 		&"lore":
-			if not _spend_fragments(6):
+			# The demo owns every chapter-1 word from the first run, so there is
+			# usually nothing left to hand out. Say that instead of charging for
+			# a word that cannot be delivered (the old fallback paid 8 fragments
+			# for a 6-fragment service — a repeatable fragment pump).
+			if unlockable_word_pool().is_empty():
+				message = "陆沉把名册合上：你身上的词已经全了，这一课没有新东西可讲。他没要你的碎片。"
+			elif not _spend_fragments(6):
 				message = "陆沉把手按在名册上：讲故事也要灯油。需要 6 记忆碎片。"
 			else:
 				var word := _unlock_random_word()
@@ -762,7 +804,9 @@ func perform_npc_function(npc_id: StringName, function_id: StringName, free := f
 				archive_ui.bind(profile)
 				archive_ui.open()
 				_refresh_player_freeze()
-			message = "陆沉把档案馆的旧升降台推到你面前：这里的等级没有尽头，只要你带得回记忆。"
+			# The demo cap is the same one the archive page enforces; the older
+			# "等级没有尽头" line contradicted the page it opens.
+			message = "陆沉把档案馆的旧升降台推到你面前：demo 每个方向修到 Lv.%d 为止，档案本身没有尽头。" % ArchiveData.MAX_LEVEL
 		&"shop":
 			if dialogue_ui != null and dialogue_ui.is_open():
 				dialogue_ui.close()
@@ -774,7 +818,9 @@ func perform_npc_function(npc_id: StringName, function_id: StringName, free := f
 				shop_ui.open()
 			message = "咕噜把货架拖了出来。"
 		&"rumor":
-			if not _spend_fragments(3):
+			if unlockable_word_pool().is_empty():
+				message = "咕噜把货架推回去：没有你不知道的词了，这单不收钱。传闻也一并送你——下一章的门会记得你上一次没拿的东西。"
+			elif not _spend_fragments(3):
 				message = "咕噜摊手：传闻也要成本。需要 3 记忆碎片。"
 			else:
 				var word := _unlock_random_word()
@@ -786,7 +832,7 @@ func perform_npc_function(npc_id: StringName, function_id: StringName, free := f
 				var next_index := mini(1, CampaignData.chapter_count() - 1)
 				var chapter := CampaignData.chapter(next_index)
 				profile.add_npc_blessing(&"wenjin", "damage", 2.0)
-				message = "闻烬把一张折起的纸推给你：下一章的 Boss 是「%s」。它的招式有前摇。你的第一击会更疼。" % chapter["boss_name"]
+				message = "闻烬把一张折起的纸推给你：下一章的 Boss 是「%s」。它的招式有前摇。你所有武器的伤害永久 +2。" % chapter["boss_name"]
 		&"contract":
 			if not _spend_fragments(12):
 				message = "闻烬笑了：契约也要纸钱。需要 12 记忆碎片。"
@@ -821,12 +867,23 @@ func _forge_god() -> String:
 	if not _spend_fragments(25):
 		return "阿砚把锤子放下：神铸要烧掉 25 记忆碎片。你现在的记忆还不够。"
 	profile.force_upgrade_weapon_base(SWORD_ID)
-	var forge_remaining := maxf(3.0 - profile.npc_blessing(&"ayan", "forge_bonus", 0.0), 0.0)
-	if forge_remaining > 0.0:
-		profile.add_npc_blessing(&"ayan", "forge_bonus", minf(1.0, forge_remaining))
+	var forge_remaining := maxf(
+		NPCProfiles.FORGE_BONUS_TOTAL_CAP - profile.npc_blessing(&"ayan", "forge_bonus", 0.0), 0.0)
+	var forge_added := minf(1.0, forge_remaining)
+	if forge_added > 0.0:
+		profile.add_npc_blessing(&"ayan", "forge_bonus", forge_added)
 	_refresh_fragment_label()
 	_save_shared_profile()
-	return "阿砚沉默了很久。炉膛里没有火，但铁砧自己亮了。断页剑基底升至 Lv.%d，锻造祝福 +1。他没说那是神迹。" % profile.weapon_base_level(SWORD_ID)
+	# The blessing is capped, so the line reports what was actually added
+	# instead of always claiming +1.
+	var blessing_line := "锻造祝福已至上限。"
+	if forge_added >= 1.0:
+		blessing_line = "锻造祝福 +1。"
+	elif forge_added > 0.0:
+		blessing_line = "锻造祝福 +%.1f。" % forge_added
+	return "阿砚沉默了很久。炉膛里没有火，但铁砧自己亮了。断页剑基底升至 Lv.%d，%s他没说那是神迹。" % [
+		profile.weapon_base_level(SWORD_ID), blessing_line,
+	]
 
 
 func _spend_fragments(cost: int) -> bool:
@@ -841,17 +898,25 @@ func _spend_fragments(cost: int) -> bool:
 	return true
 
 
-func _unlock_random_word() -> String:
-	if profile == null:
-		return "无"
+## Every chapter-1 word a paid word service could still hand out. The demo
+## grants all of them at profile creation, so this is normally empty and the
+## services must refuse instead of inventing a payout.
+func unlockable_word_pool() -> Array[WordData]:
 	var pool: Array[WordData] = []
+	if profile == null:
+		return pool
 	for word in RunLoot.demo_word_pool():
 		if not profile.is_word_unlocked(word.id):
 			pool.append(word)
+	return pool
+
+
+## Picks one word from [method unlockable_word_pool]. Callers check the pool
+## first; an empty result means there was nothing to unlock.
+func _unlock_random_word() -> String:
+	var pool := unlockable_word_pool()
 	if pool.is_empty():
-		profile.memory_fragments += 8
-		_refresh_fragment_label()
-		return "记忆碎片 +8（词库已经满了）"
+		return ""
 	var picked := pool[randi() % pool.size()]
 	profile.unlock_word(picked.id)
 	_save_shared_profile()
@@ -1077,6 +1142,13 @@ func _refresh_fragment_label() -> void:
 func _on_dialogue_finished() -> void:
 	var npc_id := _active_npc_id
 	_active_npc_id = &""
+	if not _pending_event_id.is_empty():
+		# The personal event owns this conversation; do not fall through into
+		# 咕噜's shelf right after he says the bottle is not for sale.
+		var event_id := _pending_event_id
+		_pending_event_id = ""
+		_record_npc_event(event_id)
+		return
 	if npc_id == &"guru" and shop_ui != null:
 		_refresh_shop_discount()
 		shop_ui.open()
@@ -1084,6 +1156,9 @@ func _on_dialogue_finished() -> void:
 
 
 func _on_dialogue_closed() -> void:
+	# A page closed before its last line (B / Esc / opening 言灵) leaves the
+	# event unseen, so the next talk shows it again.
+	_pending_event_id = ""
 	if npc_inspire_ui == null or not npc_inspire_ui.is_open():
 		_active_npc_id = &""
 	_refresh_player_freeze()

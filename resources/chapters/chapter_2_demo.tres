@@ -1,0 +1,194 @@
+[gd_resource type="Resource" script_class="ChapterPlanData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/chapter_plan_data.gd" id="1_plan"]
+[ext_resource type="Script" path="res://scripts/language/authority_data.gd" id="2_auth"]
+[ext_resource type="Resource" path="res://resources/authorities/revive.tres" id="3_revive"]
+[ext_resource type="Resource" path="res://resources/authorities/rewrite.tres" id="4_rewrite"]
+[ext_resource type="PackedScene" path="res://scenes/bosses/lung_bell_guardian.tscn" id="5_boss"]
+
+[resource]
+script = ExtResource("1_plan")
+chapter_id = &"breathing_ruins"
+big_map = true
+start_room = "ch2_entry"
+rooms = Array[Dictionary]([{
+"id": "ch2_entry",
+"type": "entrance",
+"size": [2560, 1440],
+"encounters": [],
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch2_branch_a",
+"type": "branch",
+"size": [2560, 1440],
+"encounters": ["ch2_branch_a/Arena", "ch2_branch_a/Arena2"],
+"wave": {
+"ch2_branch_a/Arena": [&"choir_summoner", &"page_swarm"],
+"ch2_branch_a/Arena2": [&"rust_whisperer", &"collapse_husk"]
+},
+"chests": ["ch2_branch_a/Chest1"],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch2_branch_b",
+"type": "branch",
+"size": [2560, 1440],
+"encounters": ["ch2_branch_b/Arena"],
+"wave": {
+"ch2_branch_b/Arena": [&"lung_moth", &"breath_hound"]
+},
+"chests": ["ch2_branch_b/Chest1"],
+"steles": ["ch2_branch_b/Stele1"],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch2_hub",
+"type": "hub",
+"size": [2560, 1440],
+"encounters": [],
+"chests": [],
+"steles": ["ch2_hub/Stele1"],
+"shortcuts": ["hub_shortcut_entry"],
+"shop": "ch2_hub_shop",
+"rest": true,
+"fall_below_bounds": 240
+}, {
+"id": "ch2_well",
+"type": "well",
+"size": [2560, 2160],
+"encounters": ["ch2_well/Arena", "ch2_well/Arena2"],
+"wave": {
+"ch2_well/Arena": [&"ink_bomber", &"blank_man"],
+"ch2_well/Arena2": [&"breath_hound", &"rust_whisperer"]
+},
+"chests": ["ch2_well/Chest1"],
+"steles": [],
+"shortcuts": [],
+"vertical": true,
+"fall_below_bounds": 240
+}, {
+"id": "ch2_vault",
+"type": "vault",
+"size": [2560, 1440],
+"encounters": [],
+"chests": ["ch2_vault/Chest1", "ch2_vault/Chest2"],
+"steles": ["ch2_vault/Stele1", "ch2_vault/Stele2"],
+"shortcuts": [],
+"hidden": true,
+"fall_below_bounds": 240
+}, {
+"id": "ch2_event",
+"type": "event",
+"size": [2560, 1440],
+"encounters": ["ch2_event/event"],
+"chests": [],
+"steles": ["ch2_event/Stele1"],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch2_elite",
+"type": "elite",
+"size": [3840, 2160],
+"encounters": ["ch2_elite/Arena"],
+"wave": {
+"ch2_elite/Arena": [&"page_swarm", &"collapse_husk"]
+},
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch2_boss",
+"type": "boss",
+"size": [3840, 2160],
+"encounters": [],
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}])
+doors = Array[Dictionary]([{
+"id": "entry_branch_a",
+"from": "ch2_entry",
+"to": "ch2_branch_a",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "entry_branch_b",
+"from": "ch2_entry",
+"to": "ch2_branch_b",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "branch_a_hub",
+"from": "ch2_branch_a",
+"to": "ch2_hub",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "branch_b_hub",
+"from": "ch2_branch_b",
+"to": "ch2_hub",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "hub_well",
+"from": "ch2_hub",
+"to": "ch2_well",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "hub_event",
+"from": "ch2_hub",
+"to": "ch2_event",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "branch_b_vault",
+"from": "ch2_branch_b",
+"to": "ch2_vault",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "well_elite",
+"from": "ch2_well",
+"to": "ch2_elite",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "event_elite",
+"from": "ch2_event",
+"to": "ch2_elite",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "elite_boss",
+"from": "ch2_elite",
+"to": "ch2_boss",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": true
+}, {
+"id": "hub_shortcut_entry",
+"from": "ch2_hub",
+"to": "ch2_entry",
+"from_gate": "shortcut",
+"to_gate": "shortcut_arrival",
+"one_way": true,
+"requires": ["ch2_shortcut"]
+}])
+authority_pool = Array[ExtResource("2_auth")]([ExtResource("3_revive"), ExtResource("4_rewrite")])
+boss_scene = ExtResource("5_boss")

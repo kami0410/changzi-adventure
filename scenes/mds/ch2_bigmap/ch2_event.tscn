@@ -1,0 +1,19 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/mds_big_room.gd" id="1_room"]
+[ext_resource type="Resource" path="res://resources/rooms/ch2_bigmap/ch2_event.tres" id="2_data"]
+[ext_resource type="PackedScene" path="res://scenes/levels/room.tscn" id="3_arena"]
+[ext_resource type="PackedScene" path="res://scenes/levels/memory_stele.tscn" id="5_stele"]
+
+[node name="Ch2BigmapEvent" type="Node2D"]
+script = ExtResource("1_room")
+data = ExtResource("2_data")
+fall_margin = 240.0
+
+[node name="Event" parent="." instance=ExtResource("3_arena")]
+position = Vector2(700, 1424)
+encounter_id = &"ch2_event/event"
+
+[node name="Stele1" parent="." instance=ExtResource("5_stele")]
+position = Vector2(2000, 1424)
+stele_id = &"ch2_event_stele1"

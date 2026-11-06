@@ -74,6 +74,11 @@ static var instance: MDSWorldGame
 ## at least this upward speed (px/s), so it clears the hole and can land beside it instead
 ## of falling straight back. 0 = off.
 @export var up_exit_speed := 650.0
+## Seconds the gate just arrived through stays inert after a "bot" arrival. That gate
+## sits in the floor: the player arrives above it, gets [member up_exit_speed], and falls
+## back through the same trigger. Without this grace the room would bounce them straight
+## back to where they came from. Horizontal and top arrivals are not affected.
+@export var floor_arrival_grace := 1.2
 ## Room scenes may contain a player of their own, to test them on their own (F6). It is
 ## removed when the room is loaded into the game, which has the real player.
 @export var remove_room_players := true
@@ -152,6 +157,8 @@ var _load_requested := false
 var _pending_save: Dictionary = {}
 var _exit: Dictionary = {} ## the gate being left: {gate, pos, room, to_room, to_gate}
 var _arrived_frame := -100
+var _arrival_gate := ""
+var _arrival_grace_until := 0
 var _cinema: CanvasLayer
 
 func _enter_tree() -> void:
@@ -327,6 +334,15 @@ func load_room(room: String, entry_gate := "", world_position := Vector2.INF, tr
 		_save_exploration()
 	_cooldown_until = Time.get_ticks_msec() + int(gate_cooldown * 1000.0)
 	_arrived_frame = Engine.get_physics_frames()
+	# A floor arrival drops back through the gate it came from unless that
+	# gate ignores the body until the arrival motion has settled. See
+	# [member floor_arrival_grace].
+	_arrival_gate = entry_gate
+	_arrival_grace_until = 0
+	if not _arrival_gate.is_empty() and floor_arrival_grace > 0.0 \
+			and world.get_gate_side(id, _arrival_gate) == "bot":
+		_arrival_grace_until = Time.get_ticks_msec() \
+			+ int(floor_arrival_grace * 1000.0)
 	changing_room = false
 	var area := world.get_room_area(id)
 	if previous != id:
@@ -623,8 +639,13 @@ func _spawn_position(id: String, entry_gate: String, world_position: Vector2) ->
 func _on_gate_entered(t: Dictionary) -> void:
 	# A teleported CharacterBody2D moves to its new place during the next physics step,
 	# passing the gate it came through: arrivals ignore gates for a few physics frames, even
-	# with no cooldown.
-	if changing_room or Time.get_ticks_msec() < _cooldown_until or Engine.get_physics_frames() - _arrived_frame < 3:
+	# with no cooldown. Floor arrivals get the longer grace: they are launched up from the
+	# gate and would otherwise fall back through the same trigger.
+	if changing_room or Time.get_ticks_msec() < _cooldown_until \
+			or Engine.get_physics_frames() - _arrived_frame < 3:
+		return
+	if not _arrival_gate.is_empty() and String(t.get("from_gate", "")) == _arrival_gate \
+			and Time.get_ticks_msec() < _arrival_grace_until:
 		return
 	if enforce_requirements:
 		var missing: PackedStringArray = []

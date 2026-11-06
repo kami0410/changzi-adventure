@@ -1,12 +1,16 @@
 # 监工状态 · 昌子大冒险（Windows 阶段）
 
-> 更新时间：2026-11-04（第 25 程）· 分支：`supervisor-dev`（本地，不 push）
+> 更新时间：2026-11-06（第 75 程 · Windows 导出 / v0.12.0 包）· 分支：`supervisor-dev`（本地，不 push）
 > 状态文件由监工/执行 AI 维护；设计问题只记录在「待用户确认」，不擅自实现。
+
+## 里程碑记录
+
+- **T17 里程碑（2026-11-04，监工推送）**：第 25 程成果已由监工通过连接器快照推送到 GitHub `main`，远程提交 `4bc8801b21a218dba870c3100a27e6df73d427dd`；相对上次推送基线 `4c425a8` 为 37 个 UTF-8 文本文件（13 新增、24 修改，无删除、无二进制），对应本地 HEAD `a6d8b72`（吞噬/归档权柄、信任分层、结局画廊、残碑测试稳健性、状态与记忆收尾）。网页版已同步到同一版本（公网 200）。本程只做本地记录与第 2 章大地图核查，不再次推送。
 
 ## 项目现状（一句话）
 
 Chapter 1 demo `0.11.0-demo` 已可完整游玩（标题 → Hub 教学 → 六房 + 精英/事件/休息/书库 → Boss → 权柄 → 章末选择 → 未完待续），
-局内存档与手柄支持已落地，单元/集成测试全绿，Windows 构建链路已验证。按用户 2026-11-03 的决定，打包、安装器编译、代码签名、Windows 实机验证与人工截图全部推迟到很久以后的发行阶段，现阶段不做；当前重点是在现有第一章框架内持续修复与打磨。
+局内存档与手柄支持已落地，单元/集成测试全绿，Windows 构建链路已验证。按用户 2026-11-03 的决定，打包、安装器编译、代码签名、Windows 实机验证与人工截图全部推迟到很久以后的发行阶段，现阶段不做；当前重点是在保持第一章 demo 稳定的前提下，按监工计划推进第 2 章内容。第 26 程已完成第 2 章大地图可行性核查（结论见下方专节）；第 27 程完成施工第 1 步的三项基础解耦（坠落平面按房间/区域配置、一次性内容与清房进度按节点 id、章节清房目标读计划）；第 28 程完成施工第 2 步的房间生产管线（`BigRoomData` + `MDSBigRoom`：可变尺寸/多矩形并集、多层地面与平台、按区背景平铺与按相机窗口的氛围、自动门、坠落平面 metadata）；第 29 程完成施工第 3 步的纵向/捷径道具管线（单向落台、塌陷平台、电梯/移动平台、长椅检查点、条件门捷径）；第 30 程完成施工第 4 步前半段的第 2 章计划与大区图骨架（9 区连通图、清房目标按遭遇节点派生为 7、图骨架夹具与校验）。第 31 程完成施工第 4 步后半段：9 个真实大区 `BigRoomData` + `MDSBigRoom` 场景与独立世界 `chapter_2_bigmap.mdsworld.json`/`_world.tscn` 落地，`game.gd` 按计划读起始区（`ch2_entry`）、清房目标（7）与坠落平面（区高 + 240），一区多内容按节点 id 结算；旧第 2 章 9 小房间世界原地保留但不再被引用。第 32 程完成第 2 章内容数据层第 1 步：新增 `Ch2EventData`（7 组呼吸废墟文案，按局 seed + 事件节点 id 确定性轮换）、`game.gd` 事件页/权柄授予/Boss 阶段文案改为按章节查表（第 1 章行为与文案不变）、第 2 章计划补续命/改写基础权柄池、`BossEntranceData`/`BossPhaseData` 补「肺钟守卫」入场与阶段文案，并校验计划遭遇节点与既有第 2 章波次一一对应（6 场战斗 + 1 事件，清房目标仍 7）。第 1 章仍走原 `MDSChapterRoom`、行为与基线一致，第 2–4 章仍不可达；第 2 章事件页/Boss 权柄仅在测试层驱动验证。第 33 程完成第 2 章内容数据层第 2 步的波次接线：计划 `wave` 改为「遭遇节点 id → 敌人数组」字典，6 场战斗按计划顺序各配一波（= `ROOM_WAVES[1]` 原文，波次内容未改），事件节点无波、Boss 区不占普通波次；`game.gd` 大图分支按节点生成敌人并逐场锁门/结算，第 1 章生成路径与波次不变。第 34 程完成第 2 章内容数据层第 3 步：`ch2_event` 事件区接上区域级真实自动触发（`big_map` + `type == "event"` + 本章有事件数据），进入区域即按 `Ch2EventData.pick(run_seed, 事件节点 id)` 打开第 2 章事件页；结算按 `cleared_encounters` 的 `ch2_event/event` 一次性记录，重载不重开、不重复发奖励；第 1 章事件房触发/文案/选项/数值未改，第 2 章仍不可达。第 35 程完成第 2 章 Boss 2「肺钟守卫」独特机制与章末收口：计划 `boss_scene` 路由到 `LungBellGuardian`（`InkArchivist` 子类，通用 Boss 流程复用），实现呼吸（吸气承伤 0.5× / 呼气 1.5× + 气环、阶段 2 加墨池）、钟摆双向、阶段 3 钉子窗口（5 s 1.5× / 7 s 0.6×）；第 2 章章末选择后 `_finish(true)` 停章，不再自动进入未实现的第 3 章；同时修复大图 Arena 敌人/Boss 生成在地下的高度缺陷。第 1 章 Boss/流程/9 房间/6 波次/事件均无回归，第 2 章仍不可达；Boss 数值为暂定口径并由测试锁定。第 36 程完成第 2 章大地图系统验收：按 D 节 1–10 项补齐真实集成（九区连通、边界/相机、纵向往返、过渡、一次性内容、多遭遇战斗、捷径/隐藏、Boss/章末、性能、叙事系统），共 1303 断言 0 失败；验收中发现并修复「从地面（bot）门到达后约 0.7 秒被同门弹回上一房间」的真实缺陷（MDS `floor_arrival_grace` 1.2 秒，仅 bot 门），第 1 章无回归，第 2 章仍不可达。下一步由监工按总计划安排（第 2 章仍不可达）；「待用户确认」第 9/10 项已由监工拍板（大区连通图、不新增移动能力），第 36 程新增第 11/12 项待拍板（捷径获取来源、电梯节奏）。第 37 程完成两项表现打磨：九区 22 扇门全部补上可见门扉与提示（`GateVisual` 复用 `ChapterDoor` 语言，side 感知、前往/来路提示、零碰撞零信号，门逻辑/门位/单向/条件门未动）；第 2 章新局出生点改到 `ch2_entry` 作者 `SpawnPoint`（`save_point` 组，台阶面 − `FOOT_Y`），不再从房间标签锚点空中坠落。单元 7901 / 第 2 章集成 2202，第 1 章无回归，第 2 章仍不可达；大区底部相机/HUD 遮挡记为待确认第 13 项。第 38 程完成两项内容/表现缺口：① `MapOverlay` 地图标题改为按 `CampaignData.chapter(i)["region"]` 派生——第 1 章冻结「档案馆地图」一字不改，第 2 章显示「呼吸废墟地图」，第 3/4 章同规则；② 第 2 章五种敌人美术核查：仅 `choir_summoner` 有专属精灵（已在 `ENEMY_ART`、白 tint）并由测试锁定，`breath_hound`/`lung_moth`/`rust_whisperer`/`collapse_husk` 无专属美术、继续第 1 章精灵 `#c8e1cd` 回退，缺失清单已记录。单元 8011 / 第 2 章集成 2209，第 1 章无回归，第 2 章仍不可达。第 39 程完成第 3 章大地图可行性核查（只查不施工）：9 房旧线性世界/17 门/6 波次/文本语音/Boss 3 专属脚本与立绘均已存在；缺口是计划、大区世界、事件数据、权柄池、Boss 入场/阶段文案与第 3 章大图验收套件，另有海面母题、视野压缩、捷径授予来源与章末边界四项第 3 章独有差异；第 2 章走通的大区管线可直接承载第 3 章，第 3 章施工未开始。第 40 程完成第 3 章大地图施工第 1 步（计划与图骨架）：新增 `resources/chapters/chapter_3_demo.tres`（9 区连通图：入口/两条可回环支路/枢纽/纵井/隐藏书库/事件占位/精英/Boss；6 个战斗遭遇对应旧 6 波但未接线 + 1 个事件占位 → 清房目标 7；3 宝箱/2 残碑；11 门 = 9 双向 + 2 显式单向；每区 `fall_below_bounds = 240`）与图骨架夹具 `tests/fixtures/big_room/ch3_graph.mdsworld.json`（`fixture: true`、无房间场景、永不加载），新增 `ChapterPlanData.content_pending` 只推迟波次表校验；计划未接入 `game.gd`（`CHAPTER_PLAN_PATHS[2]` 仍空），旧第 3 章 9 房世界原样保留，第 3 章仍不可达。详见下方「第 3 章计划与图骨架（第 40 程）」专节与两篇核查/施工记录。第 41 程完成第 3 章大地图施工第 2 步（真实大区世界，只做结构层）：9 个 `BigRoomData`（`resources/rooms/ch3_bigmap/`）与 9 个 `MDSBigRoom` 场景（`scenes/mds/ch3_bigmap/`）按第 40 程计划的尺寸/节点 id/门名落地，每区 `fall_below_bounds = 240`、`ch3_entry` 作者 `SpawnPoint`（台阶面 − `FOOT_Y`）；独立世界 `scenes/mds/chapter_3_bigmap.mdsworld.json` + `_world.tscn` 共 9 区 22 门（20 有向 + 2 只到达；`elite_boss` 单向、`hub_shortcut_entry` 带 `requires = ["ch3_shortcut"]` 的屏障默认封闭），旧第 3 章 9 房世界原样保留；新增 `tests/test_ch3_world.gd`（771 断言）交叉校验计划↔世界，`CHAPTER_PLAN_PATHS[2]` 仍空、第 3 章仍不可达；第 14/15/16 项留空未施工。详见下方「第 3 章真实大区世界（第 41 程）」专节。第 42 程完成第 3 章内容数据层第 1 步（只做数据层）：新增 `Ch3EventData`（7 组无光海事件文案，按局 seed + 事件节点 id `ch3_event/event` 确定性轮换，不消耗 run RNG；读/拿效果沿用第 32 程口径——读 → 污染 +8 + 解明一个残页词 / 兜底残页 +6，拿 → 残页 +12）；`game.gd` 的 `_event_data` 扩到第 3 章（第 1 章原键与原值、第 2 章 `Ch2EventData` 均不变，第 4 章仍无事件页）；`_grant_chapter_authority` 在第 32 程已按计划 `authority_pool` 授予，本程给 `chapter_3_demo.tres` 补 `authority_pool = [续命, 改写]`（条件项仍走 `ContentLibrary` 的吞噬/归档）；`BossEntranceData`/`BossPhaseData` 补第 3 章「最后的读者」8 条入场 + 8×2 条阶段文案（第 4 章仍静默，第 1/2 章选句键与文案不变，Boss 3 数值/立绘/`boss_script` 未改）；新增 `tests/test_ch3_content.gd`（570 断言）锁定事件确定性/效果类型、权柄基础+条件项、Boss 文案不回落第 1/2 章、7 个遭遇节点唯一且锚定、6 场战斗与 `ROOM_WAVES[2]` 六波按计划顺序对应（事件节点无波次）、清房目标仍 7，并锁 `CHAPTER_PLAN_PATHS[2]` 仍空、旧第 3 章 9 房/17 门/世界文件仍在、第 1/2 章计划与世界不变。计划仍未接入 `game.gd`、第 3 章仍不可达、事件区无真实触发点；已知缺口：第 3 章计划区域仍无 `wave` 键，大区 Arena 不会生成敌人，波次接线留给后续内容程；第 14/15/16 项留空未施工。第 43 程完成第 3 章内容数据层第 2 步（波次接线）：计划 4 个战斗区补 `wave` 字典，6 个战斗遭遇按计划顺序逐字接上 `ROOM_WAVES[2]` 六波，事件节点与 Boss 区不占普通波次、清房目标仍 7；`content_pending` 按第 40 程约定清零、波次表进入正常校验（标志保留在 `ChapterPlanData`；图夹具顶层的同名键是夹具元数据、未改）；第 3 章计划仍未接入 `game.gd`、事件仍无真实触发、Boss 3 仍无 `boss_scene`/机制，第 3 章仍不可达；第 14/15/16 项留空未施工。第 44 程完成第 3 章内容数据层第 3 步：`ch3_event` 事件区沿用第 34 程的通用大图区域触发（`big_map` + `type == "event"` + 本章有事件数据）接上真实自动触发——进入区域即按 `Ch3EventData.pick(run_seed, 事件节点 id)` 打开第 3 章事件页，结算按 `cleared_encounters` 的 `ch3_event/event` 一次，重载不重开、不重复奖励；读 / 拿沿用第 42 程口径（读 → 污染 +8 + 解明一个残页词 / 兜底残页 +6，拿 → 残页 +12）。未新增第 3 章专属触发路径、未接入 `game.gd`、未改章节路由与章末流程，第 3 章仍不可达；Boss 3 机制 / `boss_scene` 与第 3 章大图验收仍是后续程的事。第 45 程完成第 3 章 Boss 3「最后的读者」独特机制与 `boss_scene` 路由（只做机制与测试层）：`chapter_3_demo.tres` 的 `boss_scene` 指向既有 `last_reader.tscn`（`LastReader extends InkArchivist`，通用 Boss 流程复用），`_spawn_boss` 优先级与 `boss_script == reader` 兜底不变；机制为镜面弹幕（阶段 1/2/3 = 3/5/7 枚、张角 0.28/0.40/0.52 rad、0.7×/270）、读页封印（阶段 2 起每 3 次、0.8× 预警 + 封一个短语槽 3.0 s）、阶段 3 空白页承伤窗口（11 s 周期：展开 4.5 s ×1.5 / 合书 6.5 s ×0.6）；HP 380 / 伤害 15 / 速度 78 / 立绘 / `boss_script` 未改，数值为暂定口径并由 `test_ch3_boss` 锁定；大图生成高度沿用第 35 程 `_enemy_spawn_y()`（计划在 → -18 px）并补断言。`CHAPTER_PLAN_PATHS[2]` 仍空、第 3 章仍不可达（旧世界仍被游戏使用），章末自动进第 4 章未改；第 3 章大图验收、门视觉、章末收口仍是后续程。第 46 程完成第 3 章章末收口（只做章末流程与测试层）：`_complete_chapter` 在既有第 2 章分支之后新增 `_chapter == 2` 分支，章末选择后调用现有 `_finish(true)` 停章，不再自动进入未实现的第 4 章；第 1 章/第 2 章/第 4 章分支未改。章末文本/选项/语音本已齐全（`CampaignData` 的 4 句 outro、两选项、`ch3_outro`，`_apply_chapter_choice` 的 `lightless_sea` 分支），未新编剧情；续玩/重载沿用章节无关的 `_boss_defeated` → `_resume_boss_aftermath` 口径，本程只补断言。`tests/integration_playability.gd` 的 `_test_ch3_bigmap_boss` 扩为完整章末链路（真实大区世界 + 第 3 章计划临时挂载：Boss 3 击败 → 权柄 → outro → 章末选择 → 停章，不进入第 4 章），并在旧线性世界结构遍历里把「自动进第 4 章」改为「停在第 3 章」；可玩性集成 732 → **754**（+22）。`CHAPTER_PLAN_PATHS[2]` 仍空、第 3 章仍不可达、计划仍未接入 `game.gd`；第 3 章大图验收、门视觉、地图标题/敌人美术核查仍是后续程。第 47 程因 Magpie 网关中断夭折（`.supervisor/session49.log` 仅一行 `[claude-code:unrecognized_model]`，无提交，只留下未提交的 `tests/integration_ch3_bigmap.gd`）；第 48 程接力完成第 3 章大地图系统验收：核查并补齐验收脚本，`tests/integration_ch3_bigmap.gd` **3424 断言 0 失败**（连续两次），覆盖九区连通/22 门全走/边界相机/纵向/过渡/一次性/双遭遇/捷径隐藏/Boss/续玩/性能，并记录第 3 章性能基线（普通区首次 6.0–9.2 ms、热 6.1–7.7 ms；Boss 冷 41.1–41.4 ms / 热 24.0–24.4 ms；关动态背景 5.6–5.8 ms、关天气 19.8–20.3 ms、不生成 Boss 12.5–12.8 ms；门过渡 228–234 ms）。未发现产品缺陷（4 处验收脚本自身的断言口径/门冷却/延迟后续流程竞态/API 误用已修）；`CHAPTER_PLAN_PATHS[2]` 仍空、第 3 章仍未接入 `game.gd`、不可达；第 3 章门视觉专项、地图标题/敌人美术核查仍是后续程。第 49 程完成这两项：① 第 3 章大图门视觉专项——`GateVisual` 由 `MDSBigRoom` 通用挂载、第 41 程 9 个场景 22 扇门（20 有向 + 2 仅到达）已自动覆盖，本程补逐门断言（side、门底落面、标题内收、箭头语义、20+2 与 5/5/5/5/2 构成）并发现/修复真实缺陷「top/bot 舱口贴墙时 200 px 标题框越出房间」（`ch3_well/top1` 与 `ch2_well/top1`，x=80 左溢 20 px；`GateVisual` 新增 `caption_area`、`MDSBigRoom` 传入，标题夹入房间，左右门规则不变）；② 第 3 章敌人美术核查——`ROOM_WAVES[2]` 六波实际用 8 种：`mirror_sniper`（第 3 章专属）与沿用第 1 章的 `hanging_scribe`/`echo_enemy`/`typo_beast`/`page_swarm` 有专属 PNG、白 tint；沿用第 2 章的 `rust_whisperer`/`lung_moth`/`collapse_husk` 无专属美术、继续第 1 章回退 + `#c8e1cd`（缺失清单记录、不新绘）；`echo_enemy` 数据资源名为 `amnesiac_echo`。地图标题「无光海地图」复核不变。单元 10315/0、第 3 章大图集成 4235/0（3424 → +811）、第 2 章大图集成 2209/0，其余套件与基线一致；第 1/2 章门视觉与敌人美术无回归，第 3 章仍不可达、未接入 `game.gd`。第 50 程完成第 4 章大地图可行性核查（只查不施工）：第 2/3 章走通的 `BigRoomData` + `MDSBigRoom`、按节点 id 结算、按区域坠落平面、计划派生清房目标与按遭遇节点 id 的波次均可直接承载第 4 章；第 4 章现有旧世界 9 房/17 门/单层 1280×720、6 战斗 + 休整 + 书库 + Boss，主线文本 8 句开场/4 句章末/2 选项、`chapter_theater.ogg`、`ch4_intro/outro`、Boss 阶段语音与 Boss 4「笑面史官」专属脚本/场景/立绘（镜面弹幕 + 基类纸页波/墨雨/改写）均已存在；缺口是计划（`chapter_4_demo.tres` 不存在、`CHAPTER_PLAN_PATHS[3]` 为空）、大区世界、事件数据、权柄池、Boss 入场/阶段文案、Boss 4 专章机制与第 4 章大图验收套件。第 4 章美术素材经复核已画好并接线：舞台绘画 `smiling_theater.png`（1536×864，`TheaterBackdrop` 只叠加聚光灯/浮尘）、Boss `smiling_archivist.png`、8 种实际使用的敌人精灵全部有专属美术且无回退（含 `mask_enemy`/`seat_husk` 两个美术变体）、配乐与语音齐全；README/GDD 的旧「程序化绘制、待替换插画」记录已在第 7 程更正，本次复核与当前文档一致。第 4 章仍不可达、未接入 `game.gd`，可达性须单独拍板且不能早于第 2/3 章。第 51 程完成第 4 章大地图施工第 1 步（计划与图骨架）：新增 `resources/chapters/chapter_4_demo.tres` 9 区连通图（入口/两条可回环支路/枢纽/纵井/隐藏书库/事件占位/精英/Boss），6 个战斗遭遇按计划顺序对应旧 `ROOM_WAVES[3]` 六波但未接线 + 1 个事件占位 → 清房目标 7；3 宝箱/2 残碑；11 门 = 9 双向 + 2 显式单向（`elite_boss` 单向、`hub_shortcut_entry` 带 `requires: ["ch4_shortcut"]` 默认封闭、来源待拍板）；每区 `fall_below_bounds = 240`；`content_pending = true` 只推迟波次表。图骨架夹具 `tests/fixtures/big_room/ch4_graph.mdsworld.json` + `tests/test_ch4_plan.gd` 778 断言交叉校验；计划未接入 `game.gd`（`CHAPTER_PLAN_PATHS[3]` 仍空）、旧第 4 章 9 房世界原样保留、第 4 章仍不可达；`Ch4EventData`/权柄池/波次接线/Boss 文案与机制均未做。本程为接力重试（第 51 程首次尝试因 Magpie 网关中断夭折，无提交无残留）。第 52 程完成第 4 章真实大区世界（只做结构层）：9 个 `BigRoomData`（`resources/rooms/ch4_bigmap/`）与 9 个 `MDSBigRoom` 场景（`scenes/mds/ch4_bigmap/`）按第 51 程计划的尺寸/节点 id/内容 id 落地（2560×1440；纵井 2560×2160；精英/Boss 3840×2160；地面贴底、平台 80 px 阶梯链、`validate()` 全空；每区 `fall_margin = 240`），`ch4_entry` 作者 `SpawnPoint`（台阶面 − `FOOT_Y`）；独立世界 `scenes/mds/chapter_4_bigmap.mdsworld.json` + `chapter_4_bigmap_world.tscn`（9 区、22 门 = 20 有向 + 2 只到达、`elite_boss` 单向、`hub_shortcut_entry` 带 `requires = ["ch4_shortcut"]` 默认封闭、区域 `Smiling Theater` 灰烬/光柱 + `blood_moon` Boss 背景、`background` 空、无 `backdrop_image`/无 theater 层）；纵向/捷径骨架复用第 29 程管线（`branch_b`/`hub`/`vault`/`well`/`elite` 5 台电梯、纵井 3 个单向落台、枢纽长椅检查点），电梯沿用管线默认 80 px/s；新增 `tests/test_ch4_world.gd` 812 断言交叉校验计划↔世界，`test_ch4_plan` 的「`ch4_bigmap` 目录尚未创建」锁改为目录/文件存在（778 → 796）。世界仍不被 `game.gd` 引用（`CHAPTER_PLAN_PATHS[3]` 仍空），旧第 4 章 9 房/17 门世界原样保留，第 4 章仍不可达；舞台母题/`ch4_shortcut` 来源/战斗密度/`mask_enemy`/`seat_husk` 独立数值/Boss 4 机制/阿砚同行仍留空未施工。第 53 程完成第 4 章内容数据层第 1 步（只做数据层）：新增 `Ch4EventData`（7 组笑面剧场事件文案：纸人/面具/名册/幕布/台词/聚光灯/谢幕，按局 seed + 事件节点 id `ch4_event/event` 确定性轮换、不耗 run RNG；读 → 污染 +8 + 解明残页词/兜底残页 +6，拿 → 残页 +12）；`game.gd` 的 `_event_data` 扩到第 4 章（第 1–3 章选句键与数值不变，越界章节仍无页面）；`chapter_4_demo.tres` 补 `authority_pool = [续命, 改写]`（条件项仍走 `ContentLibrary`）；`BossEntranceData` 补「笑面史官」8 条入场、`BossPhaseData` 补阶段 2/3 各 8 条（第 1 章保留 `"%d:%d"` 选句键，第 2/3/4 章用 `"%d:%d:%d"`，不回落第 1/2/3 章）；Boss 4 数值/立绘/`boss_script` 未改，仍无 `boss_scene`/专章机制。计划仍 `content_pending = true`、7 个区域均无 `wave` 表（6 场战斗与 `ROOM_WAVES[3]` 六波仅校验计划顺序，清房目标仍 7），计划仍未接入 `game.gd`（`CHAPTER_PLAN_PATHS[3]` 仍空），旧第 4 章世界原样保留，第 4 章仍不可达。新增 `tests/test_ch4_content.gd` 613 断言；单元 12545/0，十套集成与基线一致全 0 失败。第 54 程完成第 4 章内容数据层第 2 步（波次接线，只做数据层）：`chapter_4_demo.tres` 的 4 个战斗区补 `wave` 字典，6 个战斗遭遇按计划顺序逐字接上 `ROOM_WAVES[3]` 六波（波次内容未新增/未修改），事件节点与 Boss 区不占普通波次、清房目标仍 7；`content_pending` 清零、波次表进入 `validate()` 正常校验；第 4 章计划仍未接入 `game.gd`（`CHAPTER_PLAN_PATHS[3]` 仍空）、事件区仍无真实触发、Boss 4 仍无 `boss_scene`/机制，第 4 章仍不可达。`test_ch4_content` 641（+28）、`test_ch4_plan` 795（−1）、`test_ch4_world` 813（+1）；单元 12573/0，十套集成与基线一致全 0 失败。第 56 程完成第 4 章内容数据层第 3 步（事件区真实自动触发验证，只做触发与测试层）：`ch4_event` 沿用第 34 程的通用大图区域分支（`big_map` + 类型 `event` + 本章有事件数据），进入区域即按 `Ch4EventData.pick(run_seed, "ch4_event/event")` 打开第 4 章事件页；拿 → 残页 +12，读 → 污染 +8（倍率/上限 100）+ 解明一个残页词或兜底 +6；结算写 `cleared_encounters["ch4_event/event"]`、清房计数 +1（目标 7、HUD 分母 8），重载不重开/不重复奖励，run save 落盘同一键。未新增第 4 章专属触发路径（`game.gd` 仅注释改为 Chapters 2–4）、未接入 `game.gd`、未改章节路由与章末流程，第 4 章仍不可达；`test_ch4_content` 642（+1）、可玩性集成 810（+55，含新增 `_test_ch4_bigmap_event_trigger` 54 条与第 4 章旧世界恢复 1 条），单元 12574/0，其余九套集成与基线一致全 0 失败。第 57 程完成第 4 章内容数据层第 4 步：Boss 4「笑面史官」机制核查与 `boss_scene` 路由——`chapter_4_demo.tres` 的 `boss_scene` 指向既有 `smiling_archivist.tscn`（`SmilingArchivist extends InkArchivist`），通用 Boss 流程、`_spawn_boss` 优先级（战役表 → 计划 → `boss_script == smiling` → `reader` → 默认）与兜底均未改；机制按既有实现锁定（阶段 1 纸页波；阶段 2 每第 3 次镜面弹幕 3 枚/±0.34 rad/0.7×/280、其余纸页波且阶段 ≥2 双发；阶段 3 改写 → 镜面弹幕 → 墨雨 → 纸页波四拍，墨雨 3 个 0.75× 预警、改写封 0 号短语槽 3.0 s），HP 520 / 伤害 18 / 速度 92 / 立绘 / `boss_script` 未改，数值为暂定口径并由新增 `tests/test_ch4_boss.gd`（78 断言）与可玩性集成锁定；大图生成高度沿用 `_enemy_spawn_y()`（计划在 → -18 px，无计划 → 250 px）。可玩性集成新增 `_test_ch4_bigmap_boss`（真实大区世界 + 计划临时挂载：计划路由、战役表数值、Arena 地面线之上生成、阶段 2/3 第 4 章选句键、实树镜面弹幕/墨雨/改写、击败 → 权柄 → 章末选择 → 战役结束、重载不二次生成），810 → **869**；`test_ch4_plan` 795→**797**、`test_ch4_world` 813→**814**、`test_ch4_content` 642→**644**。`CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧世界、旧第 4 章 9 房/17 门世界仍在、第 1/2/3 章计划与世界不变、清房目标 7、波次表（`content_pending = false`）、事件触发口径、`_complete_chapter` 与章节路由均未改；第 4 章仍不可达。单元 12574 → **12657/0**，其余九套集成与基线一致全 0 失败。第 58 程完成第 4 章章末收口：`_complete_chapter` 新增显式 `_chapter == 3` 分支，章末选择后 `_finish(true)` 结束战役（与旧 `else` 兜底行为等价）；真实大区世界走完 Boss 4 → 权柄 → 第 4 章 outro → 章末选择 → 战役结束，章末原文/语音/选项与结局规则由可玩性集成锁定；第 1/2/3 章章末流程未改，第 4 章仍不可达，第 4 章大图验收未开始。第 59 程完成第 4 章大地图系统验收：`tests/integration_ch4_bigmap.gd` **4869 断言 / 0 失败**（连续两次），覆盖九区连通/22 门全走/边界相机/纵向（5 台电梯实测 80 px/s）/过渡/一次性内容/双遭遇与六波实机校验/捷径隐藏/Boss/续玩/性能/叙事与第 4 章专属（笑面剧场平铺背景、灰烬光柱、`embers`、`blood_moon`、地图标题「笑面剧场地图」、8 种敌人专属美术无回退）；未发现产品行为缺陷（只修复首次尝试遗留脚本的重复声明解析错误并补覆盖缺口），`CHAPTER_PLAN_PATHS[3]` 仍空、第 2/3/4 章仍不可达、第 4 章仍未接入 `game.gd`。第 60 程按监工 2026-11-06 的样图决定，用 xvfb + OpenGL 离屏渲染为第 2/3/4 章各拍了 3 张代表性画面（入口全景 / 纵井 / Boss 战，1280×720，共 9 张，存 `artifacts/screens/ch2|ch3|ch4/`，不提交），只截图、不改任何游戏内容；截图里发现的表现层问题（底部 HUD 遮挡、背景纵向接缝、`boss_background` 被静态背景挡住、入口区套用休整文案等）只记录在「样图截图（第 60 程）」专节，本程不修。第 63 程（施工后进程中断，由第 64 程接力核验收尾）修复了其中两项可修问题：大区静态背景改为以房间底部为锚、自下而上平铺且奇数行镜像，纵向硬接缝消除；无 `Arena` 的大图房间只有在作者了长椅或商店时才走休整文案/目标，三章入口不再套用别章休整文案。第 2–4 章仍不可达。
 
 ## 已完成
 
@@ -21,14 +25,50 @@ Chapter 1 demo `0.11.0-demo` 已可完整游玩（标题 → Hub 教学 → 六�
 - 经济护栏：NPC 言灵每次回 Hub 一次 effect，起始页/起始污染只下一局一次，AI 不双叠。
 - 教学与 UI：首次 Hub 教学、训练碑、标题设置/新游戏/二次确认、暂停离开确认、失焦暂停、HUD 字号 12/16/20、色盲形状预警。
 - 存档：Profile v2（原子写 + `.bak` + v1 迁移）；局内 run save（`scripts/core/run_save.gd`）。
+- 第 2 章大地图第 1 步解耦（第 27 程）：坠落平面按章节计划房间键（`fall_y` / `fall_below_bounds`）或房间 metadata 配置，未配置默认 850；一次性内容与清场进度按 `room/节点` id 记录（一房多遭遇/多宝箱/多残碑各自结算），旧 room-key 存档仍可读并原样带写；章节清房目标由 `ChapterPlanData.clear_target()` 派生（第 1 章仍 6）。未创建第 2 章内容、未改可达性、未加移动能力。
+- 第 2 章大地图第 2 步房间生产管线（第 28 程）：新增 `BigRoomData`（Resource）+ `MDSBigRoom`（Node2D）+ `BigRoomAmbient`。可变尺寸/多矩形房间按 MDS 局部矩形并集取边界与相机限制；多层地面/平台（地面/平台各自可多层，垂直高差校验 ≤80 px、水平边缘 ≤120 px，对齐现有跳跃约 92.6 px）；瓦片视觉与矩形碰撞分离（不是每格碰撞体）；静态背景按房间并集宽度平铺、按房间→区域→世界解析，天气/动态背景/视差仍由 MDS 按区域控制；氛围只画相机窗口与房间并集的交集；按世界 JSON 自动生成门（同名作者门优先）；房间 metadata `fall_below_bounds` 接入第 27 程坠落平面解析链。第 1 章 `MDSChapterRoom`、`ch1_layout.tres`、9 个房间场景一字未改；未创建第 2 章地图/房间/计划/事件/权柄/Boss 内容，未改可达性，未新增移动能力。
+- 第 2 章大地图第 3 步纵向/捷径道具管线（第 29 程）：新增 `OneWayPlatform`（可从上方站立、下方穿过；站在上面按「下+跳」用现有输入下落穿过，不加按键、不改跳跃参数）、`CollapsingPlatform`（站立后抖动/变色/裂纹预警 → 延迟塌落 → 按 `respawn_time` 恢复；坠落回退与死亡复活时整组立即复位）、`MovingPlatform`（`AnimatableBody2D` + `sync_to_physics`，水平/垂直/斜向可配，承载站立玩家；行程按 `MDSBigRoom` 并集/相机边界收紧，越界行程自动截断）、`BenchCheckpoint`（交互更新 `_last_checkpoint` 并写现有 run save，不新增存档键）与条件门捷径（世界 JSON 门带 `requires` 时 `MDSBigRoom` 自动生成 `MDSGateBarrier`，开门状态进 MDS 存档）。第 1 章 9 个房间仍走旧管线、无任何新道具；未创建/调整第 2 章地图、世界 JSON、计划、事件、权柄或 Boss 内容，未改可达性，未新增二段跳/蹬墙跳/攀爬。
+- 第 2 章大地图第 4 步前半段：计划与大区图骨架（第 30 程）：`ChapterPlanData` 向后兼容地扩出 `big_map` / `start_room` / `doors` 与 region 键（`size`、`encounters`、`chests`、`steles`、`shortcuts`、`hidden`、`shop`/`rest`、`vertical`），`clear_target()` 对有 `encounters` 的计划按遭遇节点数派生（第 1 章仍按房型得 6），并新增 `validate_regions()` / `validate_graph()`（尺寸、坠落平面、节点 id 唯一且锚定、门位唯一、显式单向、图形态、入口有向 BFS 全可达）。`resources/chapters/chapter_2_demo.tres` 落地 9 区图：入口 → 两条可回环支路 → 枢纽（休整+商店+残碑+捷径）→ 纵向井（2560×2160）→ 事件/精英 → Boss（3840×2160），另有支路下的隐藏书库（2 箱 2 碑）；清房目标派生为 7（支路 A/纵井各 2 场），宝箱 5、残碑 5，全部 `region/Node` 节点 id；每区 `fall_below_bounds = 240`。图骨架以测试夹具 `tests/fixtures/big_room/ch2_graph.mdsworld.json` 落地（顶层 `fixture: true`，无房间场景，永不加载），测试交叉校验计划 ↔ 世界形状、双向/单向门、无孤立区、房间不重叠、坠落平面、清房目标 = 图上遭遇总数。计划当时尚未接入 `game.gd`（第 31 程已接入，见下条），第 2 章仍走旧 9 小房间世界、仍不可达；未创建/重排第 2 章实际房间场景，未改第 2 章世界 JSON，未写事件/权柄/Boss 内容，未新增移动能力，未改 MDS 插件或言灵/权柄/战斗框架。
+- 第 2 章大地图第 4 步后半段：真实大区世界与 region 语义（第 31 程）：9 个 `BigRoomData`（`resources/rooms/ch2_bigmap/`）与 9 个 `MDSBigRoom` 场景（`scenes/mds/ch2_bigmap/`）按计划尺寸/内容 id/门名落地；独立世界 `scenes/mds/chapter_2_bigmap.mdsworld.json` + `chapter_2_bigmap_world.tscn`（9 区、20 扇有向门 + 2 扇到达门、2 扇显式单向、区域雾/萤火与背景、每区 `fall_below_bounds = 240`）；电梯/单向落台/长椅/条件捷径门按第 29 程管线做骨架。`game.gd` 新增 `CHAPTER_PLAN_PATHS`，第 2 章按计划起始区 `ch2_entry`、清房目标 7（HUD 分母 8）、坠落平面 `size.y + 240`；宝箱/残碑/遭遇按 `region/Node` 结算；事件页仍只属于第 1 章。旧第 2 章 9 小房间世界与场景未删、未改语义，只是不再被 `game.gd` 引用；第 1 章仍 `ch1_01`、目标 6、平面 850、9 个 `MDSChapterRoom`，章末仍 `_finish(true)` 不进入第 2 章；第 2–4 章仍不可达。未写第 2 章事件文本/权柄池/Boss 机制/敌人波次，未新增移动能力，未改 MDS 插件或言灵/权柄/战斗框架。
+- 第 2 章内容数据层第 1 步（第 32 程）：新增 `Ch2EventData`（7 组呼吸废墟事件文案；固定「读/拿」两选项，效果只复用污染 + 解词 / 残页；变体按局 seed + 事件节点 id `ch2_event/event` 确定性轮换，不消耗 run RNG）；`game.gd` 新增 `_event_data(room_id)` 按章节查表（第 1 章仍用 `Ch1EventData` 原键与原数值，文案/效果一字不改；第 2 章用 `Ch2EventData`，事件页仅测试层驱动，自动触发仍只属于第 1 章）、`_grant_chapter_authority` 改为按计划 `authority_pool` 授予（第 1 章授予行为不变；第 2 章基础池 = 续命/改写，条件项沿用 `ContentLibrary` 的吞噬/归档，实现在测试层验证）、`_on_boss_phase` 按章节取文案；`BossEntranceData`/`BossPhaseData` 补第 2 章「肺钟守卫」8 条入场 + 8×2 条阶段文案（第 3–4 章仍静默，第 1 章选句键保持原样）。计划 `chapter_2_demo.tres` 补 `authority_pool = [续命, 改写]`。新增 `tests/test_ch2_content.gd`（489 断言）：事件确定性/效果类型、权柄基础+条件项、Boss 文案不回落到第 1 章、Boss 数值与立绘未改、7 个遭遇节点唯一且锚定、6 场战斗与 `ROOM_WAVES[1]` 六波一一对应（事件节点无波次）、清房目标仍 7。已知缺口：第 2 章计划区域尚无 `wave` 键，大区 Arena 不会生成敌人；按本程任务单只校验既有波次/节点对应，波次接线留给后续内容程。
+- 第 2 章波次接线（第 33 程）：计划 `chapter_2_demo.tres` 的 4 个战斗区补 `wave` 字典（6 个键 = 6 个战斗遭遇节点 id），事件区/Boss 区/入口/枢纽/书库不带波次；六波按计划顺序直接复用 `ROOM_WAVES[1]` 原文，未新增/修改波次内容。`ChapterPlanData.wave_for(room_id, encounter_id)` 按节点 id 查表（第 1 章仍返回房间级数组），`validate_waves()` 校验键锚定、值非空、战斗遭遇必有一波、事件遭遇不得有波。`game.gd` 大图分支按遭遇节点生成各自波次并登记 `_rooms`，一区多遭遇逐场锁门/清怪/奖励/进度；第 1 章生成路径、波次、奖励与进度一字未改。第 2 章仍不可达，事件区仍无自动触发点，Boss 独特机制未做。
+- 第 2 章事件区真实触发（第 34 程）：`_on_mds_room_loaded` 新增区域级事件分支（`big_map` + `type == "event"` + `_event_data` 非空），进入 `ch2_event` 自动打开第 2 章事件页；键 = 计划事件节点 id `ch2_event/event`，文案/选项来自 `Ch2EventData`（局 seed + 节点 id，确定性、不耗 run RNG），两项效果沿用第 32 程（读 → 污染 +8 + 解明一个残页词/兜底残页 +6；拿 → 残页 +12）。结算按 `cleared_encounters` 的节点 id 一次，重载/续玩不重开、不重复发奖励；未结算离开区域会取消延迟开页。第 1 章事件房原 `is_primary` 触发与文案/数值未改；清房目标仍 7、6 场波次不变；第 2 章仍不可达；Boss 2 机制与章节过渡由第 35 程补上（见下条）。
+- 第 2 章 Boss 2 与章末边界（第 35 程）：新增 `LungBellGuardian extends InkArchivist` + 同名场景，`chapter_2_demo.tres` 的 `boss_scene` 指向它；`_spawn_boss` 原有优先级不变（第 1 章战役表 → 第 2 章计划 → 旧脚本兜底），通用生成/血条/阶段横幅/权柄/outro/结束流程复用。机制：呼吸（吸气 2.4 s 承伤 0.5× / 呼气 1.4 s 承伤 1.5× + 气环 560 px、0.8×，阶段 2 起留墨池，阶段越高节奏越快）、钟摆（正反两枚 `HostileBolt`，阶段 2 起每第 3 次钟鸣环 620 px、0.9×，气弹 `InkBomb` 0.8× 留池）、阶段 3 钉子（暴露 5 s 承伤 1.5× / 闭合 7 s 承伤 0.6×，12 s 周期）。`_complete_chapter` 对第 2 章（`_chapter == 1`）在章末选择后调用现有 `_finish(true)` 停章，不自动进入第 3 章；第 1 章分支和第 3/4 章自动续章未改。大图 `ArenaRoom` 原点在地面，新增 `_enemy_spawn_y()` 使大图敌人/Boss 生成在 `-ENEMY_FOOT_Y - 2`（第 1/3/4 章仍 250 px），修复第 2 章生成在地下的缺陷。Boss 数值为暂定口径，由 `test_ch2_boss` 锁定；第 1 章 Boss/流程/9 房间/6 波次/事件未改，第 2 章仍不可达。
+- 第 2 章大地图系统验收（第 36 程）：新增 `tests/integration_ch2_bigmap.gd`（1303 断言，0 失败），按 D 节 10 项在真实门/真实房间里逐项验收：计划图入口 BFS 九区全可达、20 扇连通门 + 2 扇到达门全部实走、2 扇显式单向语义正确；九区边界 = 计划尺寸、相机限制 = 世界边界、玩家不越界；电梯乘行 → top 门 → bot 门到达出速/落点正确且 2 秒内不回弹；过渡期间不叠暂停/剧情/奖励/地图/权柄/商店，坐标容差符合出点规则；书库 2 箱 2 碑按节点 id 各只发一次、重载/续玩不重复；支路两场遭遇逐场锁门/清怪/发奖、重载不重生、清房推进到 7（HUD 分母 8）；书库首次发现反馈与地图揭示、捷径门授予/开门/通行/跨存档保持；Boss 区生成/门位/文案/权柄/续玩不二次生成/章末停章。验收中发现并修复 bot 门到达回弹缺陷：`mds_world_game.gd` 新增 `floor_arrival_grace`（1.2 秒，仅 bot 门，横向/top 不变，0 可关）。第 1 章 9 房间/6 波次/事件/清房目标 6/结束流程无回归；第 2 章仍不可达。
+- 第 2 章大图门视觉（第 37 程）：新增 `scripts/presentation/gate_visual.gd`（`GateVisual`），复用既有手动门 `ChapterDoor` 的 `door.png`/accent 边框/墨尘/HUD theme 12 px 描边标题；`MDSBigRoom` 在生成自动门后给当前房间所有 `MDSGate`（自动门 + 作者门）挂 `GateVisual`，`auto_gates = false` 时只补视觉。side 感知：left/right 立门向房间内展开、门底按真实地面/台阶落面对齐；top/bot 同一贴图横置为天花板/地面舱口。有去向标「前往 <目标区名>」+ 朝向箭头，无去向的到达门标「来路」无箭头；贴边门标题内收。纯 `Node2D`（`z=-1`）、无碰撞/信号/输入，门位、模式、单向语义、`requires`/`MDSGateBarrier`、过渡目标未改。九区 22 扇门视觉由测试逐门断言。
+- 第 2 章新局出生点（第 37 程）：根因是 `MDSWorldGame._spawn_position()` 在无到达门/无坐标/无 `save_point` 时回退到 `MDSWorld.get_room_label_pos()`（房间最大矩形中心，地图标签锚点）；`ch2_entry` 2560×1440 的锚点 (1280,720) 比第一级台阶面 y=1344 高 624 px。`ch2_entry.tscn` 作者 `Marker2D` `SpawnPoint`（组 `save_point`，位置 (400,1328) = 台阶面 − `Player.FOOT_Y` 16），走 MDS 既有优先级；未改 MDS 回退顺序，未改第 1 章出生/Hub。新局第一物理帧即落地，0.3 秒内不漂移。
+- 第 2 章地图标题（第 38 程）：`MapOverlay` 标题原本是字面量「档案馆地图」，所有章节共用；现改为 `map_title(chapter_index)` + `set_chapter(chapter_index)`，从既有 `CampaignData.chapter(i)["region"]` 派生「<区域名>地图」。第 1 章（索引 ≤ 0）冻结「档案馆地图」；第 2 章为「呼吸废墟地图」；第 3/4 章为「无光海地图」「笑面剧场地图」；区域为空/索引无效回落第 1 章标题，不新造章节名。`game.gd` 在 `set_world()` 前调用 `set_chapter()`，启动与续玩都同步；`_chapter_index` 保留，`_ready()` 前调用也不丢。单元 16 断言 + 可玩性集成 6 断言覆盖，第 1/2 章标题互不回落。第 2 章仍不可达。
+- 第 2 章敌人美术核查与接线（第 38 程）：五种敌人逐一核查——`choir_summoner` 有专属精灵 `assets/sprites/enemies/choir_summoner.png`（96×96 RGBA），已在 `ENEMY_ART` 且不在 `ENEMY_ART_FALLBACK`，实际白 tint 渲染；`breath_hound`/`lung_moth`/`rust_whisperer`/`collapse_husk` 无专属精灵（场景内只有程序化 `Polygon2D` 占位，`assets/concept/enemies/` 也无原图），按任务单不新绘、不拼凑，继续回退第 1 章美术并染 `#c8e1cd`。回退 tint 提为常量 `ENEMY_FALLBACK_TINT`（行为不变）。新增 `tests/test_enemy_art.gd` 94 断言锁定：第 1 章 8 种敌人各自保留原 PNG、不在回退表；第 2 章已接线敌人用自己的 PNG 且白 tint、不走回退；四个缺失敌人回退源是第 1 章美术、标准路径尚无专属 PNG（日后补图未接线会失败）。第 2 章大地图集成在真实遭遇中断言 `choir_summoner` 用专属图/白 tint、`rust_whisperer` 仍走 `scribe_bug`/绿 tint。未新增/修改任何敌人贴图或场景美术，第 1 章敌人美术与波次未改。
+- 第 3 章计划与图骨架（第 40 程）：`ChapterPlanData` 新增向后兼容的 `content_pending`（仅推迟 `validate_waves()`；区域/节点 id/门图照常校验；第 1/2 章为 `false`，校验结果不变）；新增 `resources/chapters/chapter_3_demo.tres` 9 区连通图（入口/两条可回环支路/枢纽/纵井/隐藏书库/事件占位/精英/Boss；6 个战斗遭遇对应旧 6 波但未接线 + 1 个事件占位 → 清房目标 7；3 宝箱/2 残碑；11 门 = 9 双向 + 2 显式单向，其中捷径门 `requires: ["ch3_shortcut"]`、来源待拍板且默认关闭；每区 `fall_below_bounds = 240`；无波次/权柄池/`boss_scene`/事件文案）；新增图骨架夹具 `tests/fixtures/big_room/ch3_graph.mdsworld.json`（`fixture: true`、无 `scene_path`、游戏从不引用）与 `tests/test_ch3_plan.gd`（728 断言）交叉校验计划↔夹具。计划未接入 `game.gd`（`CHAPTER_PLAN_PATHS[2]` 仍空），旧第 3 章 9 房世界/场景未改未删，第 3 章仍不可达；第 14/15/16 项仍留空未施工。
+- 第 3 章真实大区世界（第 41 程，只做结构层）：9 个 `BigRoomData`（`resources/rooms/ch3_bigmap/`）与 9 个 `MDSBigRoom` 场景（`scenes/mds/ch3_bigmap/`）按第 40 程计划尺寸/内容节点 id/门名落地（2560×1440、2560×2160 纵井、3840×2160 精英/Boss；地面贴底边、平台 80 px 阶梯链、`validate()` 全空）；每区 `fall_below_bounds = 240`；`ch3_entry` 作者 `SpawnPoint`（`save_point`、台阶面 − `FOOT_Y`）与惰性到达门；纵向/捷径骨架复用第 29 程管线（`branch_b`/`hub`/`vault`/`well`/`elite` 电梯、纵井 3 单向落台、枢纽长椅、捷径屏障，电梯沿用管线默认 80 px/s）。独立世界 `scenes/mds/chapter_3_bigmap.mdsworld.json` + `chapter_3_bigmap_world.tscn`：9 区单矩形、22 门 = 20 有向 + 2 只到达、`elite_boss` 单向、`hub_shortcut_entry` 带 `requires = ["ch3_shortcut"]` 默认封闭、区域雾/雨与 `deep_water` Boss 背景、无 sea 层/无 `backdrop_image`。`tests/test_ch3_world.gd` 771 断言交叉校验计划↔世界并锁定不变项；世界仍不被 `game.gd` 引用（`CHAPTER_PLAN_PATHS[2]` 仍空），旧第 3 章 9 房世界/场景未改未删，第 3 章仍不可达；第 14/15/16 项留空。
+- 第 3 章内容数据层第 1 步（第 42 程，只做数据层）：新增 `scripts/data/ch3_event_data.gd`（`Ch3EventData`，7 组无光海事件文案：倒影/盐页/小读者/镜面/海页/吊影/翻页；固定读/拿两选项，效果复用第 32 程口径——读 → 污染 +8 + 解明一个残页词 / 兜底残页 +6，拿 → 残页 +12；`pick(run_seed, "ch3_event/event")` 确定性轮换、不耗 run RNG）；`game.gd` 的 `_event_data` 扩到第 3 章（第 1 章仍 `Ch1EventData` 原键与原值，第 2 章仍 `Ch2EventData`，第 4 章仍 `{}`）；`chapter_3_demo.tres` 补 `authority_pool = [续命, 改写]`（条件项仍由 `AuthorityController.build_pool` 从 `ContentLibrary` 追加，第 1/2 章池与授予行为不变）；`BossEntranceData` 新增第 3 章 8 条入场文案、`BossPhaseData` 新增阶段 2/3 各 8 条（第 4 章仍静默；第 1 章保留 `"%d:%d"` 选句键，第 2/3 章用 `"%d:%d:%d"`，不回落第 1/2 章）；Boss 3「最后的读者」HP 380 / 伤害 15 / 速度 78 / `last_reader.png` / `boss_script = reader` 均未改。新增 `tests/test_ch3_content.gd`（570 断言）；`test_ch3_plan` 730 → 734（基础池断言）、`test_ch3_world` 771 不变、`test_ch2_content` 与 `test_boss_entrance_content` 的「第 3 章静默」期望收窄到第 4 章（−2）、`integration_ch1_demo` 同一断言改期望（数量不变）。第 3 章计划仍未接入 `game.gd`（`CHAPTER_PLAN_PATHS[2]` 仍空）、仍无 `wave` 表与事件真实触发，第 3 章仍不可达；旧第 3 章 9 房/17 门/世界场景与第 3 章大区世界均原样保留；第 14/15/16 项留空。
+- 第 3 章波次接线（第 43 程，只做数据层）：`chapter_3_demo.tres` 的 4 个战斗区（`ch3_branch_a`/`ch3_branch_b`/`ch3_well`/`ch3_elite`）补 `wave` 字典，6 个键 = 6 个战斗遭遇节点 id，值按计划顺序逐字复用 `ROOM_WAVES[2]` 六波（波次内容未新增/未修改）；事件节点 `ch3_event/event` 无波，Boss 区不占普通波次，清房目标仍 7。`content_pending` 按第 40 程约定由 `true` 改回 `false`：波次表进入 `validate()` 正常校验（区域/门图校验不变），标志本身保留在 `ChapterPlanData`（默认 `false`、向后兼容）；图骨架夹具顶层的 `content_pending: true` 是夹具元数据、不是该字段，未改。测试就近扩展既有套件：`test_ch3_content` 锁定波次键集合/计划顺序取值/事件与 Boss 排除/`validate_waves()` 干净，并把第 3 章计划挂到独立 `game.gd` 实例经 `_plan_wave()` 按节点 id 读回六波（证明第 33 程通用大图分支可直接取用，但不改章节路由）；`test_ch3_plan`/`test_ch3_world` 的待接线期望同步为已接线。第 3 章计划仍未接入 `game.gd`（`CHAPTER_PLAN_PATHS[2]` 仍空）、事件无真实触发、Boss 3 无 `boss_scene`/机制，第 3 章仍不可达；第 14/15/16 项留空未施工。
+- 第 3 章事件区真实触发（第 44 程，只做触发与测试层）：`_on_mds_room_loaded` 第 34 程的区域级大图事件分支是章节无关的，第 42 程 `_event_data` 已路由第 3 章，因此 `ch3_event` 事件区无需新增触发路径——计划与大区世界挂上后，进入区域即自动打开第 3 章事件页。实测（`integration_playability` 测试层驱动）：进入 `ch3_event` 即开页，文案/选项 = `Ch3EventData.pick(run_seed, "ch3_event/event")`，不耗 run RNG；拿 → 残页 +12，读 → 污染 +8（按难度/抗性倍率、上限 100）+ 解明一个残页词或兜底残页 +6；结算写 `cleared_encounters["ch3_event/event"]` 并计入清房目标 7（HUD 分母 8），重载不重开、不重复奖励、不重复计数，run save 落盘同一键。`game.gd` 仅补一段注释说明分支章节无关；未接入 `game.gd`（`CHAPTER_PLAN_PATHS[2]` 仍空）、未改章节路由/章末流程/第 1/2 章事件触发与数值，第 3 章仍不可达；Boss 3 机制/`boss_scene` 与第 3 章大图验收仍是后续程的事。单元 10113/0（+13）、可玩性集成 705（+34），其余八套集成不变且全 0 失败。
+- 第 3 章 Boss 3 机制与 `boss_scene` 路由（第 45 程，只做机制与测试层）：`chapter_3_demo.tres` 的 `boss_scene` 指向既有 `scenes/bosses/last_reader.tscn`；`LastReader extends InkArchivist` 扩展独特机制，通用 Boss 流程（生成/血条/阶段横幅/权柄/outro/结束）复用，`_spawn_boss` 优先级与 `boss_script == reader` 兜底不变。机制：镜面弹幕（阶段 1/2/3 = 3/5/7 枚、张角 0.28/0.40/0.52 rad、每枚 0.7× 攻击力 / 速度 270）、读页封印（阶段 2 起每第 3 次攻击，0.8× 地面预警 + 封印一个短语槽 3.0 s，槽位交替）、阶段 3 空白页承伤窗口（11 s 周期：空白页展开 4.5 s 承伤 ×1.5 / 合书 6.5 s 承伤 ×0.6，进入阶段 3 先展开，sprite tint 提示）；阶段 1–2 承伤 ×1.0。HP 380 / 伤害 15 / 速度 78 / 立绘 / `boss_script` 未改，以上数值为暂定口径并由 `tests/test_ch3_boss.gd`（90 断言）锁定；大图生成高度沿用第 35 程 `_enemy_spawn_y()`（计划在 → -18 px，无计划 → 250 px），只补断言未改函数。`tests/integration_playability.gd` 705 → **732**（+27）：真实大区世界从 `ch3_boss` 启动，验证计划路由 `LastReader`、数值来自战役表、生成在 `Arena` 地面线之上、阶段 2 文案用第 3 章选句键、空白页窗口开合、继承的纸页波/墨雨在真实树内生成、Boss 击败后重载不二次生成；测试后恢复旧第 3 章世界。就地更新 `test_ch3_plan`（726 → 728）、`test_ch3_content`（614 → 615）、`test_ch3_world`（764 → 765）的「无 `boss_scene`」期望。`CHAPTER_PLAN_PATHS[2]` 仍空、第 3 章仍不可达（旧第 3 章 9 房/17 门/世界仍被游戏使用）、章末仍自动进第 4 章；第 1/2 章计划/世界/事件/Boss 2 与第 1 章 9 房间/6 波次无回归。单元 10207/0，九套集成全绿。
+- 第 3 章章末收口（第 46 程，只做章末流程与测试层）：`_complete_chapter` 在既有第 2 章分支之后新增 `_chapter == 2` 分支，第 3 章章末选择后调用现有 `_finish(true)` 停章，不再自动进入未实现的第 4 章；第 1 章分支、第 2 章分支与第 4 章分支未改，章末选择界面/结局记录/续玩行为沿用第 35 程口径。第 3 章章末文本/选项/语音本已齐全（`CampaignData.chapter(2)` 4 句 outro、两选项、`ch3_outro` 语音；`_apply_chapter_choice` 的 `lightless_sea` 分支），未新编剧情。续玩/重载沿用章节无关的 `_boss_defeated` → `_resume_boss_aftermath` 逻辑（Boss 3 已死不二次生成、直接续接权柄/章末），本程只补断言。`tests/integration_playability.gd` 的 `_test_ch3_bigmap_boss` 把第 41 程大区世界与第 3 章计划临时挂到真实主场景，走真实流程验证 Boss 3 击败 → 权柄二选一 → 第 3 章 outro → 章末选择 → 停章（`_chapter` 仍 2、`_finished`、结局屏可见），并在开头锁定 `CHAPTER_PLAN_PATHS[2]/[3]` 仍空、`MDS_WORLD_FILES[2]` 仍指旧世界、清房目标 7/7 个遭遇节点/波次表/权柄池/`boss_scene` 不变；旧线性世界结构遍历的章末断言改为「停在第 3 章」。可玩性集成 732 → **754**（+22），其余套件不变。`CHAPTER_PLAN_PATHS[2]` 仍空、第 3 章仍不可达、计划仍未接入 `game.gd`；第 3 章大图验收、门视觉、地图标题/敌人美术核查仍是后续程。
+- 第 3 章大图门视觉专项（第 49 程，只做表现层与测试）：`GateVisual` 由 `MDSBigRoom._add_gate_visuals()` 通用挂载，第 41 程 9 个 `MDSBigRoom` 场景（`auto_gates` 全开）的 22 扇门已被自动覆盖，未另起视觉实现。逐门断言（`tests/integration_ch3_bigmap.gd`）：每门有 `GateVisual`、`marker.position == Vector2.ZERO`（不移动门）、side 与世界文件一致；left/right 立门向房间内展开且门底落在真实地面/台阶面（`floor_offset` 现算），door 中置，top/bot 横置为天花板/地面舱口且不越界；right 标题 `x=-CAPTION_WIDTH`、left `x=0`、top/bot/door 居中，标题矩形必须在房间内；有向门 `arrival=false`（画朝向箭头）+「前往 <目标区名>」，仅到达门 `arrival=true`（「来路」、无箭头）；汇总 22 = 20 有向 + 2 到达、side 5/5/5/5/2。发现并修复真实缺陷：top/bot 舱口贴墙时 200 px 标题框越出房间（`ch3_well/top1`、`ch2_well/top1`，x=80 左溢 20 px）——`GateVisual` 新增可选 `caption_area`（房间按标题尺寸内缩）、`MDSBigRoom` 传入，`_caption_x()`/`_caption_y()` 夹取；空值保持原规则，左右门不受影响。纯 `Node2D`（`z=-1`）、无碰撞/信号/输入；门位、模式、单向语义（`ch3_elite/right1` 不可返回）、`requires`/`MDSGateBarrier`（`ch3_hub/shortcut` 默认封闭）、过渡目标未改；第 1 章无 `GateVisual`，第 2 章 22 扇门断言无回归。
+- 第 3 章敌人美术核查与接线（第 49 程，只核查/锁定，不新绘）：以 `ROOM_WAVES[2]` 六波实际引用为准共 8 种——`mirror_sniper`（第 3 章专属）与沿用第 1 章的 `hanging_scribe`/`echo_enemy`/`typo_beast`/`page_swarm` 有专属精灵、已在 `ENEMY_ART`、不在回退表、实际白 tint（`echo_enemy` 的刷怪 id 对应数据资源 `amnesiac_echo.tres`，美术按刷怪 id 接线）；沿用第 2 章的 `rust_whisperer`（→`scribe_bug`）/`lung_moth`（→`hanging_scribe`）/`collapse_husk`（→`blank_man`）无专属美术，继续第 1 章回退并染 `ENEMY_FALLBACK_TINT`（`#c8e1cd`），缺失清单记录、`assets/concept/enemies/` 也无原图，按任务单不新绘不拼凑。`tests/test_enemy_art.gd` 94 → **200 断言**（第 3 章 8 敌逐一核对、5 接线/3 缺失、审计集合由 `ROOM_WAVES[2]` 现算）；第 3 章大图集成在真实遭遇中断言 `mirror_sniper`/`hanging_scribe` 专属图+白 tint、`rust_whisperer`/`lung_moth` 回退图+绿 tint。未新增/修改任何敌人贴图或场景美术；第 1/2 章美术与波次未改。
+- 第 3 章地图标题复核（第 49 程）：第 38 程的 `CampaignData.chapter(i)["region"]` 派生规则未动，第 3 章集成既有断言「无光海地图」复跑仍成立；第 1 章「档案馆地图」一字未改。
+- 第 4 章计划与图骨架（第 51 程，只做数据层）：新增 `resources/chapters/chapter_4_demo.tres` 9 区连通图（入口/两条可回环支路/枢纽/纵井/隐藏书库/事件占位/精英/Boss；2560×1440、纵井 2560×2160、精英/Boss 3840×2160）；6 个战斗遭遇按计划顺序对应 `ROOM_WAVES[3]` 六波但本程不接线，加 1 个事件占位 `ch4_event/event` → `clear_target()` 派生 7（第 1 章仍 6、第 2/3 章仍 7）；3 宝箱/2 残碑（`region/Node` 节点 id）；11 门 = 9 双向 + 2 显式单向（`elite_boss`、`hub_shortcut_entry` 带 `requires: ["ch4_shortcut"]`、来源待拍板且默认封闭）；每区 `fall_below_bounds = 240`；`content_pending = true` 只推迟波次表。Boss 门按第 2/3 章先例单向（旧世界 `ch4_boss/left1` 仍返回 `ch4_rest`，原样保留并由测试锁定）；Boss 区不写 `boss_scene`/文案/机制。新增图骨架夹具 `tests/fixtures/big_room/ch4_graph.mdsworld.json`（`fixture: true`、无房间场景、永不加载、20 扇有向门 + 2 扇到达门）与 `tests/test_ch4_plan.gd`（778 断言）；`test_ch2_world`/`test_ch3_content`/`integration_playability` 的「第 4 章计划槽为空」锁补「计划已存在但未路由」（+3）。计划未接入 `game.gd`（`CHAPTER_PLAN_PATHS[3]` 仍空），旧第 4 章 9 房/17 门世界与场景未改未删，第 4 章仍不可达。
+- 第 4 章真实大区世界（第 52 程，只做结构层）：9 个 `BigRoomData`（`resources/rooms/ch4_bigmap/`）与 9 个 `MDSBigRoom` 场景（`scenes/mds/ch4_bigmap/`）按第 51 程计划落地——`ch4_entry`/`ch4_branch_a`/`ch4_branch_b`/`ch4_hub`/`ch4_vault`/`ch4_event` 2560×1440、`ch4_well` 2560×2160、`ch4_elite`/`ch4_boss` 3840×2160；地面贴底边（16 px）、平台 80 px 阶梯链、`validate()` 全空；每区 `fall_margin = 240`；复用 `ch1_tiles.tres`，`backdrop_path = smiling_theater.png`（`backdrop_pixel_art = false`）、`ambient_kind = embers`（灰烬母题）、按区暖色调；旧第 4 章世界语义不变。`ch4_entry` 作者 `SpawnPoint`（`save_point` 组，(400,1328) = 第一级台阶面 1344 − `FOOT_Y`）与惰性 `shortcut_arrival` 到达门。独立世界 `scenes/mds/chapter_4_bigmap.mdsworld.json` + `chapter_4_bigmap_world.tscn`：9 区单矩形、原点 32 px 对齐、`start_room = ch4_entry`；区域 `Smiling Theater` 镜像旧世界（灰烬 + 光柱天气、`background` 空、`boss_background = blood_moon`），不写 `backdrop_image`、不加 theater 层；22 门 = 20 有向 + 2 只到达（`ch4_entry/shortcut_arrival`、`ch4_boss/left1`），`elite_boss` 显式单向、`hub_shortcut_entry` 带 `requires = ["ch4_shortcut"]` 默认封闭；侧门在地面上方 90 px、底门在地面线、顶门在上边缘；房间不重叠、双向门相邻、捷径刻意不相邻。纵向/捷径骨架复用第 29 程管线：`ch4_branch_b`/`ch4_hub`/`ch4_vault`/`ch4_well`/`ch4_elite` 各 1 台电梯（行程覆盖顶门列并避开平台）、`ch4_well` 3 个单向落台、`ch4_hub` 长椅检查点、捷径屏障；电梯未写 `speed`，沿用 `MovingPlatform` 管线默认 **80 px/s**（第 12 项只针对第 2 章，未碰）。内容节点严格用计划 id：`Arena`/`Arena2`/`Chest1`/`Stele1`/`Shop`(`ch4_hub_shop`)/`Bench`/`Event`（`ch4_event/event`）；Boss 区只放结构 `Arena`。新增 `tests/test_ch4_world.gd` **812 断言**交叉校验计划↔世界并锁定不变项；`tests/test_ch4_plan.gd` 的「目录未创建」锁改为目录/文件存在（778 → 796）。世界仍不被 `game.gd` 引用（`CHAPTER_PLAN_PATHS[3]` 仍空），旧第 4 章 9 房/17 门世界原样保留，第 4 章仍不可达；舞台母题/`ch4_shortcut` 来源/战斗密度/`mask_enemy`/`seat_husk` 独立数值/Boss 4 机制/阿砚同行全部留空未施工。
+- 第 4 章内容数据层第 1 步（第 53 程，只做数据层）：新增 `scripts/data/ch4_event_data.gd`（`Ch4EventData`，7 组笑面剧场事件文案，固定读/拿两选项；读 → 污染 +8 + 解明一个残页词 / 兜底残页 +6，拿 → 残页 +12；按 `hash("%d:%s")` + 事件节点 id `ch4_event/event` 确定性轮换，不耗 run RNG）；`game.gd` 的 `_event_data` 扩到第 4 章（第 1 章原键与原值、第 2 章 `Ch2EventData`、第 3 章 `Ch3EventData` 均不变；索引 ≥ 4 仍返回 `{}`）；`chapter_4_demo.tres` 补 `authority_pool = [续命, 改写]`（条件项仍由 `AuthorityController.build_pool` 从 `ContentLibrary` 追加吞噬/归档）；`BossEntranceData` 新增第 4 章「笑面史官」8 条入场文案、`BossPhaseData` 新增阶段 2/3 各 8 条（第 1 章保留 `"%d:%d"` 选句键，第 2/3/4 章用 `"%d:%d:%d"`；不回落到第 1/2/3 章；`BossEntranceData` 既有键 `"%d:%d" % [seed, chapter_index]` 经核查后保持原样），Boss 4 HP 520 / 伤害 18 / 速度 92 / `smiling_archivist.png` / `boss_script = smiling` 未改；计划仍 `content_pending = true`、无 `wave` 表、无 `boss_scene`，6 场战斗与 `ROOM_WAVES[3]` 六波只校验计划顺序（事件节点无波、清房目标 7）；新增 `tests/test_ch4_content.gd`（613 断言）锁定上述内容并锁 `CHAPTER_PLAN_PATHS[2]/[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧世界、旧第 4 章 9 房/17 门世界与第 1–3 章计划/世界不变；第 4 章仍不可达，事件区无真实触发、波次接线与 Boss 4 机制未开始。
+- 第 4 章波次接线（第 54 程，只做数据层）：`chapter_4_demo.tres` 的 4 个战斗区（`ch4_branch_a`/`ch4_branch_b`/`ch4_well`/`ch4_elite`）补 `wave` 字典，6 个键 = 6 个战斗遭遇节点 id，值按计划顺序逐字复用 `ROOM_WAVES[3]` 六波（`mask_enemy`+`seat_husk` / `choir_summoner`+`page_swarm` / `seat_husk`+`mirror_sniper` / `mask_enemy`+`typo_beast` / `ink_bomber`+`mask_enemy` / `mirror_sniper`+`page_swarm`），波次内容未新增/未修改；事件节点 `ch4_event/event` 无波，Boss 区不占普通波次，清房目标仍 7。`content_pending` 按第 40/43 程约定由 `true` 改回 `false`，波次表进入 `validate()` 正常校验（区域/门图校验不变），标志本身保留在 `ChapterPlanData`（默认 `false`、向后兼容）；图骨架夹具顶层的 `content_pending: true` 是夹具元数据、未改。测试就近扩展既有套件：`test_ch4_content`（641 断言，+28）锁定波次键集合/计划顺序取值/事件与 Boss 排除/`validate_waves()` 干净，并把第 4 章计划挂到独立 `game.gd` 实例经 `_plan_wave()` 按节点 id 读回六波（证明第 33 程通用大图分支可直接取用，但不改章节路由）；`test_ch4_plan`（795，−1）与 `test_ch4_world`（813，+1）的待接线期望同步为已接线；并锁 `CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧世界、旧第 4 章 9 房/17 门世界仍在、第 1/2/3 章计划与世界不变、清房目标仍 7。产品代码（`game.gd`/`ChapterPlanData`/世界/Boss 4 数据与文案）未改；第 4 章仍不可达，事件区真实触发验证、Boss 4 机制/`boss_scene`、第 4 章大图验收未开始。
+- 第 4 章 Boss 4 机制与 `boss_scene` 路由（第 57 程，只做机制与测试层）：`chapter_4_demo.tres` 的 `boss_scene` 指向既有 `scenes/bosses/smiling_archivist.tscn`（`SmilingArchivist extends InkArchivist`），通用 Boss 流程复用；`_spawn_boss` 优先级（战役表 → 计划 → `boss_script == smiling` → `reader` → 默认）与兜底未改。机制沿用既有实现并由测试锁定：阶段 1 纸页波；阶段 2 每第 3 次镜面弹幕（3 枚、张角 ±0.34 rad、每枚 `int(攻击力 × 0.7)`、速度 280），其余纸页波（阶段 ≥2 双发）；阶段 3 四拍 `%4` = 改写 → 镜面弹幕 → 墨雨 → 纸页波（墨雨 3 个 `InkWarning`、`int(攻击力 × 0.75)`；改写封 0 号短语槽 3.0 s）。数值 HP 520 / 伤害 18 / 速度 92 / 立绘 `smiling_archivist.png` / `boss_script = smiling` 未改，为暂定口径。大图生成高度沿用 `_enemy_spawn_y()`（计划在 → -18 px，无计划 → 250 px）。新增 `tests/test_ch4_boss.gd`（78 断言：计划路由、场景类型、战役表数值/立绘未改、完整节拍表、纸页波伤害、改写槽位/时长、生成高度、第 4 章选句键不回落、第 1/2/3 章隔离、计划槽/旧世界/清房目标/波次/权柄池锁）；`test_ch4_plan` 795→**797**、`test_ch4_world` 813→**814**、`test_ch4_content` 642→**644**；可玩性集成新增 `_test_ch4_bigmap_boss`（真实大区世界走完 Boss 4 → 权柄 → outro → 章末选择 → 战役结束、重载不二次生成），810→**869**。`CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧世界、旧第 4 章 9 房/17 门世界仍在、第 1/2/3 章计划与世界不变、清房目标 7、波次表与事件触发口径不变、`_complete_chapter` 与章节路由未改；第 4 章仍不可达。未做 Boss 4 机制扩展（删除词/复制武器/舞台机关）、`ch4_shortcut` 授予、扩波/增遭遇、`mask_enemy`/`seat_husk` 独立数值、舞台母题呈现层、阿砚同行；待确认第 11–16 项未碰。
+- 第 4 章章末收口（第 58 程，只做章末流程与测试层）：`_complete_chapter` 在既有第 3 章分支之后新增 `_chapter == 3` 分支，章末选择后调用现有 `_finish(true)` 结束战役（与旧 `else` 兜底行为等价，本程显式化）；第 1/2/3 章分支与 `_chapter + 1 < chapter_count()` 兜底未改，只更新过时注释。第 4 章章末文本/选项/`ch4_outro` 语音本已齐全（4 句 outro、重写/焚毁两选项、`smiling_theater` 选择分支），未新编剧情。`_test_ch4_bigmap_boss` 扩为完整章末链路并锁定第 4 章原文/语音/选项/结局规则与全部不变项，旧线性世界遍历补「停在第 4 章/战役结束」断言；可玩性集成 869 → **894**。第 4 章仍不可达、计划仍未接入 `game.gd`、未做 Boss 4 机制扩展与第 4 章大图验收。
+- 第 4 章大地图系统验收（第 59 程，只做验收与测试层）：`tests/integration_ch4_bigmap.gd` **4869 断言 / 0 失败（连续两次）**，覆盖计划图九区 BFS、世界 22 门全部实走（20 连通 + 2 只到达）、2 扇单向语义、单矩形边界/相机、纵向（5 台电梯实测管线默认 80 px/s、纵井 3 单向落台、长椅、top/bot 门、坠落平面）、门过渡无叠加模态、3 箱 2 碑一次性、`ch4_branch_a` 双遭遇与其余四个战斗区逐场波次/精灵、清房 7（HUD 8）、隐藏书库首次发现/地图揭示、`hub_shortcut_entry` 屏障默认封闭且测试注入后跨存档、世界级存档恢复、Boss 4 生成/数值/立绘/入场与阶段 2/3/权柄/章末结束战役/重载不二次生成、性能基线，以及第 4 章专属表现（笑面剧场平铺背景、灰烬光柱、`embers`、`blood_moon`、其余区空背景且无 theater 层、地图标题「笑面剧场地图」、8 种敌人专属美术无回退）。未发现产品缺陷（首次尝试遗留脚本的重复声明解析错误与覆盖缺口已在测试层修复）；产品代码（`scripts/`/`scenes/`/`resources/`）未改，`CHAPTER_PLAN_PATHS[3]` 仍空、第 4 章仍不可达、未接入 `game.gd`。
+- 第 4 章内容数据层第 3 步（第 56 程，只做触发与测试层）：`_on_mds_room_loaded` 第 34 程的区域级大图事件分支是章节无关判定（`big_map` + 计划区域 `type == "event"` + `_event_data` 非空），第 53 程 `_event_data` 已路由第 4 章，因此 `ch4_event` 无需第 4 章专属触发路径——计划与大区世界挂上后，进入区域即自动打开第 4 章事件页。`game.gd` 仅把该分支注释的「Chapters 2–3」更正为「Chapters 2–4」，行为零改动。测试层验证：进入 `ch4_event` 即开页，文案/标题/两选项 = `Ch4EventData.pick(run_seed, "ch4_event/event")`（不耗 run RNG）；拿 → 残页 +12 + 提示 + HUD「档案 1 / 8」，读 → 污染 +8（倍率/上限 100）+ 解明一个残页词或兜底 +6；结算写 `cleared_encounters["ch4_event/event"]`、清房计数 +1（目标 7、分母 8），run save 落盘同一键，重载不重开/不暂停/不重复计数/不重复奖励。`tests/integration_playability.gd` 新增 `_test_ch4_bigmap_event_trigger`（可玩性集成 755 → **810**，含第 4 章旧世界恢复），`tests/test_ch4_content.gd` 补触发键一致性断言（641 → **642**）；并锁 `CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧 `chapter_4.mdsworld.json`、旧第 4 章 9 房/17 门世界仍在、第 1/2/3 章计划槽不变、计划清房目标 7/7 个遭遇/波次表（`content_pending = false`）/`boss_scene` 仍空、第 1–3 章事件数值不变、`game.gd` 无 `ch4_event` 专属触发与 `chapter_4_bigmap` 路由。第 4 章仍不可达；Boss 4 机制/`boss_scene`、第 4 章大图验收、可达性未开始；未新增 `ch4_shortcut` 授予，战斗密度/`mask_enemy`/`seat_husk` 独立数值/舞台母题/阿砚同行均未做；待确认第 11–16 项未碰。
+- 样图截图（第 60 程，只截图）：新增 `tests/capture_bigmap_chapters.gd`（xvfb + OpenGL 离屏渲染；真实主场景 + 临时挂载第 2/3/4 章计划与大区世界，拍完不写回产品默认值），产出 9 张 1280×720 PNG（每章入口全景 / 纵井 / Boss 战各 1 张，存 `artifacts/screens/ch2|ch3|ch4/`，不提交）；9 张全部通过尺寸/非空/非黑非白核验（像素均值 28.5–46.5、暗像素 ≤ 1.3%、白像素 0%）。产品代码/场景/资源零改动，`CHAPTER_PLAN_PATHS` / `MDS_WORLD_FILES` / 章节路由与第 2/3/4 章不可达状态均未动；截图发现的表现问题只记录不修。
+- 第 2–4 章大图样图问题修复（第 63 程，第 64 程接力核验收尾）：`MDSBigRoom._build_backdrop()` 改为以房间底部为锚、自下而上平铺，奇数行 `flip_v` 镜像，相邻瓦片共用边缘行，消除 1440/2160 高房间的纵向硬接缝（`backdrop_rect_local()` 与房间求交）；`game.gd._on_mds_room_loaded` 统计 `BenchCheckpoint`，无 `Arena` 的大图房间只有在作者了长椅或商店时才走休整目标与 `RestRoomData` 文案，三章入口改回「继续前进」；`test_big_room` +18 条镜像接缝像素断言，第 2/3/4 章大图集成 +106/+123/+129 条接缝与文案断言；9 张样图重拍后逐张核验，接缝行行差低于同段中位数。第 60 程问题 1/3/5/6/7 未修（第 13/15 项相关），第 2/3/4 章仍不可达。
+- NPC 个人事件第一批（第 65 程，叙事审计 E2）：新增 `NPCEventData`（陆沉/阿砚/咕噜各一个 Hub 个人事件，对白依据 `docs/story-bible.md` 既有弧线与关键道具）、`Profile.npc_events`（`[npc] events` 存档键，旧档缺省为空）、`hub.gd` 事件对话分支。触发 = 信任档 + `Profile.demo_cleared`（陆沉 信任 6 / 阿砚 托付 12 / 咕噜 熟悉 2）；用现有 `DialogueUI` 呈现，读完最后一行才记录，中途关闭不消耗；零奖励、零数值改动、不新增背包物品；咕噜事件后不自动开商店。闻烬/白榆保持不可见、无事件。单元 +187（`test_npc_events`）、`integration_menus` +28；第 1 章/Hub 既有流程无回归，第 2–4 章仍不可达。见「NPC 个人事件（第 65 程）」专节与 ADR。
+- 结局文本加厚（第 66 程，叙事审计 E3）：新增 `EndingEchoData`——五个结局 × 五名 NPC 各一句余味（25 句）+ 每结局一段同时回收「笑面史官身份」与「最后一页」的回收段（5 段）；结束屏新增 `Echoes` 标签、结局画廊已解锁条目追加余味与回收段，未解锁仍是原占位。5 个结局 id/标题/现有两句正文/`ending_for` 判定/`Profile.endings` 记录与存档格式一字未改；demo 内不可达的复原/焚毁余味照写并由测试层验证。单元 +469（`test_ending_echoes`），十一套集成与基线逐套件一致全 0 失败。见「结局文本加厚（第 66 程）」专节。
 - 手柄：左摇杆移动、A 跳、X 攻击、B 翻滚、Y 交互/言灵、LB/RB 换武器、LT/RT 短语、十字键/Start/Back 菜单快捷键；键位页可重绑手柄键；HUD 与常用提示随最后输入设备切换。
 - 菜单焦点：暂停菜单新增设置入口，标题/暂停/设置/键位页打开即抓取焦点，方向键/左摇杆可导航。
 - 菜单回归：剧情普通页 B 关闭、对话/商店打开聚焦与关闭恢复焦点、标题「新游戏」改用场景内 `ConfirmPanel`（A 确认 / B 取消 / 焦点回归）；真实手柄 A/B 集成覆盖全部主要菜单与 Hub 设置子页。
 - 设置：AI 三 provider 切换/保存有专项集成（临时配置路径，不访问网络）；主音量写入 Profile 并在启动时应用。
 - 美术：demo 可见资产全像素化，`tests/check_pixel_assets.py --demo` 36 资产 0 失败。
-- 测试（本机 Godot 4.7.stable 实测，第 25 程收尾，HEAD 见本程日志）：单元 **5645 passed / 0 failed**；八套集成全部 0 失败——结构 **269**、第一章 demo **81**、run save **541**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**；`--headless --import` 与 `--quit` 退出 0、`ERROR` 0；游戏退出泄漏回归 `tests/check_exit_clean.sh` **10/10 clean**；demo 像素资产检查 **36 / 0**。
+- 测试（本机 Godot 4.7.stable 实测，第 59 程收尾，HEAD 见本程日志）：单元 **12657 passed / 0 failed**（第 52 程 11925；第 53 程 +620：新增 `test_ch4_content.gd` 613 断言 + 既有测试净 +7；第 54 程 +28：`test_ch4_content` +28、`test_ch4_plan` −1、`test_ch4_world` +1；第 56 程 +1：`test_ch4_content` 触发键一致性；第 57 程 +83：新增 `test_ch4_boss.gd` 78 + `test_ch4_plan` +2、`test_ch4_world` +1、`test_ch4_content` +2；第 58 程不变：新断言全在可玩性集成；第 59 程不变：新断言全在第 4 章大图验收套件）；十一套集成全部 0 失败——结构/可玩性 **894**、第一章 demo **102**、run save **613**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**、第 2 章大地图 **2209**、第 3 章大地图 **4235**、第 4 章大地图 **4869**；`--headless --import` 与 `--quit` 退出 0、`ERROR` 0；游戏退出泄漏回归 `tests/check_exit_clean.sh` **10/10 clean**；demo 像素资产检查 **36 / 0**。第 60 程未改测试与产品代码，基线数字不变；新增仅截图脚本 `tests/capture_bigmap_chapters.gd`（不计入单元/集成断言）。第 63/64 程（样图问题修复）后：单元 **12773 / 0**（+18，`test_big_room` 新增背景镜像接缝像素断言）；十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2315 / 4358 / 5133** 全 0 失败（第 2 章 2209 → **2315**、第 3 章 4235 → **4358**、第 4 章 5004 → **5133**，新增均为背景接缝与入口文案断言），其余套件不变；退出泄漏 **10/10 clean**、demo 像素资产 **36 / 0**。第 65 程（NPC 个人事件）后：单元 **12960 / 0**（+187，全部为新增 `test_npc_events.gd`）；十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 / 5133** 全 0 失败（仅菜单 A/B 391 → **419**，+28 为真实 Hub 个人事件断言；其余十套与第 64 程基线逐套件一致）；退出泄漏 **10/10 clean**、demo 像素资产 **36 / 0**。第 66 程（结局文本加厚）后：单元 **13429 / 0**（+469，全部为新增 `test_ending_echoes.gd`）；十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 / 5133** 全 0 失败，与第 65 程逐套件一致；退出泄漏 **10/10 clean**、demo 像素资产 **36 / 0**。第 67 程（接力收尾第 66 程）复跑确认：单元 **13429 / 0**、十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 / 5133** 全 0 失败、退出泄漏 **10/10 clean**、demo 像素资产 **36 / 0**，与第 66 程自称逐项一致。
 - 控制器 UI：`ui_accept`/`ui_cancel` 已补手柄 A/B（Godot 内置 UI 动作本身不带面键），菜单确认/返回在实机手柄上可用；设置页的子页（AI/键位/说明）可逐层用 B 关闭并恢复焦点。
-- 构建：Windows/Android 构建配置与产物路径（产物不提交）；Windows 120 FPS 记录。第 3 程已验证 Windows debug 与 **release** headless 导出成功（`build/windows/changzi-adventure.exe`，131,767,792 bytes / 约 125.7 MiB，PE32+ x86-64，embedded PCK，单 exe 可分发）。按用户决定，发行阶段前不再做打包/导出/安装器/签名验证。
+- 构建：Windows/Android 构建配置与产物路径（产物不提交）；Windows 120 FPS 记录。第 3 程已验证 Windows debug 与 release headless 导出成功（单 exe，embedded PCK）。第 75 程按用户 2026-11-06 拍板为 v0.12.0 里程碑重新导出 release：`build/windows/changzi-adventure.exe` **132,104,632 bytes**（约 126.0 MiB，PE32+ x86-64，内嵌 PCK 22,930,348 bytes），zip **59,572,799 bytes** 存 `artifacts/releases/v0.12.0/`（不提交）；导出/打包已验证，Windows 实机首跑与代码签名/安装器仍待发行阶段。
 
 ## 未完成（按优先级）
 
@@ -41,11 +81,12 @@ Chapter 1 demo `0.11.0-demo` 已可完整游玩（标题 → Hub 教学 → 六�
 | 5 | 存档 v2 `.bak` 实机路径 | 已完成：补「主文件缺失 + 备份存在」「主文件损坏 + 备份存在」「两者皆无」自动化测试；修复 `ConfigFile` 失败后复用实例导致备份二次加载失败的真实缺陷（`Profile` 与 `RunSave` 均已修） | S | ✅ 本程完成 |
 | 6 | 截图补齐 | 不需真人部分已完成：新增 `tests/capture_authority_ending.gd`，用 xvfb + OpenGL 离屏渲染产出权柄选择/结束屏 1280×720 与 2560×1440 截图（`artifacts/screens/`，未提交）；纯 `--headless` 为 dummy 渲染器无法截图。1080p 实机截图归入很久以后的发行阶段，现阶段不做 | S | ✅ 自动化部分完成 |
 | 7 | 5–10 人封闭试玩 | 用户 2026-11-03 拍板搁置：不组织、不冻结功能 | — | 已搁置 |
-| 8 | T17 权柄 P1 + 叙事扩展 | 吞噬/归档、信任分层、结局画廊已完成（第 25 程）；Boss 2–4 机制随第 2–4 章各自补完 | L | 🔶 三项完成，Boss 待章节 |
-| 9 | T18 发行准备 | **很久以后的发行阶段事项，现阶段不做。** 第 3 程已留档：安装器脚本 `packaging/windows/changzi-adventure.iss`、打包 README 与 `docs/release/windows-signing.md`（signtool/时间戳/Inno 签名/CI 步骤）；真实代码签名证书、安装器编译、Windows 实机验证均推迟。本程未做任何打包/导出/签名工作 | L | 推迟到发行阶段 |
-| 10 | 第 2–4 章 demo 化 | 当前保留但 demo 不可达 | L | 非 Windows demo 范围 |
+| 8 | T17 权柄 P1 + 叙事扩展 | 吞噬/归档、信任分层、结局画廊已完成（第 25 程）；Boss 2 机制已完成（第 35 程）；Boss 3 机制已完成（第 45 程）；Boss 4 机制已完成（第 57 程：计划 `boss_scene` 路由既有 `smiling_archivist.tscn`，镜面弹幕/纸页波/墨雨/改写与数值由 `test_ch4_boss` + 可玩性集成锁定；入场/阶段文案第 53 程已编写）；NPC 个人事件第一批（第 65 程）：陆沉/阿砚/咕噜三个 Hub 事件，信任档 + `demo_cleared` 触发、一次性、零奖励；结局文本加厚（第 66 程）：五结局 × 五 NPC 余味 + 每结局「笑面史官 / 最后一页」回收，结束屏与已解锁画廊展示，判定/记录/存档不变；闻烬/白榆事件仍待拍板 | L | 🔶 三项完成，Boss 2/3/4 完成，NPC 个人事件第一批 + 结局余味完成；闻烬/白榆事件待拍板 |
+| 9 | T18 发行准备 | **发行阶段事项，第 75 程按用户拍板部分提前。** 第 3 程已留档：安装器脚本 `packaging/windows/changzi-adventure.iss`、打包 README 与 `docs/release/windows-signing.md`（signtool/时间戳/Inno 签名/CI 步骤）。第 75 程已从 HEAD `7d11fc2` 重新导出 Windows release exe（132,104,632 bytes，内嵌 PCK）并打 zip（59,572,799 bytes），见「Windows 导出（第 75 程）」专节；真实代码签名证书、安装器编译、Windows 实机首跑仍推迟/待验证 | L | 导出/打包已完成；签名/安装器/实机待发行阶段 |
+| 10 | 第 2–4 章 demo 化 | 第 2 章大地图可行性核查已完成（第 26 程，见下方专节）；施工第 1 步解耦（第 27 程）、第 2 步房间生产管线（第 28 程）、第 3 步纵向/捷径道具管线（第 29 程）、第 4 步前半段的计划/图骨架（第 30 程）与后半段的真实大区世界/房间 + `game.gd` region 语义（第 31 程）已完成；第 32 程完成内容数据层第 1 步（第 2 章事件数据、权柄池、Boss 入场/阶段文案、遭遇/波次校验）；第 33 程完成内容数据层第 2 步的波次接线（计划 `wave` 按遭遇节点 id、6 波对应、大区 Arena 逐节点生成），第 34 程完成内容数据层第 3 步的事件区真实自动触发（区域级触发、节点 id 一次性结算、重载不重复），第 35 程完成第 2 章 Boss 2 独特机制与章末收口（肺钟守卫呼吸/钟摆/钉子、计划 `boss_scene` 路由、第 2 章末停章、大图生成高度修正）；第 36 程完成第 2 章大地图系统验收（九区连通/边界/纵向/过渡/一次性/多遭遇/捷径/Boss/续玩全链路 1303 断言，修复 bot 门到达回弹，性能基线已记录）；第 37 程补齐第 2 章大图门视觉（九区 22 扇，`GateVisual`）与第 2 章新局出生点（`ch2_entry` `SpawnPoint`）；第 38 程补第 2 章地图标题（按章节区域派生，第 1 章不变）并完成第 2 章敌人美术核查（仅 `choir_summoner` 有专属精灵、已接线；其余四种缺美术，保留回退并记录清单）；第 39 程完成第 3 章大地图可行性核查（只查不施工：旧第 3 章 9 房/17 门/6 波/文本语音/Boss 3 专属脚本与立绘均在，缺口为计划、大区世界、事件数据、权柄池、Boss 入场/阶段文案与第 3 章大图验收套件；第 3 章独有差异为海面母题、视野压缩、捷径来源、章末边界）；第 40 程完成第 3 章计划与图骨架（9 区、6 战斗遭遇 + 1 事件占位 = 清房目标 7、3 宝箱/2 残碑、11 门 = 9 双向 + 2 单向、每区坠落平面 240；`content_pending` 只推迟波次表；计划未接入 `game.gd`）；第 41 程完成第 3 章真实大区世界（9 个 `BigRoomData` + 9 个 `MDSBigRoom` 场景 + 独立世界/场景，22 门 = 20 有向 + 2 只到达，入口 `SpawnPoint`，每区坠落 240；世界仍不被 `game.gd` 引用、计划槽仍空）；第 42 程完成第 3 章内容数据层第 1 步（`Ch3EventData`、计划基础权柄池、Boss 3 入场/阶段文案、6 场战斗 ↔ `ROOM_WAVES[2]` 六波校验；计划仍无 `wave` 表、仍未接入 `game.gd`），第 43 程完成第 3 章内容数据层第 2 步（计划 `wave` 按遭遇节点 id 接 `ROOM_WAVES[2]` 六波、事件/Boss 无普通波、清房目标 7、`content_pending` 清零），第 44 程完成第 3 章内容数据层第 3 步（`ch3_event` 区域级真实自动触发、节点 id 一次性结算、读/拿沿用第 42 程口径；未新增触发路径、仍未接入 `game.gd`），第 45 程完成第 3 章 Boss 3 独特机制与 `boss_scene` 路由（镜面弹幕/读页/空白页窗口、计划路由既有 `last_reader.tscn`、数值暂定由测试锁定；计划仍未接入 `game.gd`），第 46 程完成第 3 章章末收口（章末选择后 `_finish(true)` 停章、不自动进第 4 章；第 1/2/4 章分支未改；真实大区世界 + 计划走完 Boss 3 → 权柄 → outro → 章末选择 → 停章，可玩性集成 754），第 47 程因网关中断夭折，第 48 程完成第 3 章大地图系统验收（`tests/integration_ch3_bigmap.gd` 3424 断言 0 失败、连续两次；性能基线已记录；未发现产品缺陷），第 49 程完成第 3 章大图门视觉专项（22 扇门逐门断言 + 修复舱口贴墙标题越界）与第 3 章敌人美术核查（`ROOM_WAVES[2]` 8 种：5 接线白 tint / 3 缺美术回退；第 3 章集成 4235 断言 0 失败），第 50 程完成第 4 章大地图可行性核查（只查不施工：大区管线可直接承载；缺口为计划/大区世界/事件/权柄/Boss 文案与第 4 章验收；美术素材已画好并接线、8 种敌人无回退；第 4 章仍不可达），第 51 程完成第 4 章计划与图骨架（9 区连通图、6 战斗遭遇 + 1 事件占位 = 清房目标 7、3 宝箱/2 残碑、11 门 = 9 双向 + 2 单向、每区坠落 240；`content_pending` 只推迟波次表；计划未接入 `game.gd`，真实大区世界未开始；首次尝试因网关中断夭折，本程接力完成），第 52 程完成第 4 章真实大区世界（只做结构层：9 个 `BigRoomData` + 9 个 `MDSBigRoom` + 独立世界/场景，22 门 = 20 有向 + 2 只到达，`elite_boss` 单向、捷径屏障默认封闭，入口出生点，每区坠落 240，电梯/单向落台/长椅骨架；世界仍不被 `game.gd` 引用），第 53 程完成第 4 章内容数据层第 1 步（`Ch4EventData` 7 组事件、计划基础权柄池续命/改写、Boss 4 入场 8 条 + 阶段 2/3 各 8 条；计划仍 `content_pending`、无 `wave` 表、无 `boss_scene`，仍不被 `game.gd` 引用），第 54 程完成第 4 章内容数据层第 2 步（计划 `wave` 按遭遇节点 id 接 `ROOM_WAVES[3]` 六波、事件/Boss 无普通波、清房目标 7、`content_pending` 清零；计划仍不路由、仍不被 `game.gd` 引用），第 56 程完成第 4 章内容数据层第 3 步（事件区真实自动触发验证：`ch4_event` 沿用通用大图区域分支、进入即开第 4 章事件页、节点 id 一次性结算、重载不重复、run save 同一键；未新增触发路径、计划仍未接入 `game.gd`），第 57 程完成第 4 章内容数据层第 4 步（Boss 4 机制与 `boss_scene` 路由：计划指向既有 `smiling_archivist.tscn`，阶段映射/镜面弹幕/墨雨/改写/数值/生成高度由 `test_ch4_boss` 与可玩性集成锁定；计划仍未接入 `game.gd`），第 58 程完成第 4 章章末收口（`_complete_chapter` 显式 `_chapter == 3` → `_finish(true)` 结束战役；真实大区世界走完 Boss 4 → 权柄 → 第 4 章 outro → 章末选择 → 战役结束；可玩性集成 894），第 59 程完成第 4 章大地图系统验收（`tests/integration_ch4_bigmap.gd` 4869 断言 0 失败、连续两次；九区连通/22 门全走/边界相机/纵向/过渡/一次性/多遭遇/捷径隐藏/Boss/续玩/性能 + 第 4 章专属表现全部断言；性能基线已记录；未发现产品缺陷），第 3 章可达性未开始；第 2–4 章仍不可达，第 2 章可达性与第 3 章施工未开始；第 60 程样图已产出（只截图、未改游戏内容，PNG 不提交）：`artifacts/screens/ch2/ch2_entry_panorama.png`、`ch2/ch2_well_shaft.png`、`ch2/ch2_boss_lung_bell.png`、`ch3/ch3_entry_panorama.png`、`ch3/ch3_well_shaft.png`、`ch3/ch3_boss_last_reader.png`、`ch4/ch4_entry_theater.png`、`ch4/ch4_well_backstage.png`、`ch4/ch4_boss_smiling_archivist.png`（共 9 张 1280×720）；第 62 程完成第 4 章大图门视觉专项与敌人美术核查（22 门逐门断言、地图标题复核、`ROOM_WAVES[3]` 7 敌专属美术锁定；无产品缺陷，见「第 4 章大图门视觉专项与敌人美术核查（第 62 程）」专节），第 63 程修复第 60 程样图的两项可修问题（大区背景纵向接缝、入口/枢纽休整文案路由，第 64 程接力核验与收尾，见「第 2–4 章大图样图问题修复（第 63 程）」专节） | L | 第 2 章施工第 1–4 步 + 内容数据第 1–3 步 + Boss 2/章末 + 第 2 章验收 + 地图标题/敌人美术核查完成；第 3 章核查 + 计划/图骨架 + 真实大区世界 + 内容数据层第 1–3 步 + Boss 3 机制/路由 + 章末收口 + 大图验收 + 门视觉专项 + 敌人美术核查完成（未接入游戏）；第 4 章核查 + 计划/图骨架 + 真实大区世界 + 内容数据层第 1–4 步（波次接线、事件区真实触发验证、Boss 4 机制/`boss_scene` 路由）完成、第 4 章章末收口完成、大图验收完成（未接入游戏）；第 60 程样图已产出（9 张 1280×720，见说明）；第 62 程完成第 4 章大图门视觉专项、地图标题复核与敌人美术核查（22 门逐门、`ROOM_WAVES[3]` 7 敌全部专属美术、无产品缺陷；未接入游戏）；第 63 程修复样图两项可修问题（背景接缝、入口休整文案），第 64 程核验收尾 |
 | 11 | Android/触屏 | 本阶段明确不考虑 | — | 不排期 |
 | 12 | 测试夹具退出泄漏 | 已完成：5 个测试文件未释放 `Profile` / `Enemy`（含其 `BurnStatus` 子节点）；补齐 `free()` 后全量单元测试连续 10 次退出均为 0 ObjectDB / 0 resource / 0 RID | S | ✅ 本程完成 |
+| 13 | 第 2 章大地图施工 | 按「第 2 章大地图可行性核查」E 节顺序：计划/房间管线 → game.gd 解耦 → 纵向道具 → 内容 → Boss/权柄/事件 → 测试；开放可达性前保持不可达。第 27 程完成第 1 步三项基础解耦（坠落平面/节点 id/计划目标）；第 28 程完成第 2 步房间生产管线（可变尺寸/多层/按区背景/氛围/自动门/坠落 metadata）；第 29 程完成第 3 步纵向/捷径道具管线（单向落台/塌陷平台/移动平台/长椅检查点/条件门捷径），第 1 章未迁移；第 30 程完成第 4 步前半段（第 2 章计划 + 9 区图骨架/夹具）；第 31 程完成第 4 步后半段（9 个真实大区世界/房间 + `game.gd` region 语义），第 2 章仍不可达；第 32 程完成内容数据层第 1 步（`Ch2EventData`、权柄池、Boss 入场/阶段文案、遭遇/波次校验）；第 33 程完成内容数据层第 2 步（计划 `wave` 按遭遇节点 id、6 场战斗 ↔ `ROOM_WAVES[1]` 六波、大区 Arena 逐节点生成/结算），第 34 程完成内容数据层第 3 步（`ch2_event` 区域级真实自动触发、按节点 id 一次性结算、重载不重复），第 35 程完成第 2 章 Boss 2 独特机制与章末收口（肺钟守卫呼吸/钟摆/钉子、计划 `boss_scene` 路由、第 2 章末停章、大图生成高度修正），第 36 程完成第 2 章大地图系统验收（D 节 10 项 1303 断言 0 失败；修复 bot 门到达回弹；记录性能基线与后续候选）；第 37 程补齐第 2 章大图门视觉与第 2 章新局出生点（第 1 章无回归）；第 38 程补第 2 章地图标题并完成敌人美术核查/接线（第 1 章无回归）；第 39 程完成第 3 章大地图可行性核查（只查不施工，见「第 3 章大地图可行性核查（第 39 程）」专节），第 40 程完成第 3 章计划与图骨架（9 区、6 战斗遭遇 + 1 事件占位 = 清房目标 7、11 门、每区坠落平面 240；`content_pending` 只推迟波次表；计划未接入 `game.gd`，见「第 3 章计划与图骨架（第 40 程）」专节），第 41 程完成第 3 章真实大区世界（9 个 `BigRoomData` + 9 个 `MDSBigRoom` + 独立世界/场景，22 门、入口出生点、每区坠落 240；世界仍不被 `game.gd` 引用，见「第 3 章真实大区世界（第 41 程）」专节）；第 42 程完成第 3 章内容数据层第 1 步（`Ch3EventData`、权柄基础池、Boss 3 入场/阶段文案、遭遇/波次校验；计划仍无 `wave` 表、未接入 `game.gd`），第 43 程完成第 3 章内容数据层第 2 步（计划 `wave` 按遭遇节点 id 接 `ROOM_WAVES[2]` 六波、事件/Boss 无普通波、清房目标 7、`content_pending` 清零），第 44 程完成第 3 章内容数据层第 3 步（`ch3_event` 区域级真实自动触发、节点 id 一次性结算、读/拿沿用第 42 程口径；未新增触发路径、仍未接入 `game.gd`），第 45 程完成第 3 章 Boss 3 独特机制与 `boss_scene` 路由（镜面弹幕/读页/空白页窗口、计划路由既有 `last_reader.tscn`、数值暂定由测试锁定；计划仍未接入 `game.gd`），第 46 程完成第 3 章章末收口（`_complete_chapter` 新增 `_chapter == 2` 分支，章末选择后 `_finish(true)` 停章、不再自动进第 4 章；第 1/2/4 章分支未改；真实大区世界 + 计划走完 Boss 3 → 权柄 → outro → 章末选择 → 停章，可玩性集成 754），第 47 程因 Magpie 网关中断夭折（无提交），第 48 程完成第 3 章大地图系统验收（九区连通/22 门/边界相机/纵向/过渡/一次性/双遭遇/捷径隐藏/Boss/续玩/性能，3424 断言 0 失败、连续两次；性能基线已记录；未发现产品缺陷；4 处验收脚本自身口径/时序问题已修），第 49 程完成第 3 章大图门视觉专项（22 扇门逐门断言、修复 `ch3_well/top1`/`ch2_well/top1` 舱口标题越界）与敌人美术核查（8 种：5 接线 / 3 回退，缺口记录；第 3 章集成 4235 断言 0 失败），第 50 程完成第 4 章大地图可行性核查（只查不施工：大区管线可直接承载；缺口为计划/大区世界/事件/权柄/Boss 文案与第 4 章验收；美术素材已画好并接线、8 种敌人无回退；第 4 章仍不可达），第 51 程完成第 4 章计划与图骨架（9 区连通图、6 战斗遭遇 + 1 事件占位 = 清房目标 7、11 门 = 9 双向 + 2 单向、每区坠落 240；`content_pending` 只推迟波次表；计划未接入 `game.gd`、真实大区世界未开始，见「第 4 章计划与图骨架（第 51 程）」专节），第 52 程完成第 4 章真实大区世界（结构层：9 个 `BigRoomData` + 9 个 `MDSBigRoom` + 独立世界/场景，22 门 = 20 有向 + 2 只到达、`elite_boss` 单向、`hub_shortcut_entry` 带 `requires` 默认封闭、入口 `SpawnPoint`、每区坠落 240、电梯/单向落台/长椅骨架；世界仍不被 `game.gd` 引用，见「第 4 章真实大区世界（第 52 程）」专节），第 53 程完成第 4 章内容数据层第 1 步（`Ch4EventData` 7 组事件、计划基础权柄池续命/改写、Boss 4 入场 8 条 + 阶段 2/3 各 8 条；计划仍 `content_pending`、无 `wave` 表、无 `boss_scene`，仍不被 `game.gd` 引用，见「第 4 章内容数据层第 1 步（第 53 程）」专节），第 54 程完成第 4 章内容数据层第 2 步（计划 `wave` 按遭遇节点 id 接 `ROOM_WAVES[3]` 六波、事件/Boss 无普通波、清房目标 7、`content_pending` 清零；计划仍不路由，见「第 4 章内容数据层第 2 步（第 54 程）」专节），第 56 程完成第 4 章内容数据层第 3 步（事件区真实自动触发验证，见「第 4 章内容数据层第 3 步（第 56 程）」专节；计划仍不路由、世界仍不被 `game.gd` 引用），第 57 程完成第 4 章 Boss 4 机制与 `boss_scene` 路由（见「第 4 章 Boss 4 机制与 `boss_scene` 路由（第 57 程）」专节），第 58 程完成第 4 章章末收口（`_complete_chapter` 显式 `_chapter == 3` → `_finish(true)` 结束战役，可玩性集成 894；见「第 4 章章末收口（第 58 程）」专节），第 59 程完成第 4 章大地图系统验收（`tests/integration_ch4_bigmap.gd` 4869 断言 0 失败、连续两次，覆盖第 36/48 程 D 节 1–10 项 + 第 4 章专属表现；未发现产品缺陷；见「第 4 章大地图系统验收（第 59 程）」专节），第 3 章可达性未开始；第 2 章施工项本程无变化；第 2 章仍不可达 | L | 🔶 第 1–4 步 + 内容数据第 1–3 步 + Boss 2/章末 + 验收 + 地图标题/敌人美术完成；第 3 章核查 + 计划/图骨架 + 真实大区世界 + 内容数据层第 1–3 步 + Boss 3 机制/路由 + 章末收口 + 大图验收 + 门视觉专项 + 敌人美术核查完成（未接入游戏）；第 4 章核查 + 计划/图骨架 + 真实大区世界 + 内容数据层第 1–4 步（波次接线、事件区真实触发验证、Boss 4 机制/`boss_scene` 路由）完成、第 4 章章末收口完成、大图验收完成（未接入游戏）；下一步由监工定第 2 章可达性/演出与第 3 章可达性排期 |
 
 ## 叙事审计（第 24 程，只查不写）
 
@@ -67,11 +108,11 @@ Chapter 1 demo `0.11.0-demo` 已可完整游玩（标题 → Hub 教学 → 六�
 
 | 章节 | 已有文本/资源 | 可达性 | 缺口 |
 |---|---|---|---|
-| 第二章 · 呼吸废墟 | `CampaignData` 6 句开场、4 句章末、2 个章末选项；Boss「肺钟守卫」；9 房间 MDS 世界；`ch2_intro/outro` 语音 | **不可达**（第一章章末选择后直接 `_finish(true)`） | 无第一章式 `ChapterPlanData` 房间计划/事件房/休息室/书库；阿砚带路与「打过钉子」只在开场文本里；无个人事件 |
+| 第二章 · 呼吸废墟 | `CampaignData` 6 句开场、4 句章末、2 个章末选项；Boss「肺钟守卫」；9 房间 MDS 世界；`ch2_intro/outro` 语音 | **不可达**（第一章章末选择后直接 `_finish(true)`） | 第 26 程时：无第一章式 `ChapterPlanData` 房间计划/事件房/休息室/书库；阿砚带路与「打过钉子」只在开场文本里；无个人事件。第 30–35 程已补第 2 章计划、大区世界、事件、波次与 Boss 2 场景 |
 | 第三章 · 无光海 | 6 句开场、4 句章末、2 个选项；Boss「最后的读者」；9 房间 MDS 世界；`ch3_intro/outro` 语音 | **不可达** | 同上；「最后的读者是孩子」只在文本；无专属事件/抉择之外的剧情节点 |
 | 第四章 · 笑面剧场 | 7 句开场、4 句章末、2 个选项；Boss「笑面史官」；9 房间 MDS 世界；专属背景图与语音 | **不可达** | 同上；「念出同行者名字」「未来的昌子」等节拍只在开场文本；Boss 2–4 独特机制按 DECISIONS 本阶段不做 |
 
-事实：第 2–4 章的**主线骨架文本与语音已经齐全**（开场/章末/选项/Boss 名），MDS 世界场景各 9 个房间也存在；但没有第一章那套手工房间计划、事件房、残碑/书库/休息室内容，且正常流程不可进入。Boss 2–4 的独特机制未实现（第二章与第一章共用 `ink` 脚本；第三章 `reader`、第四章 `smiling` 仅有脚本标识）。
+事实（第 26 程核查时）：第 2–4 章的**主线骨架文本与语音已经齐全**（开场/章末/选项/Boss 名），MDS 世界场景各 9 个房间也存在；但没有第一章那套手工房间计划、事件房、残碑/书库/休息室内容，且正常流程不可进入。Boss 2–4 的独特机制未实现（第二章与第一章共用 `ink` 脚本；第三章 `reader`、第四章 `smiling` 仅有脚本标识）。第 27–35 程已补齐第 2 章的计划/大区世界/事件/波次与 Boss 2 `LungBellGuardian`；Boss 3–4 仍未实现，本段保留为核查基线，当前状态见「已完成」。
 
 ### C. 五个结局的实际文本与可达性
 
@@ -96,10 +137,1506 @@ Chapter 1 demo `0.11.0-demo` 已可完整游玩（标题 → Hub 教学 → 六�
 1. **信任分层**（本程任务 3）：4 档定义（陌生/熟悉/信任/托付）、阈值、存档兼容；态度短句（每 NPC 每档 1 句）、商店/锻造折扣、锻造祝福、起始残页、离线评估器与 AI prompt 注入；保持 AI 默认关闭/静默回退/不双叠。
 2. **NPC 个人事件**（后续）：每人 1 个 Hub 触发事件 + 1 个关键道具 + 1 个结局余味；触发条件用信任档 + 章节进度；闻烬/白榆需先在 demo 中可见或明确维持隐藏。
 3. **结局文本加厚**（后续）：每个结局补 5 名 NPC 的余味各 1 句；补「笑面史官身份」「最后一页」的回收；不改现有 5 个 id 与判定。
-4. **第 2–4 章叙事内容**（后续，随各章补完）：每章房间计划、事件房/残碑/书库、NPC 同行插入、Boss 2–4 阶段台词与机制；仍维持不可达直到章节制作。
+4. **第 2–4 章叙事内容**（后续，随各章补完）：每章房间计划、事件房/残碑/书库、NPC 同行插入、Boss 3–4 阶段台词与机制（Boss 2 已完成，第 35 程）；仍维持不可达直到章节制作。
 5. **结局画廊**（本程任务 4）：解锁记录沿用 `Profile.endings`，5 个条目、未解锁占位、标题屏入口与手柄/键盘焦点。
 
+## 第 2 章大地图可行性核查（第 26 程，只查不施工）
+
+> 范围：按 `.supervisor/DECISIONS.md`「关卡结构方向」核查 MDS 与第 2 章现状，回答“现有系统能否承载单张连通大图、缺口在哪、怎么排施工”。
+> 本程未改第 2 章可达性、未改游戏行为、未新增关卡内容；临时探针测后删除。
+> 标记：**【已核实】** 读代码/资源或实跑探针可复现；**【推断】** 由已核实事实推导、尚未实跑；**【待施工验证】** 必须等真实大图内容落地后才能定论。
+
+### 结论摘要
+
+- **可行性：可以承载，不需要重写 MDS 或存档系统。** MDS 的 room 是“加载单元”，不是“屏幕”：房间矩形可任意大小、可由多个矩形拼成不规则形状，门/无缝衔接/相机限制/地图/存档都按世界坐标工作。第 2 章大地图应当做成**一张连通图 = 多个大区（MDS room）组成的图**，而不是把整章塞进一个 12000 px 的单场景。
+- **真正的施工面不在 MDS，而在两层**：① 房间生产管线（现有 `MDSChapterRoom` 固定 1280×720、单层地面、单 Arena，只够第 1 章模板）；② `game.gd` 的“一房一战斗/一房一拾取/固定 6 房进度”假设（多战斗区、多宝箱/残碑、纵向掉落保护都要改）。
+- **已核实的硬限制**：`game.gd` 的坠落保护按“房间原点下方 850 px”判定（`scripts/game.gd:600-603`）。任何向下超过 850 px 的大房间/下层区域都会把玩家传回检查点并扣 15 血，**大图施工前必须先改成按房间/区域配置的坠落平面**。
+- **未启用但已具备的能力**：MDS 的 links 快旅（`world.gd:1032`）、`MDSGateBarrier` 条件门（能力/物件/Boss 条件，开门状态进 MDS 存档）、MDSRoomCamera 的 SLIDE/BLEND 过渡与不规则房间相机分区。第 2 章世界目前 `links` 为空、世界场景没有挂 `MDSRoomCamera`。
+- **需要用户拍板的两点**见文末「待用户确认」：大图是“大区图 + 短过渡”还是要字面意义的单场景无缝；垂直交通是否允许新增移动能力。
+
+### A. MDS 系统承载力（逐项）
+
+| 能力 | 结论 | 已核实依据 |
+|---|---|---|
+| 大房间尺寸 | **能直接用** | 房间几何是 `origin + rects`（32 px 网格），无最大尺寸校验；`get_room_bounds` 取矩形并集，相机限制按它设置（`core/world.gd:371-400`、`nodes/mds_world_game.gd:671-680`）。探针实测 3840×1440 房间加载、相机限制、玩家落点均正确。 |
+| 多矩形/不规则房间 | **能直接用（地图/碰撞）；相机需配置** | `room_contains`/`room_at` 逐矩形判定（`core/world.gd:432-450`）；探针实测 L 形 2560×2160 房间：并集边界正确、缺口不可行走。但不挂 `MDSRoomCamera` 时相机只按并集包围盒限制，会看到缺口外的空白；要按矩形分区取景需给世界场景加 `MDSRoomCamera`（`nodes/mds_room_camera.gd:275-330,621`）。 |
+| 房间衔接 | **能直接用** | 门由世界 JSON + 场景里的 `MDSGate` 节点连接；`seamless_rooms=true` 时走进相邻矩形会无门切换（`nodes/mds_world_game.gd:232-247`）。探针实测无缝跨房加载 1.6–6.1 ms（轻量测试房间），相机限制随新房更新，玩家位置保持。 |
+| 房间过渡 | **能直接用；速度感需小改** | 现有世界统一 `fade_time=0.22`（`scenes/mds/chapter_2_world.tscn`）；MDS 另有 CUT/SLIDE/BLEND 和镜头分区混合（`nodes/mds_room_camera.gd:37,275-310`）。挂 `MDSRoomCamera` 后可做《死亡细胞》式滑镜/混合，**待施工验证**其在第 2 章大区上的观感与相机分区。 |
+| 检查点 | **需小改** | MDS 只在“无门进入”时找 `save_point`/`bench` 组决定落点（`nodes/mds_world_game.gd:607-620`）；游戏层每次进房/事件/奖励/商店/宝箱/残碑/暂停/关窗都会写 run save，且 MDS 存档含**精确玩家坐标**（`mds_world_game.gd:908-927`、`game.gd:480-537`）。缺的是“大区内长距离跑图的中途存档点/坠落回退点”：需要一个长椅/检查点物件同时更新 `_last_checkpoint` 并写 run save。 |
+| Boss 房接入 | **能直接用** | Boss 房按房间 id `_boss` 或计划 `type=boss` 识别，`ArenaRoom` 内生成 Boss，死亡后走权柄/章末流程（`game.gd:1250-1275,1740-1760`）；第 1 章与第 2–4 章结构测试均覆盖 Boss 生成。大图只需把 Boss 区作为图末端的独立 MDS 房间；大 Boss 场需重摆 `ArenaRoom` 的门/入场判定（入场半宽 530 在 `scripts/levels/room.gd:13`，门在 ±620 见 `scenes/levels/room.tscn:15,31`）。 |
+| 垂直探索 | **MDS 能直接用；游戏层需小改** | 世界 JSON 的 gate side 支持 `top`/`bot`（`core/world.gd:850-859`）；从下方进入给至少 650 px/s 向上出速（`nodes/mds_world_game.gd:583-596`）。探针实测 top/bot 门侧、落点向内 96 px、bot 出速 -650 全部正确。**但** `game.gd:600-603` 的 850 px 坠落保护会误杀下层；且 `MDSChapterRoom` 地面固定 y=560、只有单层（`scripts/levels/mds_chapter_room.gd:22-25`），大房间/多层必须换房间生产管线。 |
+| 支路/捷径 | **能直接用；快旅未实装** | 门可分叉、可单向（只放一侧门）；`door` 交互门已用于书库/捷径（`mds_chapter_room.gd:246-305`）。MDS links 支持成对快旅/电梯（`core/world.gd:1032`、`nodes/mds_gate.gd` 的 `link`），但四章世界 JSON 的 `links` 全为空，项目内无使用样例，启用属**小改 + 待施工验证**。 |
+| 隐藏要素 | **能直接用 + 一个新小道具** | 隐藏书库模式已跑通：交互门进独立房间、首次发现金色反馈（`mds_chapter_room.gd:246-305`、`game.gd:1289-1300`）。条件门 `MDSGateBarrier` 支持能力/物件/Boss 条件且开门状态进 MDS 存档（`nodes/mds_gate_barrier.gd`）。MDS 场景扫描器识别 `breakable/destroyable/destructible/crate` 组（`scene_scanner.gd:26`），但仓库没有可破坏墙运行时脚本；要“打碎墙”需新增一个小型 breakable 道具，否则用条件门/交互门即可。 |
+| 地图 | **能直接用** | 游戏内地图由 `MDSWorldMapView` 按世界文件自动缩放适配全部已访问房间（`ui/world_map_view.gd:93-103`），大地图/不同尺寸房间无需改绘制。第 2 章地图标题仍固定“档案馆地图”（`scripts/ui/map_overlay.gd:51`），属内容小缺口。 |
+| 存档 | **能直接用** | MDS 的 `get_save_data/set_save_data` 保存当前房、精确坐标、已访问、abilities、stored、defeated、Boss、区域访问等（`mds_world_game.gd:908-970`）；`game.gd` 已把整份 mds 字典塞进 run save 并在续玩时回灌。大图不改变格式。 |
+| 性能 | **现状已核实，大图待验证** | 见 D 节探针：真实第 2 章 1280×720 房间热加载 3.7–8.8 ms，Boss 房约 23 ms（`spore_drift` 动态背景），都被 0.22 s 淡入淡出盖住。大房间的瓦片/碰撞/装饰量级会上升，但 MDS 一次只加载一个 room，内存不会叠加整章；**待施工验证**最大区的加载耗时与帧率。 |
+
+### B. 第 2 章现有内容盘点
+
+**已有（已核实）**
+
+- **世界与房间**：`scenes/mds/chapter_2_world.tscn` + `chapter_2.mdsworld.json`，9 个 MDS 房间：`ch2_01`–`ch2_06` 六间战斗房、`ch2_rest`（商店 + 残碑 + 捷径门）、`ch2_vault`（宝箱 + 残碑 + 书库门）、`ch2_boss`。全部 1280×720、单层地面、1–2 个平台模板；探针逐房加载 9/9 通过，Arena/商店/残碑/宝箱/Boss 房节点齐全。区域“Breathing Ruins”，天气雾 + 萤火，Boss 背景 `spore_drift`。
+- **主线文本与语音**：`CampaignData` 第 2 章（`scripts/core/campaign_data.gd:71-112`）有 6 句开场、4 句章末、2 个章末选项；`ch2_intro`/`ch2_outro` 语音存在；Boss 名「肺钟守卫」、360 HP、14 伤害、75 速度、专属立绘 `lung_bell_guardian.png`。
+- **敌人**：`breath_hound`、`lung_moth`、`rust_whisperer`、`choir_summoner`、`collapse_husk` 的场景与数据存在（`resources/enemies/`），`ROOM_WAVES` 第 2 章波次已配。
+- **通用系统**：休整房入场白、残碑、商店、宝箱、书库发现、权柄/言灵/遗物/词条/难度全部章节通用；结构集成测试已覆盖第 2 章 9 房（`tests/integration_playability.gd:34-130`）。
+- **旧线性关卡**：`scenes/levels/biome_breathing.tscn` 仍存在，但 `_setup_campaign` 把所有旧 Level 设为不可见 + `PROCESS_MODE_DISABLED`（`scripts/game.gd:1028-1043`），第 2 章实际走 MDS 世界；施工时不要改错对象。
+
+**缺口（已核实）**
+
+- **没有第 2 章房间计划**：`chapter_2_demo.tres` 不存在；`_chapter_plan` 只在 `chapter_index == 0` 加载（`scripts/game.gd:1145-1148`）。因此没有事件房类型、精英房类型、按房波次/奖励池、权柄池。
+- **没有事件房与第 2 章事件文本**：事件流程固定读 `Ch1EventData`（`scripts/game.gd:1340-1344`）；第 2 章没有对应数据，做成 `type=event` 会显示第 1 章文案。
+- **没有第 2 章权柄授予**：`_grant_chapter_authority` 直接 `if _chapter != 0 ... return`（`scripts/game.gd:1755-1756`）；第 2 章 Boss 击败后不会开权柄三选一。
+- **Boss 无独特机制**：第 2 章无 `boss_scene`，走默认 `ink_archivist.tscn` 通用三阶段（纸页波/墨雨/改写）；`lung` 只在 `boss_voice`（阶段语音存在）。Boss 入场文案 `BossEntranceData` 只返回第 1 章（`scripts/data/boss_entrance_data.gd`）；阶段氛围 `BossPhaseData` 也固定第 1 章的纸页/镜面文案（`scripts/data/boss_phase_data.gd`），第 2 章可玩后会看到错位文案。
+- **敌人无专属美术**：`ENEMY_ART` 没有第 2 章五种敌人，走 `ENEMY_ART_FALLBACK` 复用第 1 章精灵并染绿（`scripts/game.gd:40-54`）。背景 `breathing_ruins.png` 是绘画风，未做第 1 章式像素化。
+- **没有 NPC 同行实体**：阿砚带路只存在于开场文本（`campaign_data.gd:74-79`）；仓库没有随行 NPC 控制器。MDS 的 `carry_over` 组可以把节点带过门（`mds_world_game.gd:776-824`），但“跟随移动 + 途中对话/战斗”是新机制。
+- **没有纵向/塌陷内容**：GDD 第 2 章机制写“上下分层、塌陷平台”（`docs/GDD.md:292`），现有 9 房全是单层平地；没有移动平台/塌陷平台脚本。
+- **不可达**：第 1 章章末固定 `_finish(true)`（`game.gd:1813-1817`），第 2 章正常流程进不去；本程未改。
+
+### C. 存档与系统联动（大地图影响点）
+
+| 影响点 | 现状（已核实） | 大地图后果 | 处理 |
+|---|---|---|---|
+| 局内 run save / resume | `game.gd:480-537` 存 room + 精确坐标 + `mds` 字典；MDS `set_save_data` 精确回位（`mds_world_game.gd:908-970`） | 大房间中途退出可原位续玩，无需改格式 | **能直接用** |
+| 房间进度 | `_mds_cleared_rooms` 以 **room id** 为键（`game.gd:1373`），`_cleared_in_chapter` 固定 6 房（`game.gd:1477`） | 一个 room 内多场战斗会“清一场=整房已清”，且进度上限写死 6 | **需小改**：战斗/宝箱/残碑改按“节点/遭遇 id”，进度目标从计划读取 |
+| 一次性拾取 | `_opened_chests[room_id]`（`game.gd:1934`）、`_claimed_steles[room_id]`（`game.gd:2005`）；续玩时整房宝箱全开、整房残碑全清（`game.gd:1226-1237`） | 大房间放多个宝箱/残碑会互相误伤 | **需小改**：按宝箱/残碑自身 id 记录 |
+| 检查点/坠落 | 每次进房设 `_last_checkpoint`（`game.gd:1303`），战斗锁门再设（`:1443`）；坠落保护固定 850 px（`:600-603`） | 下层区域会被误判为坠落；长距离跑图缺少中途回退点 | **需小改**：按房间配置坠落平面 + 长椅/检查点物件 |
+| Boss | `_boss_defeated`、`_resume_boss_aftermath`、Boss 房识别均与房间结构解耦（`game.gd:1250-1275,1310-1318`） | 独立 Boss 区可原样接入 | **能直接用** |
+| 权柄 | 只给第 1 章池（`game.gd:1755-1756`）；`ChapterPlanData.authority_pool` 已存在（`scripts/data/chapter_plan_data.gd`） | 第 2 章 Boss 后无权柄选择 | **需小改**：放宽到有计划的章节 |
+| 事件 | 固定 `Ch1EventData`（`game.gd:1340-1344`），按 room id 每房一次 | 可复用“一房一事件”结构，但需要第 2 章事件数据/模块 | **需新内容 + 小改** |
+| 商店/残碑/书库/休整 | `_shop_cache` 按 shop_id；残碑/宝箱见上；`RestRoomData`/`VaultRoomData` 通用 | 多商店/多休整区可支持，只要 id 唯一 | **基本能直接用** |
+| 言灵/遗物/词条/难度/信任 | 与房间结构无关，全走 run_state/Profile | 不受影响 | **能直接用** |
+| 章节推进 | `_complete_chapter` 在 `_chapter >= 1` 时自动 `_start_chapter(_chapter + 1)`（`game.gd:1815-1821`） | 第 2 章做完会自动进未完成的第 3 章 | 第 2 章完成时加“停在第 2 章末”的收口条件（工程决定，不必问用户） |
+
+### D. 性能与测试面
+
+**探针实测（本程临时探针，测后已删除；headless，Godot 4.7.stable）**
+
+- 合成大房间（3840×1440，约 100 个程序化平台）：加载 **1.3–3.1 ms**；L 形 2560×2160 房间加载同量级；无缝跨房 **1.6–6.1 ms**（轻量内容，不含 `game.gd` 的敌人生成/HUD）。
+- 真实第 2 章世界逐房加载（CUT，无淡入淡出，含房间自建地形/背景/天气/Arena）：热加载 **3.7–8.8 ms**（普通房/休整/书库），Boss 房 **约 23 ms**（`spore_drift` 动态背景）；首次访问另有脚本编译尖峰（最高约 55–73 ms），被 0.22 s 过渡盖住。
+- **推断**：大房间耗时随瓦片/装饰/敌人数量上升；只要仍用门 + 淡入，几十毫秒可被过渡掩盖；若用无缝走进重内容区，同步 `load(path)` 会掉帧。**待施工验证**最大区 + 多敌人 + 天气的实际数字。
+
+**第 36 程验收实测（含真实敌人/天气/Boss，`fade_time = 0`）**
+
+- 普通区热加载 **5.6–9.2 ms**；Boss 区首次 **61.0 ms**（冷启动）、第二次 **10.2 ms**、套件内热加载 **24–43 ms**（运行波动）；精英区首次 **35.0 ms**；Boss 区关闭动态背景 **11.7 ms**、关闭天气 **9.1 ms**、不生成 Boss **35.9 ms**。正常游玩由 0.22 秒淡入覆盖，未发现需要本程处理的性能缺陷。完整数字见 `docs/memory/sessions/2026-11-04-chapter2-bigmap-acceptance.md`。
+
+**后续施工要补的测试面（第 36 程已按 1–10 项补齐，见 `tests/integration_ch2_bigmap.gd`）**
+
+1. 大图连通性：从入口 BFS 能到休息区/书库/Boss；每扇门双向或明确单向；无孤立房间。
+2. 大房间边界/相机：房间并集/多矩形缺口、相机限制、玩家不越界；不规则房间的 `MDSRoomCamera` 分区。
+3. 纵向：top/bot 门落点与出速、上下层可达、坠落平面不再误杀、长椅检查点回退。
+4. 衔接：门过渡、无缝边界、过渡期间不掉暂停/不叠 UI、续玩回到正确房间与坐标。
+5. 一次性内容：一房多宝箱/多残碑各自只发一次；续玩不重复、不误开。
+6. 战斗：一房多遭遇的逐场锁门/清怪/奖励；清房进度与 Boss 目标按计划总数。
+7. 捷径/隐藏：条件门解锁状态跨存档；隐藏区首次发现反馈；地图揭示。
+8. Boss：独立 Boss 区生成/续玩/击败后权柄与章末；大 Boss 场门位。
+9. 性能：最大区加载耗时、淡入期间帧时间、无缝切换尖峰、天气/动态背景开销。
+10. 叙事/系统：第 2 章事件文案、Boss 阶段/入场文案、权柄池、章节收口（不自动进第 3 章）。
+
+### E. 设计要点与施工顺序
+
+**推荐结构（第 2–4 章通用，本章只给第 2 章示例）**
+
+- 一张连通图 = **6–9 个大区（MDS room）**，每区 1–3 屏大小（例如 2560×1440、3840×2160），用门/无缝边界连接；不是 12000 px 单场景。
+- 图形态：入口 → 两三条可回环的支路 → 中央枢纽（休整 + 商店 + 残碑 + 捷径解锁）→ 纵向井/上下层 → 精英/事件区 → Boss 区。支路放隐藏书库/宝箱，捷径从枢纽接回前段。
+- 纵向：平台间距按现有跳跃能力（`jump_velocity=-500`、`gravity=1350`，最大跳高约 92.6 px，`scripts/player/player.gd:12-13`、`scripts/levels/room_layout_data.gd`）控制在 ≤80 px；长距离上升用 top/bot 门、电梯/移动平台或单向落台，不硬塞台阶。
+- Boss 区独立成一个 room（`ch2_boss` 或计划 `type=boss`），沿用现有 Boss 管线；大 Boss 场再调 `ArenaRoom` 门位。
+- 地图仍用 `MDSWorldMapView`：每个大区是一个地图块，已访问点亮；不要合并成一个巨大矩形，否则地图退化成一块。
+
+**施工顺序（建议，非本程施工）**
+
+1. **数据/计划**：给 `ChapterPlanData` 增加大图字段（区的类型/战斗遭遇/宝箱残碑 id/捷径/隐藏/坠落平面/Boss），先写第 2 章计划资源。
+   - **第 30 程已完成（前半）**：`ChapterPlanData` 大图字段 + `chapter_2_demo.tres`（9 区、清房目标 7）+ 图骨架夹具与校验。计划暂未接入 `game.gd`，第 2 章实际世界/房间未开工。见 ADR `docs/memory/decisions/2026-11-04-chapter2-big-map-graph.md`。
+2. **房间生产管线**：新增可变尺寸、多层地面/平台的房间构建器（或改用 MDS Room view 手绘）；背景按房间宽度平铺；天气/动态背景按区/相机范围控制。现有 `MDSChapterRoom` 保留给第 1 章。
+   - **第 28 程已完成**：`BigRoomData` + `MDSBigRoom` + `BigRoomAmbient`。房间尺寸/多矩形并集与相机限制走 MDS；多层地面/平台按现有跳跃（≤80 px 高差、≤120 px 水平边缘）校验；背景按并集平铺、按房间→区域→世界取图；天气/动态背景保留 MDS 按区域解析；氛围只在相机窗口内绘制；门由世界 JSON 自动生成；坠落平面写入房间 metadata。第 1 章未迁移，第 2 章内容未开工。见 ADR `docs/memory/decisions/2026-11-04-big-room-pipeline.md`。
+3. **game.gd 解耦**：多遭遇注册/逐遭遇清房、按节点 id 的一次性拾取、计划驱动进度、按房间坠落平面、长椅检查点、第 2 章权柄池、事件数据分章。**第 27/31–35 程已完成**（含大图生成高度修正与第 2 章末停章）。
+4. **纵向/捷径道具**：单向落台、塌陷平台（GDD 第 2 章机制）、电梯/移动平台；条件门/可破坏墙按需二选一。
+5. **内容**：第 2 章区图、敌人布置、事件、休整/书库、阿砚同行（如做）、Boss 2 机制与阶段/入场文案。**第 31–35 程已完成**区图/房间、事件、波次、Boss 2 机制与阶段/入场文案；阿砚同行未做。
+6. **验收**：按 D 节测试面补集成；先保持第 2 章不可达，全部绿后再由监工决定开放。
+
+**风险/边界**
+
+- 不改 MDS 本体、不改存档格式、不改言灵/权柄/战斗框架；新增移动平台/塌陷平台属关卡道具，不碰玩家战斗数值。
+- 第 2 章做完前不开放可达性；第 3 章仍不可达，`_complete_chapter` 的自动续章要加收口。
+- 如果用户要求“字面意义的单场景无缝大图”，则与上述“大区图”方案不同：需要把整章塞进一个 room（地图退化、单 Arena 限制、天气/背景/加载成本上升），不建议；见待确认第 1 项。
+
+## 第 3 章大地图可行性核查（第 39 程，只查不施工）
+
+> 第 40 程已完成本节 C 节第 1 步「计划/图骨架」，见下方「第 3 章计划与图骨架（第 40 程）」
+> 专节；真实大区世界与后续步骤仍未开始。本节的核查结论保持第 39 程口径。
+>
+> 范围：回答“第 2 章走通的大区连通图路线能否直接承载第 3 章、缺口在哪、施工顺序怎么排”。
+> 本程未改第 3 章可达性，未新建计划/大区/房间/事件/权柄/Boss 内容，未改 `game.gd` 章节路由；
+> 临时探针 `tests/tmp_ch3_audit.gd` 测后删除。详细版见
+> [第 3 章核查 session](docs/memory/sessions/2026-11-05-chapter3-bigmap-audit.md)。
+> 标记：**【已核实】** 读代码/资源或实跑探针可复现；**【推断】** 由已核实事实推导、尚未实跑；
+> **【待施工验证】** 必须等真实大图内容落地后才能定论。
+
+### 结论摘要
+
+- **可行性：可以直接承载，不需要改 MDS、存档、战斗或房间管线。** `BigRoomData` + `MDSBigRoom`
+  不含任何章节判断；第 27 程的按节点 id 结算、按区域坠落平面、计划派生清房目标都是章节无关的。
+  第 3 章现有旧世界可以像第 2 章旧世界一样原地保留、不再引用。**【已核实】**
+- **缺口集中在内容层**：第 3 章没有计划（`chapter_3_demo.tres` 不存在、`CHAPTER_PLAN_PATHS[2]`
+  为空）、没有大区/房间数据、没有事件数据、没有权柄池、没有 Boss 入场/阶段文案、没有第 3 章
+  大图验收套件；与第 2 章施工前的缺口同类。**【已核实】**
+- **第 3 章独有差异**：① 海面母题目前只在 `MDSChapterRoom` 的 `LivingBackdrop(sea=true)` 里，
+  大区管线没有对应层；② GDD §11 的「视野压缩」没有任何实现；③ 捷径授予来源缺失；
+  ④ Boss「最后的读者」已有专属脚本/场景/立绘/背景/语音与部分独特攻击，但走 `boss_script`
+  旧分支、无计划 `boss_scene`、无入场/阶段文案、无测试锁定。**【已核实】**
+  （海面观感与视野压缩的实际效果为**【待施工验证】**。）
+- **施工顺序**沿用第 2 章：计划/图骨架 → 真实大区世界 → 内容数据层 → Boss 机制 → 系统验收；
+  前置依赖见下。第 3 章可达性仍须单独拍板，且不能早于第 2 章。
+
+### A. 第 3 章现有内容盘点
+
+**MDS 世界与房间【已核实，探针实走】**
+
+- `scenes/mds/chapter_3_world.tscn` + `chapter_3.mdsworld.json`：9 房、17 门
+  （7 right / 7 left / 3 door）、`links`/`pins` 为空、`start_room = ch3_01`。
+- 全部 **1280×720 单矩形、单层地面**（面 y=560，StaticBody 80 px），平台 2/2/1 块（pattern 0/1/2）；
+  没有多矩形、多层或纵向结构。房型/内容：
+
+| 房间 | 名称 | 类型 | 内容 | 门 |
+|---|---|---|---|---|
+| `ch3_01` | 无光海岸 | 战斗 | 无 | right1 |
+| `ch3_02` | 墨潮浅滩 | 战斗 | 无 | left1/right1 |
+| `ch3_03` | 沉船书库 | 战斗 | 宝箱×1、书库门 | left1/right1/door1 |
+| `ch3_04` | 静水回廊 | 战斗 | 无 | left1/right1 |
+| `ch3_05` | 深渊裂口 | 战斗 | 宝箱×1 | left1/right1 |
+| `ch3_06` | 第三页之门 | 战斗 | 无 | left1/right1 |
+| `ch3_rest` | 引路人的灯 | 休整 | 商店、残碑、捷径门 door2→`ch3_02` | left1/right1/door2 |
+| `ch3_boss` | 最后的读者 | Boss | Arena/Boss | left1 |
+| `ch3_vault` | 隐藏书库 | 书库（`kind=REST`） | 宝箱、残碑、返回门 door1→`ch3_03` | door1 |
+
+- 场景全部 `MDSChapterRoom`（`chapter_index=2`）：背景 `lightless_sea.png`（1536×864 RGB 绘画）
+  + `LivingBackdrop(sea=true)`；`room_darkness=false`、`room_weather=true`、`room_parallax=false`、
+  `room_background=true`、`fade_time=0.22`。区域 `Lightless Sea` 用雾 + 雨，`background` 为空、
+  无 `backdrop_image`；Boss 房 `boss_background=deep_water`（探针确认
+  `MDSEnvironment.background_for_room` 返回 `deep_water`，世界场景 `room_background=true`）。
+- 旧线性结构已被 `integration_playability` 的逐章循环实走（属于现有 671 断言的一部分），
+  但没有大图结构覆盖。
+
+**主线文本与语音【已核实】**
+
+- `CampaignData` 第 3 章：**6 句开场、4 句章末、2 个章末选项**；目标「穿过无光海，找到最后的读者」；
+  音乐 `chapter_sea.ogg` 存在；`ch3_intro.ogg`/`ch3_outro.ogg` 存在；
+  `boss_reader_phase2/3.ogg` 存在。
+- 章末效果已实现：带读者离开 → 仁慈 +1、恢复 20 生命；留下最后一页 → 污染 +8、获得未拥有遗物。
+- Boss：名「最后的读者」、HP 380、伤害 15、速度 78、`boss_script=&"reader"`、
+  立绘 `last_reader.png`（256×256 RGBA，持书的孩子）、`boss_scale=1.0`、白 tint、
+  `boss_voice="reader"`；**没有** `boss_scene` 键。
+- 专属脚本/场景：`scripts/bosses/last_reader.gd`（`LastReader extends InkArchivist`）+
+  `scenes/bosses/last_reader.tscn`；已实现镜面三连弹（`_mirror_fan`）与「读页」封印短语
+  （`_read_page` → `InkWarning` + `disable_phrase_slot`），阶段 1 纸页波、阶段 2 每 3 次读页、
+  阶段 3 改写/读页/镜面/墨雨轮换。Boss 立绘由 `_apply_art` 运行时挂上（探针确认路径）。
+- 专属背景：无独立图片，使用 MDS 的 `deep_water` 动态背景（区域级），探针确认已解析。
+
+**敌人与波次【已核实，探针逐房生成】**
+
+- `ROOM_WAVES[2]` **已配置 6 波**；`CampaignData.rooms[2]` 六组首发敌人与数据/场景都存在；
+  探针逐房生成的首发组与数据一致。
+- 第 3 章用到的 9 种 spawn id：`echo_enemy`、`hanging_scribe`、`rust_whisperer`、
+  `mirror_sniper`、`typo_beast`、`collapse_husk`、`scribe_bug`、`lung_moth`、`page_swarm`。
+- 美术接线（第 38 程同一口径）：
+  - 已接线专属精灵（`ENEMY_ART`，白 tint）：`echo_enemy`、`hanging_scribe`、`mirror_sniper`、
+    `typo_beast`、`scribe_bug`、`page_swarm`。
+  - 回退第 1 章美术（`ENEMY_ART_FALLBACK`，`#c8e1cd`）：`rust_whisperer`→`scribe_bug`、
+    `collapse_husk`→`blank_man`、`lung_moth`→`hanging_scribe`；三种都在第 38 程缺失清单内，
+    **没有新增第 3 章专属缺图**。
+  - 命名细节：`echo_enemy` 场景内的 `EnemyData.id` 是 `amnesiac_echo`；美术表按 spawn id
+    `echo_enemy` 解析，实际渲染正确；日后按 data id 做美术审计需同时认这两个名字。
+
+**章节计划与内容数据【已核实，探针】**
+
+- **`chapter_3_demo.tres` 不存在**；`CHAPTER_PLAN_PATHS[2]` 为空；`_load_chapter_plan(2)` 返回 null；
+  `tests/test_ch2_world.gd` 的 `ch2_game_ch3_has_no_plan_yet` 锁住此状态，新建计划时须同步更新。
+- **没有第 3 章大区目录/资源**：`resources/rooms/ch3_bigmap/`、`scenes/mds/ch3_bigmap/` 均不存在。
+- **没有事件数据**：`_event_data()` 对第 3 章返回 `{}`（无 `Ch3EventData`）；旧世界也没有 event 房。
+- **没有权柄池**：`_grant_chapter_authority()` 在 `_chapter_plan == null` 时直接返回，
+  第 3 章 Boss 击败后不会开权柄三选一。
+- **Boss 路由**：`_spawn_boss` 优先级 = 章节 `boss_scene` → 计划 `boss_scene` →
+  `boss_script == "smiling"` → `boss_script == "reader"` → 默认；第 3 章靠最后第二档路由到
+  `READER_SCENE`（探针确认脚本为 `last_reader.gd`）。
+- **Boss 入场/阶段文案**：`BossEntranceData.variants(2)` = `[]` → `pick()` 返回空串；
+  `BossPhaseData.variants(2/3, 2)` = `[]` → `pick()` 返回空串；入场静默、阶段横幅只有机械前缀，
+  不会回落到第 1 章文案。
+- **章节推进**：`_complete_chapter()` 只在 `_chapter == 0/1` 停章；第 3 章（`_chapter == 2`）
+  仍会自动续章进入第 4 章。
+- **地图标题**：第 38 程已按区域派生，第 3 章显示「无光海地图」（探针确认）。
+- **清房目标/坠落平面**：无计划 → 清房目标 6、HUD 分母 7、坠落平面 850（探针确认）。
+
+**叙事【已核实】**
+
+- 剧情圣经第 3 章节拍：「最后的读者是一个孩子」「故事需要有人翻页」等目前**只有文本**；
+  没有对应事件房、对话节点或剧情实体。Boss 立绘是持书的孩子，但 `CampaignData` 台词只称
+  「最后的读者」，没有把「孩子」写成台词。
+- **没有 NPC 同行实体**：仓库没有 companion/follower 控制器；阿砚只在第 2 章文本与 Hub 出现。
+  MDS 自带 `carry_over` 组但项目未使用。第 3 章也没有同行角色实体。
+
+### B. 承载力结论（只写第 3 章差异点）
+
+1. **房间管线可直接用【已核实】**：`MDSBigRoom`/`BigRoomData` 无章节判断；第 2 章 9 区真实世界已验证。
+   第 3 章只需新增 `ch3_bigmap` 数据/场景/世界，旧世界原地保留、不再引用。
+2. **解耦同样适用【已核实】**：按 `region/Node` 的一次性结算、按区域坠落平面、计划派生清房目标、
+   按遭遇节点 id 的波次，都是章节无关代码。
+3. **背景/氛围差异【已核实】**：第 3 章海面母题由 `LivingBackdrop(sea=true)` 提供（海面线、波光、
+   漂浮纸屑、塔影、地面暗带）；大区管线只有平铺静态背景（`lightless_sea.png` 可平铺）与
+   `BigRoomAmbient` 的 `motes`/`embers`，**没有 sea 层**。第 2 章大图也丢掉了自己的
+   `LivingBackdrop`，但第 3 章海面是主题核心，损失更明显；是否补层属表现口径，
+   本程只记录、不设计。实际观感与平铺接缝**【待施工验证】**。
+4. **「视野压缩」没有实现【已核实】**：仓库没有视野遮罩/光照半径/黑暗度玩法脚本，
+   第 3 章 `room_darkness=false`；`ChapterAtmosphere` 里只有 Boss 动态背景的 `vignette`
+   美术参数，不是视野机制。GDD §11 把它列为无光海机制，但大区管线不会自动带来它；
+   这是第 3 章独有的新机制缺口，需先拍板再排期。
+5. **没有水域物理【已核实】**：没有游泳/溺水/水面碰撞/水体制动脚本；「无光海」目前是背景与叙事。
+   按既定口径不新增移动能力，因此不需要水域机制，但也没有可复用水面脚本。
+   **【推断】** 大图若做「海面/深水」分层，只能靠背景、平台与门，不靠新物理。
+6. **纵向结构是新增内容而非新管线【已核实】**：现有 9 房全部单层；大区高差预算与第 2 章相同
+   （≤80 px 台阶、≤120 px 水平边缘），top/bot 门、单向落台、塌陷平台、移动平台都可用。
+   第 3 章 GDD 没有「上下分层/塌陷平台」条目，纵向与否属关卡设计选择，不是能力限制。
+7. **Boss 3 已有实现但没接计划【已核实】**：`LastReader`、场景、立绘、`deep_water` 背景、
+   reader 阶段语音、镜面弹/读页攻击都已存在；缺计划 `boss_scene` 路由、入场/阶段文案与测试锁定。
+   相对第 2 章施工前（完全无独特机制），第 3 章 Boss 机制工作量更小，但需与第 2 章
+   「计划 `boss_scene`」口径统一。
+8. **捷径语义不同【已核实】**：现有 `ch3_rest` 的 `door2` 是无条件交互门直达 `ch3_02`；
+   第 2 章大图 `shortcuts` 用 `MDSGateBarrier` + ability（`ch2_shortcut`）。第 3 章没有
+   `ch3_shortcut` 授予来源；若大图计划写 `shortcuts`，需先定来源（与待确认第 11 项同类）。
+9. **章末边界要再做一次【已核实】**：第 3 章现在会自动进第 4 章；大图落地后若第 4 章仍未完成，
+   需像第 2 章那样 `_finish(true)` 停章，否则会进入未完成的第 4 章。
+10. **敌人美术无新增缺口【已核实】**：3 种回退敌人都在第 38 程缺失清单内；其余 6 种有既有精灵。
+11. **背景是绘画而非像素【已核实】**：`lightless_sea.png` 1536×864 RGB，与第 2 章
+    `breathing_ruins.png` 同一已知缺口；大区平铺接缝**【待施工验证】**。
+12. **入口出生点要作者化【已核实】**：`MDSChapterRoom` 只在 `room_index` 0/1 生成 `SavePoint`；
+    大图入口若沿用房间标签锚点会空中坠落（第 37 程已修过第 2 章）。第 3 章大图入口必须作者
+    `SpawnPoint`（`save_point` 组，脚底 = 地面 − `FOOT_Y`）。
+13. **战斗房宝箱【已核实】**：`ch3_03`/`ch3_05` 已有宝箱，书库另有 1 个；计划 `chests` 支持按节点
+    id 多宝箱，无管线缺口，但计划必须为这三个箱子写节点 id。
+14. **性能【推断】**：第 3 章大区尺寸/内容尚未落地，无法实测；第 2 章验收基线为普通区热加载
+    5.6–9.2 ms、Boss 区冷启 61 ms、热 10.2–43 ms，由 0.22 s 淡入覆盖。第 3 章若做更大的
+    海面区，需按第 36 程同一口径实测。**【待施工验证】**
+
+### C. 施工顺序建议与前置依赖
+
+1. **计划/图骨架**：新建 `chapter_3_demo.tres`（`big_map`、`start_room`、`doors`、region 键：
+   尺寸/遭遇/宝箱/残碑/捷径/隐藏/坠落平面/波次/权柄池/`boss_scene`），写图骨架夹具，
+   接入 `CHAPTER_PLAN_PATHS[2]`，同步改 `tests/test_ch2_world.gd` 的
+   `ch2_game_ch3_has_no_plan_yet` 锁。
+   **前置**：第 3 章区图/节拍设计（区数、入口→支路→枢纽→纵向→事件/精英→Boss + 隐藏书库）；
+   「视野压缩」是否实现；捷径授予来源。
+2. **真实大区世界**：新建 `resources/rooms/ch3_bigmap/*.tres`、`scenes/mds/ch3_bigmap/*.tscn`、
+   独立 `chapter_3_bigmap.mdsworld.json` + `_world.tscn`；区域补
+   `backdrop_image=lightless_sea.png`，沿用雾/雨与 `boss_background=deep_water`；入口作者
+   `SpawnPoint`；门由世界 JSON 自动生成并自动挂 `GateVisual`；纵向按需用既有单向落台/
+   塌陷平台/移动平台/长椅；旧第 3 章世界保留。
+   **前置**：步骤 1；海面母题呈现口径。
+3. **内容数据层**：`Ch3EventData`（按 seed + 节点 id）、计划 `wave`（遭遇节点 id → 敌人数组，
+   可复用 `ROOM_WAVES[2]` 原文）、计划 `authority_pool`（续命/改写 + 条件项）、
+   `BossEntranceData`/`BossPhaseData` 第 3 章文案、计划 `boss_scene` 指向 `last_reader.tscn`。
+   **前置**：步骤 1–2；事件文案/权柄池内容口径。
+4. **Boss 3 机制**：复用现有 `LastReader` 的镜面弹/读页；按计划 `boss_scene` 接线；
+   补测试锁定阶段映射与攻击；是否扩展新招式另行决定（本程不设计）。
+   **前置**：步骤 3（路由与文案）。
+5. **系统验收**：新增 `tests/integration_ch3_bigmap.gd`，按第 36 程 D 节 1–10 项覆盖
+   连通/边界相机/纵向/过渡/一次性/多遭遇/捷径/隐藏/Boss/续玩，并补第 3 章专属断言
+   （海面背景/天气、`deep_water` Boss 背景、`LastReader` 脚本/立绘、地图标题、章末停章）；
+   先保持第 3 章不可达，全绿后再由监工单独拍板可达性。
+   **前置**：步骤 1–4。
+
+### D. 风险/边界
+
+- 不改 MDS 本体、不改存档格式、不改言灵/权柄/战斗框架；不新增移动能力。
+- 第 3 章施工前不开放第 3 章可达性；第 3 章可达性也不能早于第 2 章。
+- 海面母题、视野压缩、捷径授予来源、章末停章是第 3 章施工前需要定口径的四项；
+  本程只记录事实与依赖，未设计新机制、未改任何数值/相机/HUD。
+
+## 第 3 章计划与图骨架（第 40 程，只做数据层）
+
+> 范围：第 39 程核查 C 节第 1 步。只新建计划资源、图骨架夹具与交叉校验测试；
+> 不建真实大区世界/房间，不接入 `game.gd`，不改第 3 章可达性，不写波次/事件/
+> 权柄/Boss 内容。详细版见
+> [第 3 章计划/图骨架 session](docs/memory/sessions/2026-11-05-chapter3-plan-graph.md)
+> 与 [ADR](docs/memory/decisions/2026-11-05-chapter3-plan-graph.md)。
+
+- **计划** `resources/chapters/chapter_3_demo.tres`：9 区连通图，与第 2 章同构——
+  `ch3_entry`（入口）→ `ch3_branch_a` / `ch3_branch_b`（两条可回环支路）→
+  `ch3_hub`（休整 + 商店 + 残碑 + 捷径解锁）→ `ch3_well`（纵井，2560×2160）→
+  `ch3_event` 占位 / `ch3_elite` → `ch3_boss`（3840×2160，末端单向进入）；
+  `ch3_vault` 是支路 B 下的隐藏书库。其余区 2560×1440，精英/Boss 3840×2160。
+- **内容节点**：6 个战斗遭遇（支路 A 2、支路 B 1、纵井 2、精英 1）对应旧第 3 章
+  6 波（本程不写 `wave`）；事件区 1 个占位遭遇。`clear_target()` 按遭遇节点派生
+  **7**（第 1 章仍 6、第 2 章仍 7，未改动）。3 个宝箱、2 个残碑，全部
+  `region/Node` 节点 id。
+- **门**：11 条记录 = 9 双向 + 2 显式单向——`elite_boss`（进 Boss 不可返回）与
+  `hub_shortcut_entry`（捷径，`requires: ["ch3_shortcut"]`，来源待第 16 项拍板，
+  默认不可通行）。图内两个回环，Boss 为末端。每区 `fall_below_bounds = 240`。
+- **`ChapterPlanData.content_pending`**（新增，默认 `false`，向后兼容）：
+  计划结构先于内容落地时置 `true`，`validate()` 仍校验区域/节点 id/门图，只跳过
+  波次表。第 1/2 章计划保持 `false`，校验结果不变；测试把第 3 章计划的标志临时
+  关掉，确认仍报六条缺波次，证明跳过范围是局部的。
+- **图骨架夹具** `tests/fixtures/big_room/ch3_graph.mdsworld.json`：
+  `fixture: true`、`content_pending: true`、无 `scene_path`/房间场景、游戏从不引用；
+  镜像旧世界区域 `Lightless Sea` 的雾/雨与 `boss_background=deep_water`，不写
+  `backdrop_image`。20 扇有向门 + 2 扇到达门。
+- **测试** `tests/test_ch3_plan.gd`（728 断言）：计划形状/类型/尺寸/坠落平面/
+  内容 id/清房目标/图可达性/单向门/捷径占位/待内容标记 + 计划↔夹具逐区逐门交叉
+  校验 + 夹具几何 + 第 1/2 章计划不变 + `game.gd` 路由槽仍为空 + 第 3 章旧世界文件仍在。
+- **边界**：计划未接入 `game.gd`（`CHAPTER_PLAN_PATHS[2]` 仍空，既有测试锁定）；
+  旧 `chapter_3.mdsworld.json` / `chapter_3_world.tscn` 与 9 个 `MDSChapterRoom`
+  场景未改未删、仍被游戏使用；第 3 章仍不可达，章末仍会自动进第 4 章。
+  第 14（视野压缩）、15（海面母题）、16（`ch3_shortcut` 来源）项全部留空，
+  本程未实现、未预设、未猜测。
+
+## 第 3 章真实大区世界（第 41 程，只做结构层）
+
+> 范围：第 39 程核查 C 节第 2 步。把第 40 程的 9 区计划做成可加载的真实大区
+> 世界与房间场景，只做结构层；不接入 `game.gd`、不改第 3 章可达性、不写波次/
+> 事件/权柄/Boss 内容、不做第 3 章门视觉打磨。详细版见
+> [第 3 章真实大区世界 session](docs/memory/sessions/2026-11-05-chapter3-bigmap-world.md)。
+
+- **大区数据** `resources/rooms/ch3_bigmap/*.tres`：9 个 `BigRoomData`，尺寸按计划
+  2560×1440 / 2560×2160（纵井）/ 3840×2160（精英、Boss）；地面贴房间底边
+  （`H-16`，16 px 厚），平台按 80 px 阶梯链布置并通过第 28 程几何校验
+  （上升 ≤80 px、水平边缘 ≤120 px）；复用 `ch1_tiles.tres`；
+  `backdrop_path = lightless_sea.png`（既有绘画背景，`backdrop_pixel_art = false`），
+  按区 `backdrop_modulate` 与 `motes` 氛围（密度 0.5）。
+- **大区场景** `scenes/mds/ch3_bigmap/*.tscn`：9 个 `MDSBigRoom`，`fall_margin = 240`
+  （房间 metadata `fall_below_bounds = 240`，与计划一致）；内容节点严格用计划 id：
+  `ch3_branch_a` 的 `Arena`/`Arena2`/`Chest1`、`ch3_branch_b` 的 `Arena`、
+  `ch3_well` 的 `Arena`/`Arena2`/`Chest1`、`ch3_elite` 的 `Arena`、
+  `ch3_hub` 的 `Stele1`/`Shop`(`ch3_hub_shop`)/`Bench`、
+  `ch3_vault` 的 `Chest1`/`Stele1`；事件区节点名 `Event`，作者
+  `encounter_id = ch3_event/event`；Boss 区只放结构 `Arena`（Boss 内容后续程）。
+- **入口出生点**：`ch3_entry` 作者 `SpawnPoint`（`save_point` 组，(400,1328) =
+  第一级台阶面 1344 − `FOOT_Y` 16），沿用第 37 程第 2 章口径；不改 MDS 出生
+  回退顺序、不改第 1/2 章出生点。
+- **纵向/捷径骨架**（复用第 29 程管线，未新增移动能力）：`ch3_branch_b`/`ch3_hub`/
+  `ch3_vault` 各 1 台电梯（地面 → y=100，覆盖顶门列且避开平台），`ch3_well`
+  1 台电梯 + 3 个单向落台，`ch3_elite` 1 台电梯（到达门 y=1920 下方），枢纽
+  `Bench` 长椅检查点与带 `requires` 的捷径门自动生成 `MDSGateBarrier`。
+  电梯未写 `speed`，沿用 `MovingPlatform.speed` 管线默认 **80 px/s**
+  （`scripts/levels/moving_platform.gd`）；第 12 项口径只针对第 2 章，本程未给
+  第 3 章定速度。
+- **独立世界** `scenes/mds/chapter_3_bigmap.mdsworld.json` + `chapter_3_bigmap_world.tscn`：
+  9 区单矩形、原点 32 px 对齐；`start_room = ch3_entry`；区域 `Lightless Sea`
+  带雾 + 雨与 `boss_background: deep_water`，不写 `backdrop_image`（第 15 项留空）；
+  22 门 = 20 有向 + 2 只到达（`ch3_entry/shortcut_arrival`、`ch3_boss/left1`）；
+  显式单向 `elite_boss` 与 `hub_shortcut_entry`（`requires = ["ch3_shortcut"]`，
+  来源待第 16 项，屏障默认封闭）；侧门在地面上方 90 px、底门在地面线、顶门在
+  上边缘；房间不重叠、双向门相邻、捷径刻意不相邻。世界 JSON 由第 40 程夹具
+  镜像生成（逐区字段一致，仅加 `scene_path`），夹具未改语义。
+- **测试** `tests/test_ch3_world.gd`（**771** 断言）：真实世界 ↔ 计划逐区
+  类型/尺寸/遭遇/宝箱/残碑/捷径/隐藏/商店/休整/纵井；11 条计划门 ↔ 世界门位、
+  双向/单向/`requires`；世界图从入口 BFS 到全部 9 区；几何（单矩形、原点 32 网格、
+  门在正确边、房间不重叠、双向门相邻、捷径不相邻）；9 场景为 `MDSBigRoom`、
+  `BigRoomData` 校验为空、尺寸/瓦片/背景/氛围/坠落余量/底边地面；内容节点与
+  计划 id 一一对应且数量不许多、事件区作者遭遇 id、枢纽商店/长椅、入口出生点与
+  到达门；顶门房间电梯覆盖门列、行程向上、列内无平台、速度 = 管线默认 80；
+  夹具镜像与隔离；`CHAPTER_PLAN_PATHS[2]` 仍空、旧第 3 章 9 房/17 门/世界场景仍在、
+  第 1/2 章计划与世界不变、第 3 章场景无作者 `GateVisual`、世界 `room_darkness=false`。
+- **边界**：`game.gd` 未改，第 3 章仍走旧 `chapter_3.mdsworld.json` / 9 个
+  `MDSChapterRoom`，`CHAPTER_PLAN_PATHS[2]` 仍空；第 3 章仍不可达、章末仍会自动
+  进第 4 章。第 14（视野压缩）、15（海面母题）、16（`ch3_shortcut` 来源）项
+  全部留空：未实现视野压缩、未给大区加 sea 层、未改 `LivingBackdrop`、未新绘背景、
+  未新增任何授予 `ch3_shortcut` 的交互；门视觉未做第 3 章专项打磨（管线运行时
+  共享的 `GateVisual` 自动生成未改，属既有管线行为）。
+
+## 第 4 章大地图可行性核查（第 50 程，只查不施工）
+
+> 范围：回答「第 2 章走通、第 3 章已验证的大区连通图路线能否直接承载第 4 章、
+> 缺口在哪、施工顺序怎么排」。本程未改第 4 章可达性，未新建计划/大区/房间/事件/
+> 权柄/Boss 内容，未改 `game.gd` 章节路由；未新增测试与产品代码，未创建临时探针。
+> 详细版见 [第 4 章核查 session](docs/memory/sessions/2026-11-05-chapter4-bigmap-audit.md)。
+> 标记：**【已核实】** 读代码/资源或既有测试可复现；**【推断】** 由已核实事实推导、
+> 尚未实跑；**【待施工验证】** 必须等真实大图内容落地后才能定论。
+
+### 结论摘要
+
+- **可行性：可以直接承载，不需要改 MDS、存档、战斗或房间管线。** `BigRoomData` +
+  `MDSBigRoom` 不含任何章节判断；第 27 程的按节点 id 结算、按区域坠落平面、计划派生
+  清房目标、按遭遇节点 id 的波次都是章节无关的。第 4 章现有旧世界可以像第 2/3 章
+  旧世界一样原地保留、不再引用。**【已核实】**
+- **缺口集中在内容层**：第 4 章没有计划（`chapter_4_demo.tres` 不存在、
+  `CHAPTER_PLAN_PATHS[3]` 为空）、没有大区/房间数据、没有事件数据、没有权柄池、
+  Boss 入场/阶段文案静默、Boss 4 无专章机制打磨与测试、没有第 4 章大图验收套件；
+  与第 2/3 章施工前的缺口同类。**【已核实】**
+- **第 4 章独有差异**：① 舞台母题目前只由 `MDSChapterRoom` 的 `TheaterBackdrop`
+  （聚光灯/光斑/浮尘）提供，大区管线只有平铺绘画 + `BigRoomAmbient`；② Boss 4
+  「笑面史官」已有专属脚本/场景/立绘/语音与部分独特攻击（镜面弹幕），但没有专章机制
+  打磨、没有入场/阶段文案、没有测试锁定，剧情圣经的三阶段「改写规则/删除词/复制武器」
+  与 GDD 的「舞台机关」大多未实现；③ 捷径 `door2` 是无条件单向交互门，大图
+  `shortcuts` 需要 ability id 与授予来源；④ 章末边界本身就是战役终点（已是
+  `_finish(true)`，无需再改），但第 3 章的停章替身必须先解开；⑤ 入口出生点必须作者
+  `SpawnPoint`。**【已核实】**
+- **美术更正（用户 2026-11-04 事实）**：第 4 章美术素材已经画好并已接线——舞台绘画、
+  Boss 立绘、8 种实际使用的敌人精灵（含 `mask_enemy`/`seat_husk` 两个第 4 章美术变体）、
+  配乐、开场/章末/Boss 阶段语音全部存在；**没有缺失的第 4 章专属敌人美术，也没有
+  回退第 1 章美术的敌人**。README/GDD 的旧「程序化绘制、待替换插画」记录已在第 7 程
+  更正，本次复核与当前文档一致。**【已核实】**
+- **施工顺序**沿用第 2/3 章：计划/图骨架 → 真实大区世界 → 内容数据层 → Boss 机制 →
+  系统验收；前置依赖见下。第 4 章可达性仍须单独拍板，且不能早于第 2/3 章。
+
+### A. 第 4 章现有内容盘点
+
+**MDS 世界与房间【已核实，既有集成实走】**
+
+- `scenes/mds/chapter_4_world.tscn` + `chapter_4.mdsworld.json`：9 房、**17 门**
+  （7 right / 7 left / 3 door）、`links`/`pins` 为空、`start_room = ch4_01`。
+- 全部 **1280×720 单矩形、单层地面**（地面面 y=560，StaticBody 80 px），平台按
+  `platform_pattern` 0/1/2 建 2/2/1 块；没有多矩形、多层或纵向结构。
+- 场景全部 `MDSChapterRoom`（`chapter_index = 3`）；世界设置
+  `room_darkness=false`、`room_weather=true`、`room_parallax=false`、
+  `room_background=true`、`fade_time=0.22`、`gate_cooldown=0.35`、`keep_momentum=true`。
+- 区域 `Smiling Theater`：灰烬 + 光柱天气；`background` 为空、无 `backdrop_image`；
+  Boss 房 `boss_background=blood_moon`。背景由 `MDSChapterRoom` 的
+  `BACKGROUNDS[3] = smiling_theater.png` 提供（见 B 节）。
+- 房型/内容：
+
+| 房间 | 名称 | 类型 | 内容 | 门 |
+|---|---|---|---|---|
+| `ch4_01` | 剧场前厅 | 战斗 | 无 | right1 |
+| `ch4_02` | 笑面回廊 | 战斗 | 无 | left1/right1 |
+| `ch4_03` | 血幕书库 | 战斗 | 宝箱×1、书库门 | left1/right1/door1 |
+| `ch4_04` | 空座中庭 | 战斗 | 无 | left1/right1 |
+| `ch4_05` | 舞台侧廊 | 战斗 | 宝箱×1 | left1/right1 |
+| `ch4_06` | 第四页之幕 | 战斗 | 无 | left1/right1 |
+| `ch4_rest` | 熄灯的后台 | 休整 | 商店、残碑、捷径门 door2→`ch4_02` | left1/right1/door2 |
+| `ch4_boss` | 笑面剧场 | Boss | Arena/Boss | left1 |
+| `ch4_vault` | 隐藏书库 | 书库（`kind=REST`） | 宝箱、残碑、返回门 door1→`ch4_03` | door1 |
+
+- 宝箱 3（`ch4_03`、`ch4_05`、`ch4_vault`）、残碑 2（`ch4_rest`、`ch4_vault`）、
+  商店 1（`ch4_rest`，id `ch4_rest_shop`），与第 3 章旧世界同构。
+- 捷径 `ch4_rest/door2` 是**单向**交互门（直达 `ch4_02`，目标房没有回门）；
+  `ch4_boss/left1` 可返回 `ch4_rest`（与第 2/3 章大图 Boss 单向门不同）。
+- 旧线性结构已被 `integration_playability` 的逐章循环实走（6 战斗房 + 书库 + 休整 +
+  Boss + 章末），并最终到达战役结局；但没有第 4 章大图结构覆盖。
+
+**主线文本与语音【已核实】**
+
+- `CampaignData` 第 4 章：**8 句开场、4 句章末、2 个章末选项**；目标「穿过空座，走上
+  舞台，结束这场演出」；区域「笑面剧场」；音乐 `chapter_theater.ogg` 存在；
+  `ch4_intro.ogg`/`ch4_outro.ogg`、`boss_smiling_phase2/3.ogg` 均存在。
+- 章末效果已实现：重写名册 → 仁慈 +1；焚毁名册 → 污染 +12，并置
+  `_burned_final = true`（影响最终结局）。
+- 叙事审计表里「第 4 章 7 句开场」是旧记录；实际是 **8 句**（第 1/2/3 章分别为
+  6/7/7 句），本程按代码重新计数。
+
+**Boss 4「笑面史官」【已核实】**
+
+- `CampaignData`：HP **520**、伤害 **18**、速度 **92**、`boss_script=&"smiling"`、
+  立绘 `smiling_archivist.png`（256×256 RGBA）、`boss_scale=1.0`、白 tint、
+  `boss_voice="smiling"`；**没有** `boss_scene` 键。
+- 专属脚本/场景：`SmilingArchivist extends InkArchivist` +
+  `scenes/bosses/smiling_archivist.tscn` 存在；`_spawn_boss` 无 `boss_scene`/计划路由时
+  按 `boss_script == "smiling"` 选中它。
+- 已有独特攻击：**镜面弹幕**（3 枚 ×0.7 攻击力、速度 280、张角 ±0.34 rad）；
+  阶段 1 纸页波；阶段 2 每第 3 次镜面弹幕、其余纸页波；阶段 3 改写/镜面/墨雨/纸页波
+  轮换。基类 `_page_wave`（阶段 ≥2 双发）、`_ink_rain`、`_rewrite`（临时封印短语槽）
+  都继承。
+- 缺口：剧情圣经第 4 章节拍说「三阶段：改写规则、删除词、复制昌子的武器」，
+  GDD §11 说「规则改写、舞台机关」；当前没有删除词、没有复制玩家武器、没有舞台机关，
+  `_rewrite` 只是临时封印短语槽。Boss 4 也没有 `test_ch4_boss` 专项测试，
+  集成遍历只把它击杀、未断言类型/机制。
+
+**敌人与波次【已核实】**
+
+- `ROOM_WAVES[3]` **已配置 6 波**；`CampaignData.rooms[3]` 的 6 组首发敌人也都存在。
+- 第 4 章实际用到 **8 种 spawn id**：`mask_enemy`、`seat_husk`、`echo_enemy`、
+  `choir_summoner`、`typo_beast`、`mirror_sniper`、`ink_bomber`、`page_swarm`。
+- 美术接线（第 38/49 程同一口径）：**8 种全部有专属精灵、全部在 `ENEMY_ART`、
+  全部白 tint，`ENEMY_ART_FALLBACK` 命中 0 项**——第 4 章与第 1 章一样是零回退章节；
+  第 2/3 章缺图的 `rust_whisperer`/`lung_moth`/`collapse_husk` 不在第 4 章波次里。
+- 两个第 4 章美术变体：`mask_enemy` 复用 `hanging_scribe.tscn`（数据 id
+  `hanging_scribe`，flyer 动画），`seat_husk` 复用 `collapse_husk.tscn`
+  （数据 id `collapse_husk`，elite 动画）；只有精灵是第 4 章专属，数值/行为沿用
+  第 1 章敌人。美术按 spawn id 解析，实际渲染正确。
+- `echo_enemy` 数据资源 id 是 `amnesiac_echo`，美术按 spawn id 接线（沿用第 49 程）。
+
+**章节计划与内容数据【已核实】**
+
+- **`chapter_4_demo.tres` 不存在**；`CHAPTER_PLAN_PATHS[3]` 为空；
+  `_load_chapter_plan(3)` 返回 null；`resources/rooms/ch4_bigmap/`、
+  `scenes/mds/ch4_bigmap/` 均不存在。
+- **没有事件数据**：`_event_data()` 对第 4 章返回 `{}`（无 `Ch4EventData`）；
+  旧世界也没有 event 房。
+- **没有权柄池**：`_grant_chapter_authority()` 在 `_chapter_plan == null` 时直接返回，
+  第 4 章 Boss 击败后不会开权柄三选一。
+- **Boss 路由**：`_spawn_boss` 优先级 = 章节 `boss_scene` → 计划 `boss_scene` →
+  `boss_script == "smiling"` → `boss_script == "reader"` → 默认；第 4 章靠
+  `smiling` 档路由到既有场景。
+- **Boss 入场/阶段文案**：`BossEntranceData.variants(3)` 与
+  `BossPhaseData.variants(2/3, 3)` 均为 `[]` → 空串；入场静默、阶段横幅只有机械前缀，
+  不会回落到第 1 章文案（第 2/3 章测试锁定此状态）。
+- **章节推进**：`_complete_chapter()` 没有第 4 章专属分支；第 4 章是最后一章，
+  章末选择后走 `_finish(true)` 结束战役（既有集成 `campaign_reaches_ending` 已覆盖）。
+  第 3 章的停章替身（`_chapter == 2` → `_finish(true)`）是第 4 章可达性的前置。
+- **地图标题**：第 38 程派生规则下第 4 章显示「笑面剧场地图」（`test_map_overlay`
+  明确断言，集成也复跑）。
+- **清房目标/坠落平面**：无计划 → 清房目标 6、HUD 分母 7、坠落平面 850
+  （集成 `chapter_4_fall_plane_default` / `chapter_4_clear_target_default` 已断言）。
+
+**叙事【已核实】**
+
+- 剧情圣经第 4 章节拍：① 剧场坐满纸人；② 笑面史官逐一念出同行者名字；
+  ③ 舞台机关、纸人观众、镜面狙手与合唱召引者轮番登场；④ 揭示他是未来的昌子、
+  所有失败版本的集合；⑤ 三阶段改写规则/删除词/复制武器；⑥ 重写或焚毁名册。
+- 现状：① 只在开场文本；② 开场文本点名陆沉/阿砚/闻烬/白榆（未提咕噜，也没有
+  「所有版本」的展开）；③ 镜面狙手/合唱召引者作为敌人存在，纸人观众与舞台机关
+  没有实体；④ 「未来的昌子」**没有写进任何已实现台词**，只在剧情圣经里；
+  ⑤ 机制见 Boss 4 节；⑥ 已实现。
+- **没有 NPC 同行实体**：仓库没有 companion/follower 控制器；阿砚只在第 2 章文本
+  与 Hub 出现，MDS 自带 `carry_over` 组但项目未使用；第 4 章也没有同行角色实体。
+
+### B. 第 4 章美术素材核查（用户 2026-11-04 事实更正的遗留项）
+
+- **舞台/背景**：`assets/backgrounds/smiling_theater.png`（1536×864 **RGB 绘画**，
+  非像素；概念源 `assets/concept/environments/smiling_theater_source.png` 1983×793）。
+  已接入 `MDSChapterRoom` 的 `BACKGROUNDS[3]` → `BackgroundArt` +
+  `TheaterBackdrop(generated_art=true)`，后者只叠加聚光灯锥/地面光斑/浮尘；
+  旧线性 `scenes/levels/smiling_theater.tscn` 仍引用但已休眠。
+- **Boss**：`assets/sprites/bosses/smiling_archivist.png`（256×256 RGBA；alpha
+  0/255、四角透明、最低不透明行=底行、无压缩/无 mipmap）由
+  `CampaignData.boss_texture` → `_spawn_boss` → `_apply_art` 接线；概念源
+  `smiling_archivist_pixel.png`/`smiling_archivist_sprite_source.png` 仅参考。
+- **敌人**：第 4 章实际使用的 8 种全部有专属 PNG（`mask_enemy.png`/`seat_husk.png`
+  96×96 RGBA，alpha 0/255、四角透明、底行对齐、无压缩/无 mipmap；其余 6 种复用
+  第 1/2/3 章已接线精灵），全部白 tint、**无回退**。`mask_enemy`/`seat_husk` 是
+  「美术变体 spawn id」：场景/数据复用 `hanging_scribe`/`collapse_husk`，只有精灵
+  专属。
+- **道具/瓦片**：宝箱/残碑/商店/门使用第 1 章共享像素道具；地面/平台用
+  `resources/tiles/ch1_tiles.tres`，与第 2/3 章大图一致；`assets/tiles/` 只有 ch1，
+  第 4 章没有专属 tileset，属既定路线而非缺美术。
+- **音频**：`chapter_theater.ogg`、`ch4_intro.ogg`、`ch4_outro.ogg`、
+  `boss_smiling_phase2/3.ogg` 均存在并已接线。
+- **程序化/生成部分**：舞台不再依赖程序化帷幕/观众席（`generated_art=true` 分支
+  跳过）；Boss 房背景是 MDS `blood_moon` 动态背景（与第 1–3 章 Boss 背景同类，
+  不是待替换占位）；地面/平台由 ch1 瓦片生成，是大图管线做法。
+- **调色观察**：`mask_enemy`/`seat_husk` 各 25 色、Boss 45 色；与第 2/3 章同批素材
+  一致（普通敌人多为 24–25 色、Boss 45 色），属既有规范偏差（art-spec 普通敌人 24 /
+  Boss 40），不是第 4 章独有缺口；本程不改图。
+- **结论**：用户「第 4 章美术已经画好」与仓库一致；**没有发现缺失或未接线的第 4 章
+  美术素材**，没有需要按旧记录重新规划的项目。README/GDD 当前表述已在第 7 程更正，
+  本次复核再次确认；NPC 立绘只读未改。
+
+### C. 承载力结论（只写第 4 章差异点）
+
+1. **房间管线可直接用【已核实】**：`MDSBigRoom`/`BigRoomData` 无章节判断；第 2/3 章
+   9 区真实世界已验证。第 4 章只需新增 `ch4_bigmap` 数据/场景/世界，旧世界原地保留。
+2. **解耦同样适用【已核实】**：按 `region/Node` 一次性结算、按区域坠落平面、计划派生
+   清房目标、按遭遇节点 id 的波次，都是章节无关代码。
+3. **舞台母题差异【已核实】**：第 4 章舞台由 `TheaterBackdrop` 的聚光灯/光斑/浮尘 +
+   绘画提供；大区管线只有平铺静态背景（`BigRoomData.backdrop_path`）与
+   `BigRoomAmbient` 的 `motes`/`embers`，**没有 theater 层**。区域天气（灰烬 + 光柱）
+   仍由 MDS 按区域生效，可补一部分氛围；聚光灯/吊灯/观众席的舞台感会丢。是否补
+   theater ambient 层属表现口径，需拍板；实际观感与平铺接缝**【待施工验证】**。
+4. **背景是绘画而非像素【已核实】**：`smiling_theater.png` 1536×864 RGB；第 2/3 章
+   大图已经用绘画平铺（`backdrop_pixel_art=false`、线性过滤），第 4 章可照做。
+   平铺接缝（1536×864 贴图铺 2560×1440 等区）**【待施工验证】**。
+5. **Boss 4 已有实现但没接计划【已核实】**：`SmilingArchivist`、场景、立绘、Boss 语音、
+   镜面弹幕/纸页波/墨雨/改写均已存在；缺计划 `boss_scene` 路由、入场/阶段文案、
+   专章机制打磨与测试锁定。
+6. **捷径语义不同【已核实】**：现有 `ch4_rest/door2` 是无条件单向交互门直达
+   `ch4_02`；第 2/3 章大图 `shortcuts` 用 `MDSGateBarrier` + ability。第 4 章没有
+   `ch4_shortcut` 授予来源；若大图计划写 `shortcuts`，需先定来源（与第 11/16 项同类）。
+7. **章末边界不用再改【已核实】**：第 4 章是最后一章，`_complete_chapter()` 已走
+   `_finish(true)`，不会越界到第 5 章。但第 4 章可达性要求先解开第 3 章停章替身
+   （`_chapter == 2` → `_finish(true)`）并接入第 3 章计划；属可达性拍板后的工作。
+8. **入口出生点要作者化【已核实】**：`MDSChapterRoom` 只在 `room_index` 0/1 生成
+   `SavePoint`；大图入口若沿用房间标签锚点会空中坠落（第 37 程已修过第 2 章）。
+   第 4 章大图入口必须作者 `SpawnPoint`（`save_point` 组，脚底 = 地面 − `FOOT_Y`）。
+9. **清房目标/坠落平面【已核实】**：旧世界无计划 → 目标 6、HUD 分母 7、坠落 850；
+   大图计划按遭遇节点派生目标，并按第 2/3 章口径每区 `fall_below_bounds = 240`。
+10. **事件区是可选项【已核实】**：旧第 4 章没有事件房，`_event_data()` 对第 4 章
+    返回 `{}`。若大图加事件区，需要 `Ch4EventData` + 读/拿效果，并把清房目标从 6
+    提到 7；若不加，目标保持 6。属内容口径。
+11. **权柄池缺口【已核实】**：无计划 → Boss 4 击败后没有权柄三选一；大图计划补
+    `authority_pool = [续命, 改写]`（条件项仍走 `ContentLibrary` 的吞噬/归档）即可
+    与第 2/3 章一致。
+12. **敌人美术无缺口【已核实】**：第 4 章 8 种敌人全部有专属精灵、无回退；
+    `mask_enemy`/`seat_husk` 是美术变体、数值/场景沿用第 1 章敌人，是否需要独立数值
+    属内容口径。
+13. **战斗密度口径【已核实】**：旧第 4 章每战斗房是「首发 3–4 + 波次 2」共 5–6 只；
+    第 2/3 章大图每个战斗遭遇只用 `ROOM_WAVES` 的 2 只。若第 4 章照大图口径，
+    战斗密度会下降；若要维持旧密度需扩波或增遭遇。属内容选择。
+14. **性能【推断】**：第 4 章大区尺寸/内容尚未落地，无法实测；第 2/3 章验收基线为
+    普通区首次 6.0–9.2 ms、热 6.1–7.7 ms，Boss 冷 41 ms / 热 24 ms，门过渡
+    228–234 ms。第 4 章若沿用 2560×1440/3840×2160 区与绘画平铺，量级应相当；
+    `blood_moon` Boss 背景的实际开销需按第 36/48 程同一口径实测。**【待施工验证】**
+
+### D. 施工顺序建议与前置依赖
+
+1. **计划/图骨架**：新建 `chapter_4_demo.tres`（`big_map`、`start_room`、`doors`、
+   region 键：尺寸/遭遇/宝箱/残碑/捷径/隐藏/坠落平面/波次/权柄池/`boss_scene`），
+   写图骨架夹具，接入 `CHAPTER_PLAN_PATHS[3]`，同步改
+   `tests/test_ch2_world.gd`/`test_ch3_content.gd`/`integration_playability` 中
+   「第 4 章计划槽为空」的锁。
+   **前置**：第 4 章区图/节拍设计；是否加事件区；捷径授予来源；战斗密度口径。
+2. **真实大区世界**：新建 `resources/rooms/ch4_bigmap/*.tres`、
+   `scenes/mds/ch4_bigmap/*.tscn`、独立 `chapter_4_bigmap.mdsworld.json` +
+   `_world.tscn`；每区 `backdrop_path = smiling_theater.png`
+   （`backdrop_pixel_art=false`），沿用区域灰烬/光柱与 `boss_background=blood_moon`；
+   入口作者 `SpawnPoint`；门由世界 JSON 自动生成并自动挂 `GateVisual`；纵向按需用
+   既有单向落台/塌陷平台/移动平台/长椅；旧第 4 章世界保留。
+   **前置**：步骤 1；舞台母题呈现口径。
+3. **内容数据层**：`Ch4EventData`（若加事件区）、计划 `wave`（遭遇节点 id → 敌人数组，
+   可复用 `ROOM_WAVES[3]` 原文）、计划 `authority_pool`（续命/改写 + 条件项）、
+   `BossEntranceData`/`BossPhaseData` 第 4 章文案、计划 `boss_scene` 指向
+   `smiling_archivist.tscn`；同步把「第 4 章静默」测试期望改为已授权文案。
+   **前置**：步骤 1–2；事件文案/权柄池/战斗密度口径。
+4. **Boss 4 机制**：复用现有 `SmilingArchivist` 的镜面弹幕/纸页波/墨雨/改写；
+   按计划 `boss_scene` 接线；补 `test_ch4_boss` 锁定阶段映射与攻击；是否扩展
+   「删除词/复制武器/舞台机关」另行拍板。
+   **前置**：步骤 3；机制范围口径。
+5. **系统验收**：新增 `tests/integration_ch4_bigmap.gd`，按第 36/48 程同一口径覆盖
+   连通/边界相机/纵向/过渡/一次性/多遭遇/捷径/隐藏/Boss/续玩/性能，并补第 4 章
+   专属断言（舞台绘画平铺与接缝、`blood_moon` Boss 背景、`SmilingArchivist`
+   脚本/立绘、地图标题「笑面剧场地图」、章末结束战役、8 种敌人美术无回退）；
+   先保持第 4 章不可达，全绿后再由监工单独拍板可达性。
+   **前置**：步骤 1–4。
+
+### E. 开放问题候选（只记录，不编号、不擅自决定）
+
+- **第 4 章舞台母题呈现口径**：大图是否补 `TheaterBackdrop` 的聚光灯/吊灯/浮尘层
+  （新 ambient/背景层），还是接受平铺绘画 + 区域灰烬/光柱 + `BigRoomAmbient`。
+  与第 3 章的海面母题同类。
+- **第 4 章捷径 `ch4_shortcut` 授予来源**：现有 `door2` 无条件；大图 `shortcuts`
+  需要 ability id 与游戏内授予来源（Hub NPC/事件/精英/书库）。与第 11/16 项同类。
+- **第 4 章是否新增事件区**：旧世界没有 event 房；加则需 `Ch4EventData` 与效果，
+  清房目标 6→7；不加则保持 6。
+- **Boss 4 机制范围**：剧情圣经的三阶段「改写规则/删除词/复制昌子的武器」与
+  GDD 的「舞台机关」对现实现的差距；补多少、怎么补需先拍板。
+- **战斗密度**：大图沿用 `ROOM_WAVES[3]` 每遭遇 2 只（第 2/3 章先例），还是扩波/
+  增遭遇维持旧第 4 章每房 5–6 只的密度。
+- **`mask_enemy`/`seat_husk` 是否要独立数值与行为**：目前只是第 1 章敌人的美术变体
+  （共享场景/数据）；若当独立敌人，需要新数据/行为。
+- **阿砚同行**：跟随/战斗/对话是新机制，仓库没有 companion/follower 控制器；
+  本程只在记录中重申缺失，不实现、不排期（与第 2 章同一状态）。
+
+### F. 本程未做
+
+- 未做第 4 章计划/图骨架/大区世界/内容数据/Boss 机制/验收套件任何施工。
+- 未开放第 2/3/4 章可达性；未把任何章节计划接入 `game.gd`，未改章节路由。
+- 未改第 11/12/13/14/15/16 项相关数值、相机、HUD、海面母题、视野压缩、捷径授予。
+- 未新增移动能力、未改 NPC 立绘、未改 MDS 插件、未新绘/拼凑任何美术。
+- 未新增测试与产品代码；未创建临时探针，无残留。
+
+## 第 4 章计划与图骨架（第 51 程，只做数据层）
+
+> 范围：第 4 章大地图施工第 1 步（对应第 50 程核查 D 节第 1 项）。本程只做计划层：
+> 新建计划资源、图骨架夹具与交叉校验测试。**不建真实大区世界/房间，不接入
+> `game.gd`，不改第 4 章可达性**，不写波次/事件/权柄/Boss 内容。
+> 首次尝试（brief53 / session53）因 Magpie 网关中断夭折（日志仅
+> `[claude-code:unrecognized_model]`，无提交、无文档、无残留），本程为接力重试。
+> 详细版见 [第 4 章计划与图骨架 session](docs/memory/sessions/2026-11-05-chapter4-plan-graph.md)
+> 与 [ADR](docs/memory/decisions/2026-11-05-chapter4-plan-graph.md)。
+
+### 结论摘要
+
+- **计划已落地**：`resources/chapters/chapter_4_demo.tres` 为 9 区连通图，
+  与第 2/3 章同构——入口 → 两条可回环支路 → 枢纽（休整 + 商店 + 残碑 + 捷径）→
+  纵井 → 事件/精英 → Boss，隐藏书库挂在支路下。
+- **清房目标 7**：6 个战斗遭遇（支路 A 2、支路 B 1、纵井 2、精英 1）按计划顺序
+  对应旧 `ROOM_WAVES[3]` 六波（**本程未接线**）+ 1 个事件占位
+  `ch4_event/event`，由 `clear_target()` 按遭遇节点数派生；第 1 章仍 6、第 2/3 章仍 7。
+- **门 11 = 9 双向 + 2 单向**：`elite_boss`（进 Boss 不可返回）与
+  `hub_shortcut_entry`（枢纽 → 入口捷径，`requires: ["ch4_shortcut"]`，默认封闭、
+  授予来源待拍板）。图内两个回环，Boss 为末端。
+- **Boss 门取舍**：旧线性世界 `ch4_boss/left1` 可返回 `ch4_rest`；大图计划按
+  第 2/3 章先例做显式单向。旧世界原样保留，两种行为分别由测试锁定。
+- **坠落平面**：每区 `fall_below_bounds = 240`（区高 + 240，第 27 程口径）。
+- **`content_pending = true`**：只推迟 `validate_waves()`；区域字段、节点 id、门图
+  照常校验。后续内容程接完六波后按第 43 程约定清零。
+- **未写内容**：`wave`、`authority_pool`、`boss_scene`、Boss 入场/阶段文案、
+  事件文本/效果、`Ch4EventData`、`ch4_shortcut` 授予来源、敌人独立数值。
+- **未路由**：`CHAPTER_PLAN_PATHS[3]` 仍为空；`game.gd` 仍用旧
+  `chapter_4.mdsworld.json` / `chapter_4_world.tscn`；第 4 章仍不可达。
+  既有「计划槽为空」测试保留，并补「计划资源已存在但未接入」断言。
+
+### A. 计划内容（`resources/chapters/chapter_4_demo.tres`）
+
+| 区 | 类型 | 尺寸 | 遭遇/内容 |
+|---|---|---|---|
+| `ch4_entry` | entrance | 2560×1440 | 无遭遇；注释记录舞台母题现状与待定 |
+| `ch4_branch_a` | branch | 2560×1440 | `Arena`、`Arena2`；宝箱 `Chest1` |
+| `ch4_branch_b` | branch | 2560×1440 | `Arena` |
+| `ch4_hub` | hub | 2560×1440 | 休整 + 商店 `ch4_hub_shop` + 残碑 + 捷径解锁 |
+| `ch4_well` | well | 2560×2160 | `Arena`、`Arena2`；宝箱 `Chest1`；`vertical` |
+| `ch4_vault` | vault | 2560×1440 | 隐藏；宝箱 + 残碑 |
+| `ch4_event` | event | 2560×1440 | `ch4_event/event` 占位（无波次/文案） |
+| `ch4_elite` | elite | 3840×2160 | `Arena` |
+| `ch4_boss` | boss | 3840×2160 | 末端占位；无 `boss_scene`/文案/机制 |
+
+- 宝箱 3、残碑 2，与旧世界同数（旧 `ch4_03` / `ch4_05` / 书库各一箱；
+  旧 `ch4_rest` / 书库各一碑），全部 `region/Node` 节点 id。
+- 计划未写 `wave`：本程只在测试里校验 6 场战斗与 `ROOM_WAVES[3]` 六波按计划顺序
+  一一对应；事件节点无波次。
+- **Boss 区只做图骨架末端占位**：不写 `boss_scene` 路由、不改旧
+  `boss_script == "smiling"` 分支、不做 Boss 4 机制、不写入场/阶段文案。
+
+### B. 图骨架夹具（`tests/fixtures/big_room/ch4_graph.mdsworld.json`）
+
+- 顶层 `fixture: true` + `content_pending: true`（夹具元数据），无 `scene_path`、
+  无房间场景、游戏从不引用（测试检查 `game.gd` 不含夹具路径）。
+- 镜像旧世界区域 `Smiling Theater`（灰烬 + 光柱、`boss_background = blood_moon`、
+  `background` 空），不写 `backdrop_image`——不为舞台母题预设方案。
+- 9 区世界矩形、20 扇有向门 + 2 扇到达门，与计划的 11 条门记录互校；
+  捷径门带 `requires: ["ch4_shortcut"]`，`elite_boss` 与捷径为显式单向。
+- 夹具顶层注释记录：舞台母题、`ch4_shortcut` 来源、`Ch4EventData`、Boss 4
+  机制/路由/文案、战斗密度、`mask_enemy`/`seat_husk` 独立数值、Boss 单向门取舍
+  均留给后续程/拍板。
+
+### C. 测试与路由锁
+
+- 新增 `tests/test_ch4_plan.gd` **778 断言**：计划形状/类型/尺寸/坠落平面/内容 id/
+  清房目标/图可达性/单向门/捷径占位/待内容标记 + `content_pending` 只推迟波次表
+  （关掉标志必须报六条缺波次）+ 6 场战斗 ↔ `ROOM_WAVES[3]` 六波按计划顺序对应 +
+  计划↔夹具逐区逐门交叉校验 + 夹具几何（不重叠、门在正确边、门位在房间内、
+  区域相邻、捷径不邻接）+ 第 1–3 章计划不变 + 旧第 4 章世界不变（9 房/17 门/
+  7 right / 7 left / 3 door；`ch4_boss/left1` 仍返回 `ch4_rest`）+ `game.gd`
+  路由槽仍为空、旧世界仍被使用、`ch4_bigmap` 目录尚未创建。
+- 路由锁同步（各 +1 断言）：`tests/test_ch2_world.gd`、`tests/test_ch3_content.gd`、
+  `tests/integration_playability.gd` 在既有「第 4 章计划槽为空」旁补
+  「计划资源已存在但未接入」；无计划时清房目标 6 / 坠落平面 850 的默认行为断言
+  继续成立（计划未接 `game.gd`，行为不变）。
+
+### D. 本程留空/未做
+
+- **舞台母题**：未给大区管线加 theater 层、未改 `TheaterBackdrop`、未新绘背景；
+  只记录现状（聚光灯/地面光斑/浮尘 + `smiling_theater.png`）与待定。
+- **`ch4_shortcut` 来源**：未新增任何授予交互/事件/掉落；捷径门封闭占位，
+  `game.gd` 源码仍不含 `ch4_shortcut`（测试锁定）。
+- **战斗密度**：未扩波、未增遭遇；旧世界每房 5–6 只 vs 大图每遭遇 2 只
+  （`ROOM_WAVES` 单波）的差异只记录，留待内容程/拍板。
+- **`mask_enemy`/`seat_husk` 独立数值与行为**：未做，仍为第 1 章敌人的美术变体。
+- **Boss 4 机制范围**：未做、未设计；剧情圣经三阶段与 GDD「舞台机关」的差距只记录。
+- **章末边界**：未改 `_complete_chapter`；第 4 章为最后一章、章末已走 `_finish(true)`；
+  第 3 章停章替身（`_chapter == 2` → `_finish(true)`）须在可达性拍板后解开。
+- **阿砚同行**：未做；仓库仍无 companion/follower 控制器，只记录缺失。
+- 未建真实大区世界/房间、未写 `Ch4EventData`/权柄池/波次接线/Boss 文案/机制、
+  未开放第 2/3/4 章可达性、未改第 11–16 项相关数值/相机/HUD/捷径授予、
+  未新增移动能力、未改 NPC 立绘/MDS 插件、未新绘美术、未打包/导出/签名。
+
+## 第 4 章真实大区世界（第 52 程，只做结构层）
+
+> 范围：第 4 章大地图施工第 2 步（对应第 50 程核查 D 节第 2 项）。把第 51 程的
+> 9 区计划做成可加载的真实大区世界与房间场景，只做结构层；不接入 `game.gd`、
+> 不改第 4 章可达性、不写波次/事件/权柄/Boss 内容、不做第 4 章大图验收。
+> 详细版见 [第 4 章真实大区世界 session](docs/memory/sessions/2026-11-05-chapter4-bigmap-world.md)。
+
+- **大区数据** `resources/rooms/ch4_bigmap/*.tres`：9 个 `BigRoomData`，尺寸按计划
+  2560×1440 / 2560×2160（纵井）/ 3840×2160（精英、Boss）；地面贴房间底边
+  （`H-16`，16 px 厚），平台按 80 px 阶梯链布置并通过第 28 程几何校验
+  （上升 ≤80 px、水平边缘 ≤120 px）；复用 `ch1_tiles.tres`；
+  `backdrop_path = smiling_theater.png`（既有绘画背景，`backdrop_pixel_art = false`），
+  `ambient_kind = embers`（灰烬母题）、密度 0.5，按区暖色调（入口白 / 支路暖 /
+  枢纽灯黄 / 纵井灰紫 / 书库冷紫 / 事件暖橙 / 精英红 / Boss 血红）。
+- **大区场景** `scenes/mds/ch4_bigmap/*.tscn`：9 个 `MDSBigRoom`，`fall_margin = 240`
+  （房间 metadata `fall_below_bounds = 240`，与计划一致）；内容节点严格用计划 id：
+  `ch4_branch_a` 的 `Arena`/`Arena2`/`Chest1`、`ch4_branch_b` 的 `Arena`、
+  `ch4_well` 的 `Arena`/`Arena2`/`Chest1`、`ch4_elite` 的 `Arena`、
+  `ch4_hub` 的 `Stele1`/`Shop`(`ch4_hub_shop`)/`Bench`、
+  `ch4_vault` 的 `Chest1`/`Stele1`；事件区节点名 `Event`，作者
+  `encounter_id = ch4_event/event`；Boss 区只放结构 `Arena`（Boss 内容后续程）。
+- **入口出生点**：`ch4_entry` 作者 `SpawnPoint`（`save_point` 组，(400,1328) =
+  第一级台阶面 1344 − `FOOT_Y` 16），沿用第 37/41 程口径；惰性 `shortcut_arrival`
+  到达门（`MDSGate.Mode.TOUCH`）；不改 MDS 出生回退顺序、不改第 1–3 章出生点。
+- **纵向/捷径骨架**（复用第 29 程管线，未新增移动能力）：`ch4_branch_b`/`ch4_hub`/
+  `ch4_vault` 各 1 台电梯（地面 → y=100，覆盖顶门列且避开平台），`ch4_well`
+  1 台电梯 + 3 个单向落台，`ch4_elite` 1 台电梯（到达门上缘的横向走廊），枢纽
+  `Bench` 长椅检查点与带 `requires` 的捷径门自动生成 `MDSGateBarrier`。
+  电梯未写 `speed`，沿用 `MovingPlatform.speed` 管线默认 **80 px/s**；
+  「待用户确认」第 12 项只针对第 2 章，本程未给第 4 章定速度。
+- **独立世界** `scenes/mds/chapter_4_bigmap.mdsworld.json` + `chapter_4_bigmap_world.tscn`：
+  9 区单矩形、原点 32 px 对齐；`start_room = ch4_entry`；区域 `Smiling Theater`
+  镜像旧世界（灰烬 + 光柱天气、`background` 空、`boss_background = blood_moon`），
+  不写 `backdrop_image`、不加 theater 层（舞台母题仍待拍板）；22 门 = 20 有向 +
+  2 只到达（`ch4_entry/shortcut_arrival`、`ch4_boss/left1`）；显式单向
+  `elite_boss`（进 Boss 不可返回）与 `hub_shortcut_entry`
+  （`requires = ["ch4_shortcut"]`，来源待第 50 程专节 E，屏障默认封闭）；
+  侧门在地面上方 90 px、底门在地面线、顶门在上边缘；房间不重叠、双向门相邻、
+  捷径刻意不相邻。世界 JSON 由第 51 程夹具镜像生成（逐区字段一致，仅加
+  `scene_path`），夹具未改语义。
+- **测试** `tests/test_ch4_world.gd`（**812** 断言）：真实世界 ↔ 计划逐区
+  类型/尺寸/遭遇/宝箱/残碑/捷径/隐藏/商店/休整/纵井；11 条计划门 ↔ 世界门位、
+  双向/单向/`requires`；世界图从入口 BFS 到全部 9 区；几何（单矩形、原点 32 网格、
+  门在正确边、房间不重叠、双向门相邻、捷径不相邻）；9 场景为 `MDSBigRoom`、
+  `BigRoomData` 校验为空、尺寸/瓦片/背景/氛围/坠落余量/底边地面；内容节点与
+  计划 id 一一对应且数量不许多、事件区作者遭遇 id、枢纽商店/长椅、入口出生点与
+  到达门；5 区电梯（默认 80 px/s）、纵井 3 个单向落台、顶门房间电梯覆盖门列、
+  行程向上、列内无平台；夹具镜像与隔离；`CHAPTER_PLAN_PATHS[3]` 仍空、旧第 4 章
+  9 房/17 门世界仍在（`ch4_boss/left1` 仍返回 `ch4_rest`）、第 1–3 章计划与世界
+  不变、计划仍 `content_pending`/无波次/无权柄池/无 `boss_scene`、无
+  `Ch4EventData`、`game.gd` 不含 `ch4_shortcut`、场景无作者 `GateVisual`。
+  就地更新 `tests/test_ch4_plan.gd` 的「`ch4_bigmap` 目录尚未创建」锁为目录/
+  文件存在（778 → 796，其余路由锁不变）。
+- **边界**：`game.gd` 未改，第 4 章仍走旧 `chapter_4.mdsworld.json` / 9 个
+  `MDSChapterRoom`，`CHAPTER_PLAN_PATHS[3]` 仍空；第 4 章仍不可达。舞台母题
+  （未加大区 theater 层、未改 `TheaterBackdrop`、未新绘背景）、`ch4_shortcut`
+  来源（未新增任何授予交互/事件/掉落，屏障保持封闭）、战斗密度（未扩波/未增遭遇；
+  旧世界每房 5–6 只 vs 大图每遭遇 2 只只记录）、`mask_enemy`/`seat_husk` 独立
+  数值与行为（未做，仍为第 1 章敌人美术变体）、Boss 4 机制范围（未做、未设计、
+  不写 `boss_scene`/入场/阶段文案）、章末边界（未改 `_complete_chapter`；第 3 章
+  停章替身仍待可达性拍板后解开）、阿砚同行（未做，仓库仍无 companion 控制器）
+  全部留空未施工。未新增移动能力、未改 NPC 立绘/MDS 插件、未新绘美术、未打包/
+  导出/签名。
+
+## 第 4 章内容数据层第 1 步（第 53 程，只做数据层）
+
+> 范围：第 4 章大地图施工第 3 步前半段（对应第 50 程核查 D 节第 3 项中
+> 「`Ch4EventData` / `authority_pool` / Boss 入场与阶段文案」部分）。沿用第 32 程
+> （第 2 章）与第 42 程（第 3 章）已验证的口径，只做数据层与测试。**波次接线
+> （第 2 步）、事件区真实自动触发（第 3 步）、Boss 4 机制/`boss_scene` 与本程
+> 之后的第 4 章大图验收均不做**；计划仍不路由、世界仍不被 `game.gd` 引用，
+> 第 4 章仍不可达。详细版见
+> [第 4 章内容数据层 session](docs/memory/sessions/2026-11-05-chapter4-content-data.md)。
+
+- **事件数据** `scripts/data/ch4_event_data.gd`（`Ch4EventData`）：7 组笑面剧场
+  文案——纸人 / 面具 / 名册 / 幕布 / 台词 / 聚光灯 / 谢幕；取材自
+  `CampaignData.chapter(3)` 的开场（纸人只为最后一页鼓掌、笑面史官记得所有名字、
+  「这次换你写我」）与章末（一页写满昌子名字的纸、纸人的最后一句「谢幕」），
+  以及 GDD/剧情圣经的舞台、面具、名册、谢幕母题；不新增设定、不写出未实现的
+  「未来的昌子」剧情事实。固定「读/拿」两选项，效果沿用第 32 程口径——读 →
+  污染 +8 + 解明一个残页词（无词可解改发残页 +6），拿 → 残页 +12；
+  `pick(run_seed, "ch4_event/event")` 确定性轮换、不消耗 run RNG。
+- **事件路由**：`game.gd` 的 `_event_data` 扩到第 4 章（索引 3），键为计划事件
+  节点 id；第 1 章仍 `Ch1EventData` 原键与原值，第 2/3 章仍 `Ch2/Ch3EventData`，
+  索引 ≥ 4 仍返回 `{}`。事件区真实触发留给后续程（通用大图区域分支已存在，
+  本程只锁触发谓词输入）。
+- **权柄池**：`chapter_4_demo.tres` 补 `authority_pool = [续命, 改写]`；条件项
+  仍由 `AuthorityController.build_pool` 从 `ContentLibrary` 追加吞噬（污染 ≥ 40）/
+  归档（记录 ≥ 2），第 1/2/3 章池与授予行为不变。
+- **Boss 文案**：`BossEntranceData` 新增第 4 章「笑面史官」8 条入场文案
+  （`variants(3)`），`BossPhaseData` 新增阶段 2/3 各 8 条（`variants(phase, 3)`）；
+  第 1 章保留 `"%d:%d"` 选句键，第 2/3/4 章用 `"%d:%d:%d"`，不回落第 1/2/3 章。
+  核查确认 `BossEntranceData` 既有实现用 `"%d:%d" % [run_seed, chapter_index]`
+  （第二段是章节索引，天然按章节区分），保持原样只加表；若改键会让第 2/3 章
+  已选句子漂移。
+- **Boss 数值/立绘/脚本未改**：笑面史官 HP 520 / 伤害 18 / 速度 92 /
+  `smiling_archivist.png` / `boss_script = smiling`，计划仍无 `boss_scene`、
+  无专章机制（改写规则/删除词/复制武器/舞台机关留待机制程）。
+- **遭遇与波次只校验不接线**：7 个遭遇节点唯一且 `region/Node` 锚定；6 个战斗
+  遭遇按计划顺序与 `ROOM_WAVES[3]` 六波一一对应（事件节点无波、Boss 区不占
+  普通波）；清房目标仍 7（HUD 分母 8）。计划 7 个区域仍无 `wave` 键，
+  `content_pending = true` 继续推迟 `validate_waves()`；清零标志的副本会报恰好
+  6 条缺波次且不向事件节点要波——下一步按计划顺序落 `ROOM_WAVES[3]` 即可。
+- **测试**：新增 `tests/test_ch4_content.gd`（**613 断言**）锁定事件确定性/
+  效果类型/轮换/不耗 RNG、章节事件路由、权柄基础池 + 条件项、Boss 文案不回落
+  第 1/2/3 章与选句键不变、Boss 4 数值/立绘/脚本未改、7 个遭遇节点与六波对应、
+  清房目标 7、`content_pending` 保持、事件触发谓词输入，并锁
+  `CHAPTER_PLAN_PATHS[2]/[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧世界、旧第 4 章
+  9 房/17 门世界与第 1–3 章计划/世界不变、`game.gd` 不含 `chapter_4_demo.tres`/
+  `chapter_4_bigmap`/`ch4_shortcut`。同步更新 `test_ch4_plan`/`test_ch4_world`
+  的「无 authority_pool / 无事件模块 / Boss 静默」期望，以及
+  `test_ch2_content`/`test_ch3_content`/`test_boss_entrance_content`/
+  `integration_ch1_demo` 中「第 4 章静默」的旧期望（改为「第 4 章有自己的文案、
+  超出范围静默」）；图骨架夹具只改说明文字。
+- **边界/未做**：未开放第 2/3/4 章可达性、未接入 `game.gd`、未改章节路由与
+  章末流程；未做波次接线、事件区真实自动触发验证、Boss 4 机制/`boss_scene`、
+  第 4 章大图验收；未新增 `ch4_shortcut` 授予、未改舞台表现/战斗密度/
+  `mask_enemy`/`seat_husk` 独立数值；未做阿砚同行、新移动能力、NPC 立绘、
+  MDS 插件、新绘美术、打包/导出/签名/安卓/触屏。待确认第 11–16 项未碰，
+  第 50 程专节 E 的开放问题候选仍只记录、未编号、未拍板。
+
+## 第 4 章内容数据层第 2 步（第 54 程，只做数据层）
+
+> 范围：第 4 章大地图施工第 3 步的后半段（对应第 50 程核查 D 节第 3 项中
+> 「计划 `wave` 接线 + `content_pending` 清零」）。沿用第 33 程（第 2 章）与
+> 第 43 程（第 3 章）已验证的口径，只做数据层与测试。**事件区真实自动触发
+> （第 3 步）、Boss 4 机制/`boss_scene`、第 4 章大图验收与本程之后的任何
+> 可达性工作均不做**；计划仍不路由、世界仍不被 `game.gd` 引用，第 4 章仍
+> 不可达。详细版见
+> [第 4 章波次接线 session](docs/memory/sessions/2026-11-05-chapter4-wave-wiring.md)。
+
+- **波次接线**：`chapter_4_demo.tres` 的 4 个战斗区（`ch4_branch_a`/
+  `ch4_branch_b`/`ch4_well`/`ch4_elite`）补 `wave` 字典，6 个键 = 6 个战斗
+  遭遇节点 id，值按计划顺序逐字复用 `ROOM_WAVES[3]` 六波（波次内容未新增、
+  未修改）：`ch4_branch_a/Arena` → `mask_enemy`+`seat_husk`；
+  `ch4_branch_a/Arena2` → `choir_summoner`+`page_swarm`；
+  `ch4_branch_b/Arena` → `seat_husk`+`mirror_sniper`；
+  `ch4_well/Arena` → `mask_enemy`+`typo_beast`；
+  `ch4_well/Arena2` → `ink_bomber`+`mask_enemy`；
+  `ch4_elite/Arena` → `mirror_sniper`+`page_swarm`。事件节点
+  `ch4_event/event` 无波，事件区/Boss 区/入口/枢纽/书库不带 `wave`；清房目标
+  仍 7（HUD 分母 8）。
+- **`content_pending` 清零**：按第 40/43 程约定由 `true` 改回 `false`，波次表
+  进入 `validate()` 正常校验（区域/门图校验不变）；标志本身保留在
+  `ChapterPlanData`（默认 `false`、向后兼容）。图骨架夹具
+  `tests/fixtures/big_room/ch4_graph.mdsworld.json` 顶层的
+  `content_pending: true` 是夹具元数据、不是该字段，未改。
+- **校验**（就近扩展既有套件，未另起重复套件）：
+  - `tests/test_ch4_content.gd`（**641 断言**，+28）：波次段从「未接线」改为
+    接线校验——6 个键恰好等于 6 个战斗遭遇节点 id、每个键的值 ==
+    `ROOM_WAVES[3]` 对应波原文、键锚定本区且唯一、事件节点/事件区/Boss 区
+    无波、`validate_waves()` 与 `validate()` 干净、`content_pending` 已清零；
+    新增 `_test_runtime_wave_lookup`：把第 4 章计划挂到独立 `game.gd` 实例上，
+    经 `_plan_wave()` 按节点 id 读回六波（证明第 33 程通用大图分支可直接
+    取用），但不改章节路由。
+  - `tests/test_ch4_plan.gd`（**795 断言**，−1）：`_test_pending_content` →
+    `_test_wave_wiring`，锁定 6 个波次键、逐遭遇非空、事件/Boss 无波、计划
+    校验干净；`content_pending` 的局部性改为「新副本删掉波次 + 标志开 →
+    `validate()` 干净；标志关 → 报六条缺波次」，保留第 40 程的关口。
+  - `tests/test_ch4_world.gd`（**813 断言**，+1）：计划侧期望同步为
+    `content_pending = false`、6 个波次键、`validate_waves()` 干净；世界/场景
+    本身未改。
+  - 既有断言保留并复跑：`CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]`
+    仍指旧世界、旧第 4 章 9 房/17 门世界仍在、第 1/2/3 章计划与世界不变、
+    清房目标仍 7。
+- **产品代码未改**：`game.gd`、`ChapterPlanData`、第 4 章世界 JSON/场景、
+  Boss 4 数值与文案均未改动；本程只改计划资源与测试。
+- **边界/未做**：未开放第 2/3/4 章可达性、未接入 `game.gd`、未改章节路由与
+  章末流程；未做事件区真实自动触发验证（第 3 步，沿用第 34/44 程通用分支，
+  留待下一程）、Boss 4 机制/`boss_scene`、第 4 章大图验收；未新增
+  `ch4_shortcut` 授予（捷径屏障仍默认封闭）；战斗密度未扩波/未增遭遇（旧世界
+  每房 5–6 只 vs 大图每遭遇 2 只的差异只记录）；`mask_enemy`/`seat_husk`
+  独立数值与行为未做；舞台母题呈现层未改；阿砚同行未做；待确认第 11–16 项
+  未碰，第 50 程专节 E 的开放问题候选仍只记录、未编号、未拍板。
+
+## 第 4 章内容数据层第 3 步（第 56 程，只做触发与测试层）
+
+> 范围：第 4 章事件区 `ch4_event` 的真实自动触发验证。沿用第 34 程（第 2 章）
+> 与第 44 程（第 3 章）已验证的通用大图区域分支，本程只做核查、集成验证与
+> 记录。**不接入 `game.gd`、不开放可达性、不改章节路由与章末流程、不做
+> Boss 4 机制/`boss_scene`、不做第 4 章大图验收**；计划仍不路由、世界仍不被
+> `game.gd` 引用，第 4 章仍不可达。详细版见
+> [第 4 章事件触发 session](docs/memory/sessions/2026-11-05-chapter4-event-trigger.md)。
+
+- **前置核查（结论：无需新增触发路径）**：`_on_mds_room_loaded` 第 34 程的
+  区域级大图事件分支是章节无关判定——`big_map` + 计划区域 `type == "event"`
+  + `_event_data(room_id)` 非空；第 53 程 `_event_data` 已路由第 4 章
+  （`_chapter == 3` → `Ch4EventData`）。因此 `ch4_event` 事件区无需第 4 章
+  专属触发路径；`game.gd` 只把该分支注释的「Chapters 2–3」更正为
+  「Chapters 2–4」，行为零改动。
+- **触发验证**（`tests/integration_playability.gd` 新增
+  `_test_ch4_bigmap_event_trigger`，把第 52 程
+  `chapter_4_bigmap_world.tscn` 与第 4 章计划临时挂到真实主场景，
+  `ch4_event` 为起始区，走真实 `room_loaded`）：
+  - 进入区域即开第 4 章事件页；文案/标题/两选项 =
+    `Ch4EventData.pick(run_seed, "ch4_event/event")`，开页不耗 run RNG；
+  - 拿 → 残页 +12、提示文案正确、HUD「档案 1 / 8」，结算写
+    `cleared_encounters["ch4_event/event"]` 且清房计数 +1（清房目标 7、分母 8）；
+  - 结算落进真实 run save 的同一键；重载不重开、不暂停、不重复计数、
+    不重复奖励；
+  - 回退结算后重进再验「读」→ 污染 +8（经倍率、上限 100）+ 解明一个残页词，
+    无词可解 → 残页 +6（沿用 `Ch4EventData` / `_grant_event_word` 既有口径）；
+  - 同时锁不变项：`CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧
+    `chapter_4.mdsworld.json`、旧第 4 章 9 房/17 门世界仍在、第 1/2/3 章计划槽
+    不变、计划清房目标 7 / 7 个遭遇 / 波次表（`content_pending = false`）/
+    `boss_scene` 仍空、第 1–3 章事件数值不变、`game.gd` 无 `ch4_event`
+    专属触发与 `chapter_4_bigmap` 路由；测试后恢复第 4 章旧世界巡检。
+- **单元校验**：`tests/test_ch4_content.gd`（641 → **642**）补一条
+  「触发键 = `RoomProgress.event_encounter_id("ch4_event")` = 计划事件节点 id」，
+  防止页面与结算键漂移。
+- **产品代码未改**：`game.gd` 仅注释；`ChapterPlanData`、第 4 章计划/世界/
+  场景、`Ch4EventData`、Boss 4 数值与文案均未改动。
+- **边界/未做**：未开放第 2/3/4 章可达性、未接入 `game.gd`、未改章节路由与
+  章末流程；未做 Boss 4 机制/`boss_scene`、第 4 章大图验收；未新增
+  `ch4_shortcut` 授予（捷径屏障仍默认封闭）；战斗密度未扩波/未增遭遇（旧世界
+  每房 5–6 只 vs 大图每遭遇 2 只的差异只记录）；`mask_enemy`/`seat_husk`
+  独立数值与行为未做；舞台母题呈现层未改；阿砚同行未做；待确认第 11–16 项
+  未碰，第 50 程专节 E 的开放问题候选仍只记录、未编号、未拍板。
+
+## 第 4 章 Boss 4 机制与 `boss_scene` 路由（第 57 程，只做机制与测试层）
+
+> 范围：第 4 章 Boss 4「笑面史官」的计划 `boss_scene` 路由与既有机制锁定。
+> 沿用第 45 程（第 3 章 Boss 3）的做法，本程只做核查、路由、测试与记录。
+> **不扩展机制（删除词/复制武器/舞台机关）、不接入 `game.gd`、不开放可达性、
+> 不改章节路由与章末流程、不做第 4 章大图验收**；计划仍不路由、世界仍不被
+> `game.gd` 引用，第 4 章仍不可达。详细版见
+> [第 4 章 Boss 4 session](docs/memory/sessions/2026-11-06-chapter4-boss4-mechanism.md)。
+
+- **前置核查（结论：既有实现可直接复用，无需改脚本）**：
+  - `scripts/bosses/smiling_archivist.gd`（`SmilingArchivist extends InkArchivist`）
+    与 `scenes/bosses/smiling_archivist.tscn` 已存在；阶段 1 纸页波，阶段 2
+    每第 3 次为镜面弹幕、其余纸页波，阶段 3 四拍 `%4` = 改写 / 镜面弹幕 /
+    墨雨 / 纸页波。镜面弹幕 3 枚、张角 ±0.34 rad、每枚
+    `int(攻击力 × 0.7)`、速度 280；纸页波继承（阶段 ≥2 双发）；墨雨 3 个
+    `InkWarning`、`int(攻击力 × 0.75)`；改写封印一个短语槽 3.0 s。
+  - `CampaignData.chapter(3)`：名「笑面史官」、HP 520 / 伤害 18 / 速度 92、
+    `boss_script = &"smiling"`、立绘 `smiling_archivist.png`；没有
+    `boss_scene`（场景由计划路由）。
+  - `game._spawn_boss` 优先级：战役表 `boss_scene`（第 1 章）→ 计划
+    `boss_scene`（第 2/3/4 章）→ `boss_script == "smiling"` →
+    `boss_script == "reader"` → 默认；本轮只给计划补字段，优先级与兜底未改。
+  - 大图生成高度：`_enemy_spawn_y()` 在 `_chapter_plan != null and big_map` 时
+    返回 `-ENEMY_FOOT_Y - 2`（-18 px），否则 250 px；函数未改，只补断言。
+  - 第 53 程已补 `BossEntranceData` 8 条入场 + `BossPhaseData` 阶段 2/3 各
+    8 条，选句键 `"%d:%d:%d"`（含章节索引），第 4 章不回落第 1/2/3 章。
+- **路由与不变项**：`chapter_4_demo.tres` 新增
+  `[ext_resource type="PackedScene" path="res://scenes/bosses/smiling_archivist.tscn"]`
+  并写 `boss_scene = ExtResource("5_smiling")`；Boss 区备注同步改为「已路由 +
+  入场/阶段文案已编写 + 机制扩展仍待拍板」。通用 Boss 流程（生成/血条/阶段
+  横幅/权柄/outro/结束）全部复用，未另起框架。数值与立绘未改（暂定口径，
+  由测试锁定）；第 1/2/3 章 Boss 场景与计划 `boss_scene` 未改；
+  `_complete_chapter` 与章节路由未改。第 4 章仍不可达：
+  `CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧
+  `chapter_4.mdsworld.json`、旧第 4 章 9 房/17 门世界仍在；计划清房目标 7、
+  7 个遭遇、波次表（`content_pending = false`）、基础权柄池、事件触发口径
+  均不变；`game.gd` 仍无 `chapter_4_bigmap` / `ch4_shortcut` 引用。
+- **机制锁定（由测试固定）**：
+
+  | 阶段 | 攻击轮换 | 说明 |
+  |---|---|---|
+  | 1 | 纸页波 | 单发，伤害 = 攻击力 18 |
+  | 2 | 纸页波 ×2 → 镜面弹幕 | 每第 3 次为镜面弹幕；纸页波阶段 ≥2 双发 |
+  | 3 | 镜面弹幕 → 墨雨 → 纸页波 → 改写 | `%4` 轮换；改写固定封 0 号槽 |
+
+  - 镜面弹幕：3 枚、±0.34 rad、`int(18 × 0.7) = 12`、速度 280。
+  - 墨雨：3 个 `InkWarning`、`int(18 × 0.75) = 13`。
+  - 改写：封印 0 号短语槽 3.0 s（阶段 3 的改写落在 4 的倍数拍，恒为 0 号槽）。
+  - 单元层限制：`test_ch4_boss` 在 `_initialize` 同步运行，节点尚未进入
+    SceneTree，而 `SmilingArchivist._mirror_fan` / `_ink_rain` 有
+    `is_inside_tree()` 前置；单元层用记录型子类锁完整节拍表、用真实脚本锁
+    纸页波伤害与改写，镜面弹幕/墨雨的生成物数量、伤害与速度在
+    `integration_playability` 的真实树里锁定。
+- **测试**：新增 `tests/test_ch4_boss.gd`（78 断言）；`test_ch4_plan`
+  795→**797**、`test_ch4_world` 813→**814**、`test_ch4_content`
+  642→**644**（旧「计划无 `boss_scene`」期望改为已路由）；可玩性集成新增
+  `_test_ch4_bigmap_boss`（真实第 4 章大区世界 + 计划临时挂载，`ch4_boss`
+  起始：计划路由 `SmilingArchivist`、数值来自战役表、生成在 Arena 地面线
+  之上、阶段 2/3 横幅使用第 4 章选句键、实树镜面弹幕/墨雨/改写生效、击败 →
+  权柄 → outro → 章末选择 → 战役结束、重载不二次生成；测试后恢复旧第 4 章
+  世界），810 → **869**。
+- **边界/未做**：未开放第 2/3/4 章可达性、未接入 `game.gd`、未改章节路由/
+  章末流程/`_complete_chapter`（第 4 章章末收口排下一程）；未做 Boss 4 机制
+  扩展（剧情圣经的「删除词/复制昌子的武器」、GDD 的「舞台机关」），未新增
+  任何攻击手段；未新增 `ch4_shortcut` 授予（屏障仍默认封闭）；未扩波/增遭遇
+  （旧世界每房 5–6 只 vs 大图每遭遇 2 只只记录）；`mask_enemy`/`seat_husk`
+  独立数值未做；舞台母题呈现层未改；阿砚同行未做；待确认第 11–16 项未碰，
+  第 50 程专节 E 的开放问题候选仍只记录、未编号、未拍板。
+
+## 第 4 章章末收口（第 58 程，只做章末流程与测试层）
+
+> 范围：第 4 章（最终章）的章末流程收口——Boss 4 击败 → 权柄 → outro →
+> 章末选择 → 战役结束/停章，不自动进入不存在的后续章节。
+> 沿用第 46 程（第 3 章章末）的做法，本程只做核查、章末分支、测试与记录。
+> **不接入 `game.gd`、不开放可达性、不改章节路由与可达性、不做第 4 章大图
+> 验收、不扩展 Boss 4 机制、不新编剧情**；计划仍不路由、世界仍不被 `game.gd`
+> 引用，第 4 章仍不可达。详细版见
+> [第 4 章章末收口 session](docs/memory/sessions/2026-11-06-chapter4-chapter-end.md)。
+
+- **前置核查（结论：章末文本/选项/语音齐全，续玩逻辑章节无关，无需新编）**：
+  - `_complete_chapter` 原有分支：第 1 章（`_chapter == 0`）置
+    `demo_cleared` 后 `_finish(true)`；第 2 章（`_chapter == 1`）`_finish(true)`
+    （第 35 程）；第 3 章（`_chapter == 2`）`_finish(true)`（第 46 程）；其余走
+    `_chapter + 1 < CampaignData.chapter_count()` → `_start_chapter`，否则
+    `_finish(true)`。第 4 章（`_chapter == 3`）此前因 `chapter_count() == 4`
+    落到 `else` 的 `_finish(true)`，行为上已经结束战役，但没有显式分支。
+  - `CampaignData.chapter(3)`：4 句 `outro`、两选项（重写名册 仁慈 +1 /
+    焚毁名册 污染 +12）、`voice_outro = ch4_outro`
+    （`assets/audio/voice/zh_cn/ch4_outro.ogg` 存在）；`_apply_chapter_choice`
+    已有 `smiling_theater` 分支（选项 1 置 `_burned_final`，结局按
+    `CampaignData.ending_for` 选焚毁）。**未新编任何剧情文本、未新设选项**。
+  - 续玩/重载逻辑章节无关：`_on_mds_room_loaded` 的 Boss 区在 `_boss_defeated`
+    时调用 `_resume_boss_aftermath`（不二次生成 Boss、无权柄时补授予、随后
+    `_complete_chapter`）；`_start_mds_chapter` 从 run save 恢复
+    `_boss_defeated`。
+- **改动**：`scripts/game.gd` 的 `_complete_chapter` 在既有第 3 章分支之后新增
+  `_chapter == 3` 分支，章末选择后调用现有 `_finish(true)` 结束战役；第 1/2/3 章
+  分支与 `_chapter + 1 < chapter_count()` 兜底未改，只更新第 3 章分支上方已
+  过时的注释。章末选择界面/结局记录/续玩行为沿用第 35/46 程口径，不另起流程。
+  （行为等价：第 4 章是最后一章，旧的 `else` 兜底本来就是 `_finish(true)`；
+  本程把战役终点写成显式分支并由测试锁定。）
+- **测试**：`tests/integration_playability.gd` 的 `_test_ch4_bigmap_boss` 扩为
+  完整章末链路（真实第 4 章大区世界 + 计划临时挂载，`ch4_boss` 起始）：
+  击败 `SmilingArchivist` → 权柄二选一 → 第 4 章 outro（4 句原文/标题/
+  `ch4_outro` 语音）→ 章末选择（两选项原文）→ `_finish(true)`；断言
+  `_chapter` 仍 3、`_finished`、结局屏可见、`_boss_defeated` 已记录、
+  选项 0 的仁慈 +1 与零污染、`_burned_final == false`、结局 id 按
+  `CampaignData.ending_for` 规则且写入 `Profile.endings`；测试后
+  `_restore_chapter_world` 恢复旧第 4 章世界。同函数开头锁定不变项：
+  `CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧
+  `chapter_4.mdsworld.json`、清房目标 7、7 个遭遇节点、`ch4_branch_a/Arena`
+  波次表、权柄基础池、`boss_scene` 指向 `smiling_archivist.tscn`、
+  `CampaignData.chapter_count() == 4`。旧线性世界结构遍历补
+  `chapter_index == 3` 分支：停在第 4 章、结局屏可见（并同步更新第 3 章分支的
+  过时注释与章末等待时长）。
+- **不变项**：`CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧世界、
+  旧第 4 章 9 房/17 门世界仍在；第 4 章计划清房目标 7、波次表
+  （`content_pending = false`）、权柄池、事件触发口径、`boss_scene` 与 Boss 4
+  机制/数值不变；第 1/2/3 章计划/世界/章末流程不变；第 4 章仍不可达、未接入
+  `game.gd`。
+- **边界/未做**：未做第 4 章大图验收；未做 Boss 4 机制扩展（剧情圣经的
+  「改写规则/删除词/复制昌子的武器」、GDD 的「舞台机关」）；未新增
+  `ch4_shortcut` 授予（屏障仍默认封闭）；未扩波/增遭遇（旧世界每房 5–6 只 vs
+  大图每遭遇 2 只只记录）；`mask_enemy`/`seat_husk` 独立数值未做（仍是第 1 章
+  敌人的美术变体，共享场景/数据）；舞台母题呈现层未改（未改 `TheaterBackdrop`、
+  未新绘背景）；阿砚同行未做；待确认第 11–16 项未碰，第 50 程专节 E 的开放
+  问题候选仍只记录、未编号、未拍板。
+
+## 第 4 章大地图系统验收（第 59 程）
+
+> 范围：第 4 章（笑面剧场）九区大地图的系统验收，口径对齐第 36 程（第 2 章）
+> 与第 48 程（第 3 章）D 节 1–10 项，并加第 4 章专属断言。只做验收与验收面内
+> 的真实缺陷修复；不接入 `game.gd`、不开放可达性、不做门视觉/地图标题改动/
+> 敌人美术接线。本程为 brief63 第 2 次尝试：首次（brief62）因 Magpie 网关
+> 中断夭折，只留下未提交的验收脚本初稿；本程核查后修复其解析错误并补齐
+> 缺口，未另起框架。详细版见
+> [第 4 章大地图系统验收 session](docs/memory/sessions/2026-11-06-chapter4-bigmap-acceptance.md)。
+
+- **前置核查（结论：验收对象与第 51–58 程落地一致）**：
+  - 计划 `resources/chapters/chapter_4_demo.tres`：9 区连通图；6 个战斗遭遇 +
+    1 个事件占位 → 清房目标 7；3 宝箱/2 残碑；11 门 = 9 双向 + 2 单向
+    （`elite_boss`、`hub_shortcut_entry` 带 `requires = ["ch4_shortcut"]`）；
+    每区 `fall_below_bounds = 240`；`content_pending = false`；
+    `authority_pool = [续命, 改写]`；`boss_scene = smiling_archivist.tscn`。
+  - 独立世界 `scenes/mds/chapter_4_bigmap.mdsworld.json` +
+    `chapter_4_bigmap_world.tscn`：9 区、22 门 = 20 有向 + 2 只到达
+    （`ch4_entry/shortcut_arrival`、`ch4_boss/left1`）；入口 `ch4_entry` 作者
+    `SpawnPoint`。
+  - 内容：`Ch4EventData` 7 组笑面剧场文案；计划 `wave` 六波按顺序接
+    `ROOM_WAVES[3]`；Boss 4 路由既有 `SmilingArchivist`；章末显式
+    `_chapter == 3` → `_finish(true)`。
+- **遗留初稿核查**：`tests/integration_ch4_bigmap.gd`（1782 行）结构完整，但
+  `_run()` 内 `enemy_art` / `enemy_fallback` 重复声明，GDScript 解析失败、
+  从未跑通。删除重复声明后首次运行 **4766 断言 / 0 失败**；随后按任务单补
+  覆盖缺口（5 台电梯逐一测速、7 组事件文案、Boss 阶段 3、权柄条件项、其余
+  四个战斗区波次实机校验），最终 **4869 断言 / 0 失败（连续两次）**。
+- **验收结果**：`tests/integration_ch4_bigmap.gd` **4869 断言 / 0 失败**。
+  覆盖：计划图入口 BFS 九区全可达；世界 22 门全部实走（20 连通 + 2 到达）、
+  2 扇单向语义正确；九区单矩形边界 = 计划尺寸、相机四边 = 世界边界；5 台
+  电梯实测管线默认 80 px/s、纵井 3 个单向落台、长椅回退、top/bot 门落点与
+  出速、坠落平面不误杀；门过渡无叠加暂停/剧情/奖励/地图/权柄/商店；3 宝箱 +
+  2 残碑按节点 id 一次性；`ch4_branch_a` 两场遭遇逐场锁门/清怪/奖励，其余四个
+  战斗遭遇在真实区域按计划波次生成；清房推进到 7（HUD 分母 8）；隐藏书库首次
+  发现与地图揭示；捷径屏障默认封闭、测试注入能力后开门并跨存档保持（未新增
+  游戏内授予）；世界级存档恢复到正确房间/坐标；`ch4_boss` 生成
+  `SmilingArchivist`、战役数值/立绘/入场与阶段 2/3 文案、权柄池、击败 → outro
+  → 章末选择 → 战役结束、重载不二次生成；地图标题「笑面剧场地图」、
+  `smiling_theater.png` 平铺、灰烬/光柱、`embers`、`blood_moon` Boss 背景、
+  无 theater/sea 层、8 种敌人专属美术无回退。
+- **性能基线**（`fade_time = 0` 原始构建，两次运行区间）：普通区首次
+  14.5–19.7 ms、热 12.3–16.6 ms；Boss 区冷 71.4–79.7 ms / 热 45.6–45.9 ms；
+  关动态背景 11.6–12.0 ms、关天气 38.0–38.5 ms、不生成 Boss 21.7–22.8 ms；
+  真实门过渡 236.1–243.8 ms。headless 无帧率上限，单帧耗时无代表性；大区按
+  「门 + 0.22 秒淡入」过渡、`seamless_rooms = false`，故记录门过渡墙钟。
+- **真实缺陷**：**未发现产品行为缺陷**；本程改动全部在验收脚本自身（遗留初稿
+  重复声明导致解析失败 + 按任务单补断言），未改任何 `scripts/`/`scenes/`/
+  `resources/`。战斗密度差异只记录：大图每遭遇 2 只 vs 旧世界每房 3–4 只。
+- **不变项**：`CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧世界、
+  旧第 4 章 9 房/17 门世界仍在；第 4 章计划/波次/事件/权柄/Boss 4/章末流程与
+  第 1/2/3 章计划/世界/流程不变；未新增 `ch4_shortcut` 授予、未改电梯速度/
+  相机/HUD；第 2/3/4 章仍不可达、第 4 章仍未接入 `game.gd`。
+- **边界/未做**：未做第 4 章门视觉专项、第 4 章地图标题改动、第 4 章敌人美术
+  核查/接线、Boss 4 机制扩展、舞台母题呈现层、`ch4_shortcut` 授予来源、战斗
+  密度调整、`mask_enemy`/`seat_husk` 独立数值、阿砚同行；待确认第 11–16 项
+  未碰，第 50 程专节 E 的开放问题候选仍只记录、未编号、未拍板。
+
+## 样图截图（第 60 程）
+
+> 依据：`.supervisor/DECISIONS.md`「样图截图（监工决定 2026-11-06，用户想看新章节的样子）」。本程唯一产出是样图；只截图、只记录，不改任何游戏内容。
+
+### 做法
+
+- **渲染**：`xvfb-run -a godot --path . --resolution 1280x720 --rendering-driver opengl3 --audio-driver Dummy -s tests/capture_bigmap_chapters.gd -- --out-dir=res://artifacts/screens`。纯 `--headless` 是 dummy 渲染器、截不到图，沿用 `tests/capture_authority_ending.gd` 的离屏渲染先例。
+- **挂载**：第 2–4 章仍不可达、计划也未接入 `game.gd`。截图脚本实例化真实 `scenes/main.tscn`，等第 1 章加载后，用 `integration_ch2/3/4_bigmap.gd` 同样的手法临时挂上对应章节的 `ChapterPlanData` + `chapter_N_bigmap_world.tscn`；拍完不写回任何产品默认值（`CHAPTER_PLAN_PATHS` / `MDS_WORLD_FILES` / 章节路由均未动）。
+- **取景**：只把玩家放到作者地面/平台上的取景点、`Camera2D.reset_smoothing()`、必要时等电梯升到画面内；没有改数值、没有加作弊开关、没有改游戏逻辑。Boss 房间由真实 `_on_mds_room_loaded` 生成 Boss，玩家进入 `Arena` 触发范围后由真实 `_update_room_locks()` 触发入场，等 2.6 秒拍战斗中的一帧。
+- 新增 `tests/capture_bigmap_chapters.gd`（随本程提交）；PNG 存 `artifacts/screens/`，按约定不提交。
+
+### 文件清单与取景
+
+| 文件 | 区/房间（计划尺寸） | 取景与画面内容 |
+|---|---|---|
+| `artifacts/screens/ch2/ch2_entry_panorama.png` | 呼吸废墟 · 入口 `ch2_entry`（2560×1440） | 玩家站在入口第二级平台 (1100,1168)；画面含左侧「来路」门视觉、底部舱口「前往 呼吸废墟 · 锈雾支路」标题（部分被底部 HUD 挡住）、平台阶梯、`breathing_ruins.png` 背景与章节 HUD。 |
+| `artifacts/screens/ch2/ch2_well_shaft.png` | 呼吸废墟 · 纵井 `ch2_well`（2560×2160） | 玩家站在 `OneWay3` 单向落台 (480,1184)；左侧电梯升到画面内（约 y=1100），同帧可见单向落台、井深与背景。 |
+| `artifacts/screens/ch2/ch2_boss_lung_bell.png` | 呼吸废墟 · 肺钟心室 `ch2_boss`（3840×2160） | 玩家站在右侧平台 (2420,2048)，Boss「肺钟守卫」在 `Arena` 生成并向玩家接近；画面含顶部 Boss 血条、入场句「钟摆停了一瞬，像在听你开口」、Boss 攻击预警与钟摆弹。 |
+| `artifacts/screens/ch3/ch3_entry_panorama.png` | 无光海 · 无光海岸 `ch3_entry`（2560×1440） | 玩家站在入口第二级平台 (1100,1168)；蚀日、雨、左侧「来路」门、底部舱口「前往 无光海 · 静水支路」标题（部分被 HUD 挡住）、`lightless_sea.png` 背景。 |
+| `artifacts/screens/ch3/ch3_well_shaft.png` | 无光海 · 深渊裂口 `ch3_well`（2560×2160） | 玩家站在 `OneWay3` (480,1184)；海面、帆船、蚀日与雨同框，是本次实测最能体现「无光海」氛围的区；左侧电梯与单向落台入画。 |
+| `artifacts/screens/ch3/ch3_boss_last_reader.png` | 无光海 · 最后的读者 `ch3_boss`（3840×2160） | 玩家站在右侧平台 (2420,2048)，Boss「最后的读者」生成并接近；画面含 Boss 血条、入场句「最后的读者从海面抬起头」、镜面弹幕预警。 |
+| `artifacts/screens/ch4/ch4_entry_theater.png` | 笑面剧场 · 剧场前厅 `ch4_entry`（2560×1440） | 玩家站在入口第二级平台 (1100,1168)；`smiling_theater.png` 平铺（吊灯/红幕/纸人观众/光柱）、左侧「来路」门、底部舱口「前往 笑面剧场 · 空座中庭」标题（部分被 HUD 挡住）。 |
+| `artifacts/screens/ch4/ch4_well_backstage.png` | 笑面剧场 · 舞台侧廊 `ch4_well`（2560×2160） | 玩家站在 `OneWay3` (480,1184)；舞台巨书、观众席、吊灯与光柱同框；左侧电梯、单向落台入画。 |
+| `artifacts/screens/ch4/ch4_boss_smiling_archivist.png` | 笑面剧场 · 最后的舞台 `ch4_boss`（3840×2160） | 玩家站在右侧平台 (2420,2048)，Boss「笑面史官」生成并接近；画面含 Boss 血条、入场句「观众席上的纸人一齐鼓掌」、Boss 自身血条与舞台背景。 |
+
+### 核验结果
+
+| 文件 | 尺寸 | 像素均值 | 暗像素占比 | 白像素占比 | 字节 |
+|---|---|---|---|---|---|
+| `ch2/ch2_entry_panorama.png` | 1280×720 | 46.5 | 0.7% | 0% | 1,655,702 |
+| `ch2/ch2_well_shaft.png` | 1280×720 | 46.1 | 1.2% | 0% | 1,696,289 |
+| `ch2/ch2_boss_lung_bell.png` | 1280×720 | 44.0 | 1.3% | 0% | 1,591,073 |
+| `ch3/ch3_entry_panorama.png` | 1280×720 | 45.2 | 0.1% | 0% | 1,276,544 |
+| `ch3/ch3_well_shaft.png` | 1280×720 | 35.1 | 0.1% | 0% | 1,260,107 |
+| `ch3/ch3_boss_last_reader.png` | 1280×720 | 34.0 | 0.0% | 0% | 1,144,063 |
+| `ch4/ch4_entry_theater.png` | 1280×720 | 38.9 | 0.1% | 0% | 1,400,724 |
+| `ch4/ch4_well_backstage.png` | 1280×720 | 40.4 | 0.1% | 0% | 1,560,107 |
+| `ch4/ch4_boss_smiling_archivist.png` | 1280×720 | 28.5 | 0.4% | 0% | 1,198,700 |
+
+（暗像素 = 亮度 < 4；白像素 = 亮度 > 250；按 160×90 缩略图统计。）
+
+### 截图中发现的问题（只记录，本程不修）
+
+1. **底部 HUD 遮挡（对应待确认第 13 项）**：9 张的底部武器卡/控制条都盖住画面最下方约 80 px。Boss 三张里 Boss 与玩家的脚部被武器卡压住；入口三张里底部舱口的「前往 <区名>」标题也被盖住一部分。第 13 项原本记录的是第 2 章底部取景/HUD 遮挡，本程确认同样影响第 3、4 章。
+2. **背景纵向平铺接缝**：大区背景图是 1536×864 的静态图，按房间高度纵向平铺。1440 高的入口区在屏幕 y≈144 有较浅接缝；2160 高的纵井/Boss 区更明显——`ch4_boss` 顶部约 290 px 是 `smiling_theater.png` 底部的黑色舞台地面，下一条瓦片从吊灯顶部重新开始，形成硬接缝；`ch2_boss` / `ch3_boss` 顶部同样能看到拼接线。
+3. **`boss_background` 被静态背景挡住**：世界 JSON 的 `areas[...].boss_background` 已写 `spore_drift`（第 2 章）、`deep_water`（第 3 章）、`blood_moon`（第 4 章），但 `MDSBigRoom` 的静态背景 `z_index = -20` 在 MDS 动画背景 `z_index = -110` 之前，铺满房间的静态图把动画 Boss 背景完全遮住。三张 Boss 图里看不到 `deep_water` / `blood_moon` 动画层；第 3 章「海面」来自 `lightless_sea.png` 静态图而非 `deep_water`。与待确认第 15 项（第 3 章海面母题）相关但范围更大（三章 Boss 背景都受影响）。
+4. **入口/枢纽区套用休整文案**：`ch2_entry` / `ch3_entry` / `ch4_entry` 这类没有 `Arena` 的大图房间会走「非书库 → 休整」分支，显示 `RestRoomData` 的一条通用文案并把目标设为「休整，或继续前进」。截图里分别是「墨迹未干的名字在墙角晾着。」「纸人把灯芯拨亮，等你开口。」「屋檐滴水，挑上的旧货都醒着。」；第 3 章入口出现「纸人」字样，读起来更像第 4 章剧场/档案馆的意象。属内容路由观察。
+5. **电梯贴房间左缘**：纵井的电梯作者位置在房间 x=0..160，相机又被房间左边界夹住，所以纵井三张里电梯只以画面最左侧一条横线出现（能看出是电梯，但不醒目）。作者布局 + 相机夹取的取景限制，不是缺陷。
+6. **Boss 取景**：Boss 生成在 `Arena` 局部 (110,-18)，玩家放在右侧平台后 Boss 从画面左中向玩家走来；2.6 秒那一帧能同时看到 Boss、玩家、Boss 血条、入场句与攻击预警，但 Boss 脚部仍在底部 HUD 后面（同第 1 条）。
+7. **第 2 章入口背景与第 1 章色调接近**：`breathing_ruins.png` 是红月废墟，和第 1 章档案馆的既有背景色调相近；既有素材，不是本程改动，仅记录给监工判断样图代表性时参考。
+
+### 不变项与边界
+
+- **不变项**：`scripts/` / `scenes/` / `resources/` 零改动；`CHAPTER_PLAN_PATHS[2]/[3]` 仍空、`MDS_WORLD_FILES[2]/[3]` 仍指旧世界、旧第 2/3/4 章世界仍在；章节路由、`game.gd`、数值、电梯速度、相机/HUD、门逻辑、地图标题、敌人美术、战斗密度、`ch4_shortcut` 授予全部未动；第 2/3/4 章仍不可达。
+- **未做**：未修截图里发现的问题；未做第 4 章门视觉/地图标题/敌人美术/Boss 4 机制扩展/舞台母题呈现层/战斗密度/`mask_enemy` / `seat_husk` 独立数值/阿砚同行；未碰待确认第 11–16 项（只记录现状，不新增条目、不定口径）；未新增移动能力、未改 NPC 立绘、未改 MDS 插件、未新绘美术；未做打包导出/安装器/签名/安卓/触屏。
+
+## 第 4 章大图门视觉专项与敌人美术核查（第 62 程）
+
+> 范围：第 4 章（笑面剧场）九区大图的表现/美术审计，口径对齐第 49 程对第 3 章
+> 的先例：门视觉逐门核验、地图标题复核、敌人美术核查。只做测试与记录，不改门
+> 逻辑、不接入 `game.gd`、不开放可达性、不碰待确认第 11–16 项。详细版见
+> [第 4 章门视觉/敌人美术 session](docs/memory/sessions/2026-11-06-chapter4-gate-visual-enemy-art.md)。
+
+- **前置核查**：`GateVisual` 由 `MDSBigRoom._add_gate_visuals()` 通用挂载；
+  第 52 程 9 个第 4 章场景均为 `MDSBigRoom`、`auto_gates` 全开，22 扇门已被
+  自动覆盖。世界文件事实：left/right/top/bot 各 5 + 中置 door 2；20 有向 +
+  2 仅到达（`ch4_entry/shortcut_arrival`、`ch4_boss/left1`）；`ch4_elite/right1`
+  进 Boss 不可返回；`ch4_hub/shortcut` 带 `requires = ["ch4_shortcut"]`、
+  `MDSGateBarrier` 默认封闭。以上全部只读核查，未改。
+- **逐门核验（22/22）**：每门 `GateVisual` 存在且可见、`marker.position ==
+  Vector2.ZERO`、side 与世界文件一致、门扉/舱口在房间内、门底落在真实地面/
+  台阶面（`floor_offset` 现算；侧门 90 px、`ch4_entry/shortcut_arrival` 16 px
+  台阶面、bot 舱口 0）、标题非空且矩形被 `room_bounds.encloses()`、有向门
+  `arrival == false`（「前往 <目标区名>」）、仅到达门 `arrival == true`
+  （「来路」、无箭头）、纯 `Node2D` 零碰撞。逐门明细见 session。
+- **新增断言**（`tests/integration_ch4_bigmap.gd`，+135）：① 侧门门扉墙侧边缘
+  必须正好落在门位 x（向房间内展开）；② top/bot 96 px 舱口矩形两轴都不越出
+  房间（既有断言只查竖向）；③ 世界文件侧直方图 == 运行时直方图、有向门 20、
+  仅到达门恰为上述两扇。第 4 章集成 **4869 → 5004 断言 / 0 失败**。
+- **真实缺陷**：**无**。第 49 程的 `caption_area` 夹取已覆盖第 4 章同类门位
+  `ch4_well/top1`（x=80，标题夹到 x=0，不再越界）；`scripts/` / `scenes/` /
+  `resources/` 零改动。
+- **地图标题复核**：第 38 程 `CampaignData.region` 派生规则未动；第 4 章
+  「笑面剧场地图」与第 1 章「档案馆地图」均由既有断言
+  （`integration_ch4_bigmap.chapter_4_map_title`、`test_map_overlay` 的
+  `map_title_chapter_1_unchanged` / `map_title_chapter_4_region`）锁定，本程
+  复跑成立，未重复造断言、未改 `MapOverlay` / HUD。
+- **敌人美术核查**：`ROOM_WAVES[3]` 现算 **7 种**（`mask_enemy`、`seat_husk`、
+  `choir_summoner`、`page_swarm`、`mirror_sniper`、`typo_beast`、`ink_bomber`）
+  ——全部专属 PNG、已在 `ENEMY_ART`、不在回退表、实际白 tint；缺失清单为空。
+  `mask_enemy`/`seat_husk` 是美术变体（复用 `hanging_scribe.tscn`/
+  `collapse_husk.tscn` 与对应 `.tres`，贴图各自独立；`collapse_husk` 自身走
+  `blank_man` 回退，故 `seat_husk` 对照 `blank_man`）。第 50/59 程「8 种」=
+  上述 7 种 + 旧第 4 章房间组额外使用的 `echo_enemy`（已有第 1 章美术、由
+  CH1/CH3 清单锁定，`ROOM_WAVES[3]` 不含）。`tests/test_enemy_art.gd`
+  **200 → 298 断言**（+98，审计集合由 `ROOM_WAVES[3]` 现算）；第 4 章集成
+  六波真实区域逐个断言敌人专属 PNG + 白 tint（原先只显式查 `ch4_branch_a`）。
+  未新增/修改任何贴图或场景美术。
+- **不变项**：门位/模式/单向语义/`requires`/`MDSGateBarrier`/过渡目标未改；
+  `CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧世界、旧第 4 章
+  9 房/17 门世界仍在；第 2/3/4 章仍不可达、第 4 章未接入 `game.gd`；未修
+  第 60 程样图问题；未做 Boss 4 机制扩展/舞台母题/`ch4_shortcut` 授予/战斗密度/
+  `mask_enemy`/`seat_husk` 独立数值/阿砚同行；第 11–16 项未碰、未新增条目。
+- **下一程候选（只记录）**：第 60 程样图问题——底部 HUD 遮挡（第 13 项）、
+  背景纵向平铺接缝、`boss_background` 被静态背景遮住（与第 15 项相关）、
+  入口/枢纽套用休整文案、纵井电梯贴左缘、Boss 脚部被 HUD 压住（同第 13 项）、
+  `breathing_ruins.png` 与第 1 章色调接近。与第 13/15 项相关的部分拍板前不施工、
+  不定口径。
+
+## 第 2–4 章大图样图问题修复（第 63 程，第 64 程接力核验收尾）
+
+> 依据：第 60 程「样图截图」专节的问题 2（背景纵向平铺接缝）与问题 4（入口/枢纽套用休整文案）。第 63 程完成两项修复并重拍 9 张样图后进程中断（`.supervisor/session67.log` 仅一行 `[claude-code:unrecognized_model]`，无提交、状态文件未更新）；第 64 程核查在途改动、跑基线、复核截图并收尾。问题 1/3/5/6/7 不属本程范围（与待确认第 13/15 项相关或纯取景），未施工。
+
+### 背景纵向平铺接缝（第 60 程问题 2）
+
+- **成因**：大区静态背景是 1536×864 的绘画（顶部天空、底部地面，本身不可纵向平铺），原实现从房间顶部向下按 864 px 平铺。大区房间高 1440/2160，不是 864 的整数倍：最后一行是残瓦片，且相邻两行是「上一张的地面」直接接「下一张的天空」。`ch4_boss` 顶部约 290 px 的黑色舞台地面、`ch2_boss`/`ch3_boss` 顶部拼接线都由此而来。
+- **修复**（`scripts/levels/mds_big_room.gd::_build_backdrop`）：改为以房间**底部**为锚、自下而上排瓦片——最底一行保持原方向，使绘画自己的地面线正好落在房间地面；其上每一行 `flip_v` 镜像，使上下相邻瓦片共用同一条边缘像素行（天空接天空），不再出现地面/天空硬接缝。`backdrop_rect_local()` 同步改为与 `room_bounds` 求交，报告实际可用覆盖（高房间顶部会溢出、被相机边界裁掉）。
+- **验证**：9 张重截图目视无硬拼接线；对三张纵井图在唯一可见接缝行（屏幕 y=472）做行差量化：接缝行行差 2.6 / 0.5 / 3.8，低于同段中位数 3.9 / 1.3 / 4.4（同段真实美术/平台边缘可达 35–38），证明接缝处纹理连续。`test_big_room._test_backdrop_mirror_seams` 做像素级连续性断言（每个纵向相邻瓦片的接触边颜色相等，并验证接缝确实是边缘行而非简单重复）；三个大图集成套件逐区断言「底行正立且底边落在房间地面、奇数行镜像」。
+- **取舍（记录）**：镜像会让同一幅画在纵向上对称重复（`ch2_well` 可取景到「双月」对称），这是在不拉伸、不重绘既有素材且素材本身不可平铺的前提下消除硬接缝的代价；比原来的天空/地面硬拼自然。未改素材、未改背景色调。
+
+### 入口/枢纽休整文案路由（第 60 程问题 4）
+
+- **成因**：`game.gd::_on_mds_room_loaded` 对「没有 `Arena`」的房间一律走非书库 → 休整分支：目标写「休整，或继续前进」并抽一条 `RestRoomData` 文案。第 2/3/4 章入口区既无战斗也无休整设施，却因此抽到商店/休整房文案（第 3 章入口甚至抽到「纸人…」这类偏第 4 章意象的句子）。
+- **修复**：统计房间里的 `BenchCheckpoint`（`has_bench`）与既有 `_shops`；`rests_here := not big_map or has_bench or not _shops.is_empty()`。只有非大图（第 1 章保持原行为）或真正作者了长椅/商店的大图房间才走休整目标与文案；其余无 `Arena` 的大图房间目标只写「继续前进」且不抽 `RestRoomData`。书库分支不变。
+- **验证**：三章入口断言目标 =「继续前进」且 `_rest_greeted` 不含入口区；三章枢纽（有 `Shop` + `Bench`）仍断言「休整，或继续前进」并抽到文案。截图复核：三张入口图右上目标均为「继续前进」，画面无休整提示。
+- **未改**：`RestRoomData` 文案表、第 1 章全部房间行为、休整/商店/长椅机制与数值。
+
+### 截图与核验（第 63 程重拍、第 64 程复核）
+
+- 9 张 1280×720 PNG 于 2026-11-05 21:40–21:43 UTC 重拍（晚于产品改动 21:19/21:22、晚于截图脚本改动 21:38），存 `artifacts/screens/ch2|ch3|ch4/`，不提交。第 64 程复核：9 张齐全、尺寸 1280×720、非空、非全黑非全白（均值 32.1–56.5、暗像素 ≤ 0.6%、白像素 0%），玩家均在取景内。
+- 截图脚本补一行 `hud.show_message("")`：真实主场景刚显示过第 1 章目标提示，挂载新章后清掉，避免样图混入别章文案；只改取景/核验，不改游戏逻辑。
+- 修前 → 修后对照：入口三张由「休整，或继续前进」+ 别章休整句变为「继续前进」且无提示；`ch4_boss` 顶部约 290 px 黑的残瓦片地面带消失，画面上部恢复为剧场吊顶/红幕；`ch2_boss`/`ch3_boss` 顶部拼接线消失；纵井唯一可见接缝行纹理连续、无硬线。
+- 未修事项（只记录）：问题 1/6（底部 HUD 遮挡、Boss 脚部被压）对应待确认第 13 项；问题 3（`boss_background` 被 `z_index=-20` 静态背景盖住）与第 15 项相关且范围更大；问题 5（电梯贴左缘）是作者布局 + 相机夹取的取景限制，非缺陷；问题 7（第 2 章入口背景与第 1 章色调接近）属既有素材记录。以上拍板前不动。
+
+### 不变项与边界
+
+- `CHAPTER_PLAN_PATHS[2]/[3]` 仍空、`MDS_WORLD_FILES[2]/[3]` 仍指旧世界、旧第 2/3/4 章世界仍在；章节路由、相机/HUD 边距与透明度、电梯速度、门逻辑、地图标题、敌人美术、战斗密度、`ch4_shortcut` 授予均未动；第 2/3/4 章仍不可达；待确认第 11–16 项未碰、未新增条目。
+- 未做打包/导出/安装器/签名/安卓/触屏；未推送、未更新网页版。
+
+## NPC 个人事件（第 65 程，叙事审计 E2 第一批）
+
+> 依据：`docs/story-bible.md`「四位同行者 / 五位 NPC」、第 24 程叙事审计 A/E 节、现有 `NPCProfiles` / `TrustData` / `Profile.npc_trust` / Hub 对话基础设施。只做 demo 中可见的三名 Hub NPC（陆沉、阿砚、咕噜）；闻烬/白榆在 `hub.gd` 中不可见、`talk_to_npc` 直接返回，本程不设为可见、不写事件。只按圣经已有弧线写，每段对白依据的圣经原文要点见下。
+
+### 圣经依据与事件节拍
+
+| NPC | 圣经原文要点 | 本程事件节拍 |
+|---|---|---|
+| 陆沉 | 秘密：「他撕下三页名册，不是为了保护世界，而是为了保护自己不被写进『已死之人』那一栏。」弧光：「从『替昌子决定该读什么』到『承认自己也曾篡改』。」关键道具：「红色文件夹，里面是昌子最初的入职档案。」结局后：仁慈足够才把文件夹交给昌子 | 他取出红色文件夹，承认「已死之人」栏里出现自己的名字、撕页是为自保，承认一直替昌子决定该读什么；文件夹没有交给昌子（留给结局） |
+| 阿砚 | 秘密：「他曾经是旧世界最后一座军械库的锻造之神。世界忘记他的神名后，他把自己降格成『守夜人』，因为守夜人不需要被记住。」弧光：「从『拒绝承认神格』到『愿意再为一个人烧一次炉』。」关键道具：「一把永远修不好的断页剑——其实是他给自己留的墓碑。」结局后：叫出真名才走出铁匠铺 | 他否认剑能修好、承认断页剑是给自己的碑；说旧世界最后一座军械库是他烧的最后一炉、改叫阿砚因为守夜人不需要名字；拒绝「神」，然后在冷炉膛里按出一点暗红：「只烧这一次……是给你。」不进入真名分支 |
+| 咕噜 | 秘密：「它不是这个世界的生物，而是被烧掉的词堆里长出来的『记忆拾荒者』。它害怕的不是死，是没人再来买东西。」弧光：「从『什么都卖』到『有一件东西不卖』。」关键道具：「一只装着『永』字的玻璃瓶。」结局后：信任足够才「这个不卖，借你」 | 货架最里面的玻璃瓶装着「永」字；它说「那个不卖」，承认自己连「永」和「恒」都拆开卖过，但这只瓶子是第一次醒来时吞下的字；用「别死太早，你死了谁还来听我讲价」遮住害怕；瓶子没有送出（留给结局） |
+
+### 触发条件与档位理由
+
+| NPC | 事件 id | 信任档 | 门槛 | 章节进度 |
+|---|---|---|---|---|
+| 陆沉 | `luchen_red_folder` | 信任 | 6.0 | `Profile.demo_cleared = true` |
+| 阿砚 | `ayan_furnace` | 托付 | 12.0 | `Profile.demo_cleared = true` |
+| 咕噜 | `guru_bottle` | 熟悉 | 2.0 | `Profile.demo_cleared = true` |
+
+- **章节进度 = `Profile.demo_cleared`**：Hub 在局外，`Profile` 没有更细的章节进度；`demo_cleared` 是唯一「完成过第 1 章 demo」的持久信号，且在 demo 内可达（通关 → 结局屏 → 返回 Hub）。`runs_completed` 含死亡，不作为章节进度。
+- **陆沉 · 信任（6）**：该档既有态度句「有些页我本来不该给你看。但我想，你会替我记住。」正是承认篡改的关系基础；承认自己为自保撕页比日常闲聊重，低于托付又过早。
+- **阿砚 · 托付（12）**：圣经弧光终点是「愿意再为一个人烧一次炉」，该档态度句「真名的事……等你准备好，再来问我一次」也把最深的话留在这里；再烧炉是「为一个人」，对应最深档；真名分支本程不做。
+- **咕噜 · 熟悉（2）**：该档态度句「有些东西我不摆上架，只留给信得过的人」直接铺「有一件东西不卖」；这是它弧光的起点，熟悉即可，不需要托付。
+
+### 实现方式
+
+- 新增 `scripts/hub/npc_event_data.gd`（`NPCEventData`）：三名 NPC 的事件 id / 标题 / 关键道具名 / 最低信任档 / `requires_demo_cleared` / 对白行；`event_for()` 返回副本，`can_trigger(profile, npc_id)` 做一次性 + 档位 + 章节进度判定；闻烬/白榆/未知 id 无条目。
+- `Profile` 新增 `npc_events: Array[String]` 与 `has_npc_event()` / `record_npc_event()`（首次返回 true）；存档写 `[npc] events`，读档缺省为空、跳过空串与重复 id，旧档无需迁移。
+- `hub.gd::talk_to_npc()` 先查 `NPCEventData.can_trigger()`；可触发时用现有 `DialogueUI` 打开事件对白（替换该次常驻问候/态度/职能行），**读完最后一行才记录并保存**；中途 B/Esc 关闭或从事件页打开言灵不消耗事件。事件结束后咕噜不自动开商店；普通对话仍按原逻辑开商店。
+- **零奖励**：事件不改残页/记忆碎片/信任/祝福/背包/经济/锻造/商店数值。关键道具只做对话节拍，不新增背包物品类型；物品机制缺口记录在下方「未做事项」。
+
+### 测试结果
+
+- 新增 `tests/test_npc_events.gd` **187 断言**：三事件存在/唯一/id/道具/档位、闻烬白榆无事件、`event_for` 返回副本；触发门槛（无信任/无进度/差 0.01 档不触发，达标触发，已看过不再触发，null/未知 id 安全）；零奖励；`[npc] events` 存档往返、重复保存不重复、旧档无键兼容；对白行数/非空/无占位符/唯一/提及关键道具/咕噜瓶子含「永」。
+- `tests/integration_menus.gd` 新增 `_test_npc_personal_events`：真实 Hub 场景验证「只有信任、无章节进度不触发」；三事件分别触发、事件行替换常驻问候、读完记录一次、不扣碎片/不加信任；陆沉事件后下一次恢复普通问候；阿砚中途关闭不消耗、再谈重新触发；咕噜事件结束不弹商店、普通对话仍弹商店。**391 → 419 断言（+28）**，0 失败。
+- 全量单元 **12773 → 12960 / 0**（+187，全部为新增 `test_npc_events`）；十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 / 5133** 全 0 失败（仅菜单 A/B +28，其余与第 64 程基线逐套件一致）；`--headless --import` / `--quit` 退出 0、`ERROR` 0；退出泄漏 10/10 clean；demo 像素资产 36 / 0。
+
+### 未做事项（记录，不编号待确认）
+
+- 结局文本加厚（E3：每个结局补五名 NPC 余味、「笑面史官身份」「最后一页」回收）——下一程候选。
+- 闻烬/白榆的个人事件与可见性——待拍板；本程未设为可见、未写事件。
+- 阿砚「叫出真名」完整分支（真名、锤子留在铁砧、第一次走出铁匠铺）——本程只到「再烧一次炉」。
+- 关键道具的物品化（红色文件夹/玻璃瓶作为背包/收藏品）——本程按任务单只做对话节拍 + 事件标志位；若后续要物品机制，需另立物品类型与展示。
+- 事件余味在结局中的回收（陆沉交付文件夹、咕噜「这个不卖，借你」、阿砚走出铁匠铺）——属 E3。
+
+### 不变项与边界
+
+- 第 1 章 9 房间/6 波次/事件/清房目标 6/结束流程、Hub 闲聊与关键词回应、信任数值与 `[npc] trust` 存档格式一字未改（只新增 `[npc] events`）；NPC 立绘未改；未新增背包物品类型、未改经济/锻造/商店数值。
+- 第 2/3/4 章仍不可达；`CHAPTER_PLAN_PATHS[2]/[3]` 仍空、`MDS_WORLD_FILES[2]/[3]` 仍指旧世界；章节路由、相机/HUD、电梯速度、门逻辑、地图标题、敌人美术、战斗密度、`ch4_shortcut` 授予均未动。
+- 待确认第 11–16 项未碰、未新增条目；未做打包/导出/安装器/签名/安卓/触屏；未推送、未更新网页版。
+
+## 结局文本加厚（第 66 程，叙事审计 E3）
+
+> 依据：`docs/story-bible.md`「结局（复原/焚毁档案/深渊回响/未完的注脚/记录中断）」「反派：笑面史官」「四位同行者 / 五位 NPC」、第三章节拍（最后的读者交出空白的最后一页）、第 24 程叙事审计 C/E 节、第 65 程 E2 个人事件。只写圣经已有的弧线与结局含义；不改 5 个结局 id、标题、现有 2 句正文、`ending_for` 判定、`Profile.record_ending` / `Profile.endings` 记录与存档格式。
+
+### 「笑面史官身份」「最后一页」的圣经定义与回收
+
+| 母题 | 圣经原文要点 | 回收方式 |
+|---|---|---|
+| 笑面史官身份 | 「身份：未来的昌子，或者说，是昌子所有可能版本中『最会写结局』的那一个。」「最终揭示：他的脸后面不是脸，是一页写满『昌子』的名字的纸。每一个名字都是一次失败的重来。」 | 每个结局的回收段（`CODAS`）都落到「脸后面那页写满昌子的纸」：复原把它合进名册、焚毁把它烧掉、深渊让它写满、未完把它压在名册底下、中断给它留空行 |
+| 最后一页 | 第三章节拍：「他交出空白的最后一页，并说『故事需要有人翻页』」；笑面史官目标：「让昌子回到舞台上，替自己完成最后一页」；深渊结局：「昌子写下最后一页时，墨自己动了起来」 | 同一段回收里落到「最后一页」：复原没有撕、焚毁烧掉、深渊由昌子写下、未完仍空着、中断没写完 |
+
+两处圣经都有明确定义，**无需记缺口**；回收段只使用上述定义，不新增身份或最后一页的内容。
+
+### 五名 NPC 的结局余味（25 句）
+
+#### 复原 restored（圣经：三页对齐、失踪者回到纸上；陆沉交文件夹、阿砚走出铁匠铺、咕噜瓶子空了、闻烬重写名字、白榆地图出现新路）
+
+| NPC | 余味 | 圣经依据要点 |
+|---|---|---|
+| 陆沉 | 陆沉把红色文件夹推到昌子面前，这次没有合上。他说入职档案上的名字比你记得的完整，剩下的该由你自己读。 | 「结局 · 复原」内容「陆沉把红色文件夹交给昌子」；NPC 节「结局后：如果仁慈足够，他会把红色文件夹交给昌子」；E2 事件里他承认一直替昌子决定该读什么并合上文件夹，本句是弧光收束 |
+| 阿砚 | 阿砚的炉子没有再熄。断页剑还靠在砧边，他不再说那是碑，只说等昌子下次来，再打一截新的剑脊。 | 弧光「从拒绝承认神格到愿意再为一个人烧一次炉」+ 关键道具「断页剑——其实是他给自己留的墓碑」；**不写「叫出真名/走出铁匠铺」**（该分支本程未做） |
+| 咕噜 | 咕噜把玻璃瓶塞进昌子手里：这个不卖，借你。瓶子空了，它说「永」字已经用在该用的地方，账不用算。 | 「结局 · 复原」内容「咕噜的瓶子空了」；NPC 节「结局后：如果信任足够，它会把瓶子送给昌子，说『这个不卖，借你』」；E2「瓶子的账，等我哪天不在了再算」 |
+| 闻烬 | 闻烬用那支断尖笔，在名册边角写了一次自己的名字。写完她把笔收起来，说这笔尖早该磨了。 | 「结局 · 复原」内容「闻烬重新写下自己的名字」；NPC 节「结局后：把笔尖磨好，重新写一次自己的名字」+ 关键道具断尖笔 |
+| 白榆 | 白榆把那张没有终点的手绘地图铺开。地图边缘多出一条从未有过的路，他看了很久，说这回我陪你走一段。 | 「结局 · 复原」内容「白榆的地图出现一条新路」；NPC 节「结局后：地图上会出现一条从未有过的路，通向档案馆之外」+ 弧光「第一次和某个人一起走」 |
+
+#### 焚毁档案 burned（圣经：名册烧了三天三夜，世界失去历史与用过去命令人的权力）
+
+| NPC | 余味 | 圣经依据要点 |
+|---|---|---|
+| 陆沉 | 陆沉没有交出红色文件夹。火烧过档案馆时，他把它放在观众席第一排，像还给一个不会再来的自己。 | NPC 节「结局后：……否则它会出现在笑面剧场的观众席上」+ 焚毁结局「世界失去历史」 |
+| 阿砚 | 火烧到铁匠铺时，阿砚先搬走了砧子，没管那把断页剑。他说碑烧了也好，省得有人对着一块铁念名字。 | 关键道具「断页剑是他给自己留的墓碑」+ 焚毁结局「世界失去历史」 |
+| 咕噜 | 咕噜蹲在烧剩的词堆里翻找，货架空了。它说「永」字大概也烧没了，可只要还有人还价，它就还能再进一批货。 | 秘密「被烧掉的词堆里长出来的记忆拾荒者」「害怕没人再来买东西」+ 关键道具玻璃瓶 |
+| 闻烬 | 闻烬没有拦那把火。她说改过的名字本来就不算数，烧了干净。断尖笔在她指间转了一圈，最后收进袖子里。 | 秘密「改写记录比杀人更彻底」+ 关键道具断尖笔 + 焚毁结局 |
+| 白榆 | 白榆的地图被火烧掉一半。他看着剩下的一半说，没有终点也好，走到哪里都算新路。 | 秘密「所有没有走完的路」+ 关键道具「没有终点的手绘地图」+ 焚毁结局 |
+
+#### 深渊回响 abyss（圣经：墨自己动起来；昌子成为污染的一部分、唯一还记得世界的人）
+
+| NPC | 余味 | 圣经依据要点 |
+|---|---|---|
+| 陆沉 | 陆沉还想替昌子决定该读什么，可他已经读不懂昌子写下的句子。红色文件夹摊在桌上，入职档案被墨浸成一页空白。 | 弧光「从替昌子决定该读什么到承认自己也曾篡改」+ 深渊结局「昌子成为污染的一部分」 |
+| 阿砚 | 阿砚的炉子还亮着，可他已经认不出推门进来的是谁。锤子举到一半又放下，像在等一句不会再有人说的真名。 | 秘密「世界忘记他的神名后降格成守夜人」+ 深渊结局；真名没有被叫出（未做分支），只写等待 |
+| 咕噜 | 咕噜还在货架后面讲价，只是没有客人。它把玻璃瓶推给一团墨，说这个不卖——墨没有回答，它也没有收回去。 | 秘密「害怕的不是死，是没人再来买东西」+ 关键道具「永」字瓶 + 深渊结局 |
+| 闻烬 | 闻烬在墨里改最后一个名字，改到一半停住了。她第一次承认，有些字被污染读过之后，连她也改不回去。 | 秘密「改写记录比杀人更彻底」+ 深渊结局「墨自己动了起来」 |
+| 白榆 | 白榆还在画路，可画出的每一条都通向同一片墨。他把笔放下，说这条路他带不了，昌子得自己走。 | 秘密「所有没有走完的路」+ 深渊结局「昌子成为污染的一部分」 |
+
+#### 未完的注脚 unfinished（圣经：名册补全但留一页空白；下一次潮水带来新名字）
+
+| NPC | 余味 | 圣经依据要点 |
+|---|---|---|
+| 陆沉 | 陆沉把红色文件夹收回抽屉。他说等那一页空白补上再交给你，可他自己也知道，那一天大概不会来。 | NPC 节「结局后：如果仁慈足够……交给昌子」的未完成态 + 未完结局「仍有一页空白」 |
+| 阿砚 | 阿砚把断页剑翻了个面，裂口朝里。他说等昌子把那一页空白补上，再决定这把剑是碑还是剑。 | 关键道具「断页剑是墓碑」+ 未完结局「仍有一页空白」 |
+| 咕噜 | 咕噜把玻璃瓶往货架里面推了推，说瓶子的账等那一页空白补上再算。今天不谈这个。 | 关键道具玻璃瓶 + E2「瓶子的账，等我哪天不在了再算。今天不谈这个」+ 未完结局 |
+| 闻烬 | 闻烬把断尖笔搁在名册上。她说等昌子想清楚要留下谁，再来找她改那一页——价钱照旧。 | 弧光「承认自己也想被记住」+ 情报贩子职能/价钱 + 未完结局 |
+| 白榆 | 白榆把地图卷起来，故意留了一角空白。他说那一角等昌子自己走完，再画上去。 | 关键道具「没有终点的手绘地图」+ 未完结局「仍有一页空白」 |
+
+#### 记录中断 interrupted（圣经：污染吞没这一页；名字淡去，记忆碎片已经写下）
+
+| NPC | 余味 | 圣经依据要点 |
+|---|---|---|
+| 陆沉 | 陆沉翻开红色文件夹，昌子的入职档案停在半页。他没有往下读，只把文件夹合上，放回抽屉最里面。 | 关键道具「昌子最初的入职档案」+ 中断结局「昌子的名字从档案中淡去」+ E2 文件夹被合上 |
+| 阿砚 | 阿砚把炉门关上，只留一线暗红。他说铺子今晚不开，等那个赊账的史官回来再说。 | 秘密「守夜人」+ E2「再烧一次炉」的暗红 + 中断结局「下一次你会记得更多」 |
+| 咕噜 | 咕噜把玻璃瓶从货架上拿下来，又放回去。它说史官大人只是暂时赊账，账还挂在墙上，利息照算。 | 秘密「害怕没人再来买东西」+ 玻璃瓶 + 中断结局 |
+| 闻烬 | 闻烬翻到昌子那一页，笔尖悬了很久，最终没有落下去。她说这一页她改不了，也不想改。 | 秘密「同门、篡改史官」+ 弧光「承认自己也想被记住」+ 中断结局 |
+| 白榆 | 白榆把地图折好，放在昌子最后一次出发的地方。他说路不会消失，只是会等人。 | 秘密「所有没有走完的路」+ 关键词「路不会消失。它只是会等你走错几次之后，才愿意出现」+ 中断结局 |
+
+### 每结局回收段（5 段，同时回收两个母题）
+
+| 结局 | 回收段 | 圣经依据要点 |
+|---|---|---|
+| 复原 | 笑面史官的脸后面是一页写满「昌子」的纸，每一个名字都是一次失败的重来。复原之后，昌子把那页纸合进名册，最后一页没有撕掉——上面只留下自己选择记住的人。 | 反派节身份/最终揭示 + 复原余味「记得自己选择记住谁」 |
+| 焚毁档案 | 最后一页和名册一起烧了。笑面史官那张写满「昌子」的脸在火里卷起来，每一个失败的名字都烧成同一个字。灰烬里没有人再需要结局。 | 焚毁「名册烧了三天三夜/世界失去历史」+ 反派身份 |
+| 深渊回响 | 最后一页是昌子自己写的。墨动起来时，笑面史官的脸后面那页纸终于写满——上面每一个「昌子」都睁开了眼，却没有一个还叫昌子。 | 深渊「昌子写下最后一页时墨自己动了起来/成为污染的一部分」+ 反派身份 + 余味「没有昌子来读懂」 |
+| 未完的注脚 | 最后一页还空着。笑面史官没有来催，只把那张写满「昌子」的纸压在名册底下，等下一次潮水带来新的名字。 | 未完「仍有一页空白/下一次潮水带来新名字」+ 反派身份 |
+| 记录中断 | 最后一页没有写完。笑面史官的脸后面那页纸还留着空行，等下一次昌子醒来，再添一个名字。 | 中断「污染吞没这一页/下一次你会记得更多」+ 反派身份「每个名字都是一次失败的重来」 |
+
+### 实现方式
+
+- 新增 `scripts/data/ending_echo_data.gd`（`EndingEchoData`）：`ECHOES`（5 结局 × 5 NPC，一名 NPC 在一个结局里只有一句）、`CODAS`（每结局一段回收）、`ending_ids()` / `npc_ids()` / `npc_name()` / `has_ending()` / `echoes_for()`（返回副本）/ `echo_for()` / `coda_for()` / `display_text()`（「陆沉：……\n…\n\n<回收段>」，未知结局返回空串）。
+- `scenes/ui/ending_screen.tscn` + `scripts/ui/ending_screen.gd`：Body 与 Reward 之间新增 `Echoes` Label（12 px、自动换行、默认隐藏）；`show_campaign_ending()` 按 `ending.id` 填 `EndingEchoData.display_text()`，无 id / 未知结局留空隐藏；旧 `show_ending()` 调用不变。
+- `scripts/ui/ending_gallery_ui.gd`：每张结局卡正文后新增余味 Label；只有 `Profile.endings` 已解锁的条目显示余味与回收段，未解锁仍是原 `？？？` / `尚未记录。走过不同的选择，这一页会自己出现。` 占位；`get_entry_text()` 已解锁时追加余味，锁定条目不返回任何余味。
+- 余味只在对应结局达成后展示：结束屏只拿到刚达成的 `ending`；画廊按 `Profile.endings` 的 id 判定。
+- `CampaignData.ENDINGS` / `ending_for`、`Profile.record_ending` / `endings` 与存档、画廊解锁/占位规则均未改（只新增文本数据与展示读取）。
+
+### 测试结果
+
+- 新增 `tests/test_ending_echoes.gd` **469 断言**：五结局 × 五 NPC 齐全且唯一、每结局恰好 5 句、`echoes_for()` 返回副本、未知 id/未知 NPC 安全；文本非空/无首尾空白/含 NPC 名/句末标点/无占位符（TODO/TBD/%s/占位/待补/待定/？？？）/25 句全局唯一；主题对应（复原咕噜含「这个不卖，借你」、陆沉含文件夹、闻烬含「自己的名字」、白榆含「路」；焚毁五句都含火/烧；每段回收都含「最后一页」与「笑面史官」）；真实 `ending_screen.tscn` 的 `Echoes` 节点、深渊余味显示且不串复原、正文仍以原 `body` 开头、切换结局整块替换、`show_ending()`/未知结局为空；画廊已解锁显示、锁定不泄露、未知旧 id 不解锁；`progress/endings` 仍只写 id、存档不含余味文本、重载 id 不变；5 个 id/标题/现有正文逐字锁定、`ending_for` 五分支不变。
+- 全量单元 **12960 → 13429 / 0**（+469，全部为新增 `test_ending_echoes.gd`）；十一套集成复跑全 0 失败，数字与基线逐套件一致（894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 / 5133）；`--headless --import` / `--quit` 退出 0、`ERROR` 0；退出泄漏 10/10 clean；demo 像素资产 36 / 0。
+
+### 未做事项（记录，不编号待确认）
+
+- 闻烬/白榆的可见性与个人事件——待拍板；本程只在结局余味里按圣经弧线写两人，没有设为可见、没有写 Hub 事件。
+- 阿砚「叫出真名」完整分支（真名、锤子留在铁砧、第一次走出铁匠铺）——余味只写到「愿意再为一个人烧一次炉」，没有写成已经叫出真名。
+- 关键道具的物品化（红色文件夹/玻璃瓶/断尖笔/手绘地图进背包或收藏）。
+- 结局余味的配音、逐 NPC 结局插画或独立结局场景（本程只做文本与展示读取）。
+- 隐藏结局「换位」不在 5 个结局 id 内，未做。
+
+### 不变项与边界
+
+- `CampaignData.ENDINGS` 的 5 个 id、标题、现有两句正文与 `ending_for` 判定未改；`Profile.record_ending` / `Profile.endings` 的记录、去重与存档格式未改；结局画廊解锁/占位规则未改。
+- 第 1 章 9 房间/6 波次/事件/清房目标 6/结束流程、Hub 闲聊与关键词回应、信任数值与 `[npc] trust`/`[npc] events` 存档格式、NPC 立绘、经济/锻造/商店数值均未改。
+- 第 2/3/4 章仍不可达；`CHAPTER_PLAN_PATHS` / `MDS_WORLD_FILES`、章节路由、相机/HUD、电梯速度、门逻辑、地图标题、敌人美术、战斗密度、`ch4_shortcut` 授予均未动。
+- 待确认第 11–16 项未碰、未新增条目；未推送、未更新网页版。
+
+### 接力收尾（第 67 程）
+
+- 第 66 程进程在收尾前死亡（`.supervisor/session70.log` 只有模型警告与一行
+  「等待第 2/3/4 章三套大地图集成」提示，无提交）；本程按 brief71 先独立复核
+  在途改动：余味只按结局 `id` 读取、旧调用/未知结局整块留空、画廊只对
+  `Profile.endings` 已解锁条目显示、5 个结局 id/标题/正文/`ending_for` 判定/
+  `Profile.endings` 记录与存档格式均未改——未发现实现缺陷，未返工。
+- 基线复跑（Godot 4.7.stable.official.5b4e0cb0f）：`--headless --import` /
+  `--quit` 退出 0、`ERROR` 0；全量单元 **13429 / 0**（与第 66 程自称一致）；
+  十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 /
+  5133** 全 0 失败（逐套件与第 65/66 程基线一致，三个大图套件均跑完）；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。
+- 本程只做复核、复跑与按项提交，未开新功能、未改产品行为；收尾工作区干净。
+  提交 hash 见下条「本程提交」。
+- 本程提交：`ce4fcab` feat: thicken the five endings with NPC echoes and codas
+  （`EndingEchoData`、结束屏 `Echoes`、画廊已解锁展示）；`0e60cdb` test: lock
+  the ending echoes, gallery gating and save format（`test_ending_echoes.gd`
+  469 断言）；文档提交 `51716ba` docs: record the ending text thickening pass
+  （本状态文件、session 文档、记忆索引）。
+
 ## 待用户确认
+
+第 35 程的两个歧义（Boss 2 数值、第 2 章末界面/结局记录）已按采用口径记录并用测试锁定，见本程日志与 ADR；不是待拍板项。第 36 程验收发现两项需要监工/用户拍板的内容口径，见第 11/12 项；在拍板前不施工、不猜测。第 37 程只新增第 13 项（大区底部相机取景/HUD 遮挡），只记录未施工。第 38 程未新增待拍板项。第 39 程只核查第 3 章，新增第 14–16 项（视野压缩、海面母题、捷径来源），均为第 3 章施工前需定、本程未施工未猜测。第 40 程只做第 3 章计划/图骨架，未新增待拍板项，第 14/15/16 项在计划与夹具里只留注释、未实现。第 11（`ch2_shortcut` 获取来源）、12（电梯节奏）、13（大区底部相机/HUD）仍开放，本程均未施工、未猜测。第 41 程只做第 3 章真实大区世界结构层，未新增待拍板项；第 14/15/16 项在真实世界里仍留空（无视野压缩、无 sea 层、捷径屏障保持封闭），未实现、未猜测。第 42 程只做第 3 章内容数据层第 1 步，未新增待拍板项；第 14/15/16 项仍未实现（无视野压缩、无 sea 层、未新增任何 `ch3_shortcut` 授予），第 11/12/13 项未碰。第 43 程只做第 3 章波次接线，未新增待拍板项；第 14/15/16 项仍留空（未实现视野压缩、未加 sea 层、未新增任何 `ch3_shortcut` 授予来源），第 11/12/13 项未碰，章末自动进第 4 章的缺口未改。第 44 程只做第 3 章事件区真实自动触发（沿用第 34 程通用分支、测试层驱动，`CHAPTER_PLAN_PATHS[2]` 仍空），未新增待拍板项；第 14/15/16 项仍留空（未实现视野压缩、未加 sea 层、未新增任何 `ch3_shortcut` 授予来源），第 11/12/13 项未碰，章末自动进第 4 章的缺口未改。第 45 程只做第 3 章 Boss 3 独特机制与计划 `boss_scene` 路由（沿用 Boss 2 做法、数值为暂定口径并由测试锁定，`CHAPTER_PLAN_PATHS[2]` 仍空、章节路由与章末流程未改），未新增待拍板项；第 14/15/16 项仍留空（未实现视野压缩、未加 sea 层、未新增任何 `ch3_shortcut` 授予来源），第 11/12/13 项未碰，章末自动进第 4 章的缺口未改。第 46 程只做第 3 章章末收口（`_complete_chapter` 新增 `_chapter == 2` 停章分支，`CHAPTER_PLAN_PATHS[2]` 仍空、章节路由与可达性未改，未新编剧情文本），未新增待拍板项；第 14/15/16 项仍留空（未实现视野压缩、未加 sea 层、未新增任何 `ch3_shortcut` 授予来源），第 11/12/13 项未碰；第 3 章末自动进第 4 章的缺口已由本程收口（停在第 3 章），第 3 章仍不可达。第 47 程因 Magpie 网关中断夭折，未产出任何结论、未新增待拍板项。第 48 程只做第 3 章大地图系统验收（新增 `tests/integration_ch3_bigmap.gd` 3424 断言，未改产品代码、未新增 `ch3_shortcut` 授予、未实现视野压缩/sea 层、未改电梯速度/相机/HUD），未新增待拍板项；第 14/15/16 项只记录现状，第 11/12/13 项未碰，第 3 章仍未接入 `game.gd`、仍不可达。第 49 程只做第 3 章大图门视觉专项与敌人美术核查（纯表现层 + 测试；未新增/修改敌人贴图，未新增 `ch3_shortcut` 授予、未实现视野压缩/sea 层、未改电梯速度/相机/HUD、未改门逻辑/门位/单向/条件门/过渡目标），未新增待拍板项；第 14/15/16 项仍留空，第 11/12/13 项未碰，第 3 章仍未接入 `game.gd`、仍不可达。第 50 程只做第 4 章大地图可行性核查（只查不施工，未改可达性/章节路由/任何数值、未新建内容、未新增测试与产品代码），未新增待拍板项；第 4 章特有的需拍板事项只记为专节「开放问题候选」，不擅自编号、不擅自决定，是否新增「待用户确认」条目由监工在验收时定。第 51 程只做第 4 章计划与图骨架（只做数据层与测试夹具；计划未接入 `game.gd`、未建真实大区世界/房间、未写 `Ch4EventData`/权柄池/波次/Boss 文案/机制，未新增任何 `ch4_shortcut` 授予，未改舞台表现/战斗密度/`mask_enemy`/`seat_husk` 数值、未改章末流程），未新增待拍板项；第 50 程专节 E 的开放问题候选仍只记录、不编号，第 11–16 项仍未施工、未猜测。第 52 程只做第 4 章真实大区世界结构层（世界未接入 `game.gd`、未写 `Ch4EventData`/权柄池/波次/Boss 文案与机制、未新增 `ch4_shortcut` 授予、未改舞台表现/战斗密度/`mask_enemy`/`seat_husk` 数值/章末流程），未新增待拍板项；第 50 程专节 E 的舞台母题/`ch4_shortcut` 来源/事件区/Boss 4 机制范围/战斗密度/`mask_enemy`/`seat_husk` 独立数值仍只记录、未拍板、未施工，第 11–16 项也未碰。第 53 程只做第 4 章内容数据层第 1 步（`Ch4EventData`/权柄池/Boss 文案；计划仍不路由、世界仍不被 `game.gd` 引用，未做波次接线/事件触发/Boss 4 机制/可达性），未新增待拍板项；第 50 程专节 E 的开放问题候选仍只记录、不编号，第 11–16 项也未碰。第 54 程只做第 4 章波次接线（计划 `wave` 按遭遇节点 id 接 `ROOM_WAVES[3]` 六波、`content_pending` 清零；计划仍不路由、世界仍不被 `game.gd` 引用，未做事件触发/Boss 4 机制/可达性），未新增待拍板项；第 50 程专节 E 的舞台母题/`ch4_shortcut` 来源/事件区/Boss 4 机制范围/战斗密度/`mask_enemy`/`seat_husk` 独立数值仍只记录、未拍板、未施工，第 11–16 项也未碰。第 56 程只做第 4 章事件区真实自动触发验证（沿用第 34/44 程通用大图区域分支、测试层驱动；计划仍不路由、世界仍不被 `game.gd` 引用，未做 Boss 4 机制/`boss_scene`、第 4 章大图验收与可达性），未新增待拍板项；第 50 程专节 E 的开放问题候选仍只记录、不编号，第 11–16 项也未碰。第 57 程只做第 4 章 Boss 4 机制与 `boss_scene` 路由（计划指向既有 `smiling_archivist.tscn`、既有机制与数值由测试锁定；计划仍不路由、世界仍不被 `game.gd` 引用，未改章节路由/章末流程，未做机制扩展/第 4 章大图验收/可达性），未新增待拍板项；第 50 程专节 E 的开放问题候选（含 Boss 4 机制扩展范围）仍只记录、不编号，第 11–16 项也未碰。第 58 程只做第 4 章章末收口（章末流程与测试层；计划仍不路由、世界仍不被 `game.gd` 引用，未改可达性/章节路由/Boss 4 机制/数值/波次/事件/章末文本，未新编剧情、未新设选项），未新增待拍板项；第 50 程专节 E 的开放问题候选（含 Boss 4 机制扩展范围）仍只记录、不编号，第 11–16 项也未碰。第 59 程只做第 4 章大地图系统验收（只跑/补验收脚本并记录，未改产品代码；计划仍不路由、世界仍不被 `game.gd` 引用，未改可达性/章节路由/门视觉/地图标题/敌人美术/战斗密度/电梯速度/相机/HUD，未新增 `ch4_shortcut` 授予），未新增待拍板项；第 50 程专节 E 的开放问题候选（含 Boss 4 机制扩展范围、舞台母题呈现层、`ch4_shortcut` 来源、战斗密度、`mask_enemy`/`seat_husk` 独立数值）仍只记录、不编号，第 11–16 项也未碰。第 60 程只做第 2–4 章样图截图（只截图、只记录；未改产品代码/场景/资源，未改可达性/章节路由/`CHAPTER_PLAN_PATHS`/`MDS_WORLD_FILES`，未修截图里发现的问题），未新增待拍板项；截图里与第 13/15 项相关或超出其范围的观察只记录现状，不新增「待用户确认」条目、不定口径，第 11–16 项仍开放、未施工。第 62 程只做第 4 章大图门视觉专项与敌人美术核查（纯表现层测试与记录；未改产品代码、未改门逻辑/门位/单向/条件门/过渡目标、未改地图标题规则/HUD、未新绘或修改任何敌人贴图，未改可达性/章节路由/`CHAPTER_PLAN_PATHS`/`MDS_WORLD_FILES`，未修第 60 程样图问题），未新增待拍板项；第 60 程样图问题只记为下一程候选，与第 13/15 项相关的部分拍板前不施工、不定口径，第 11–16 项仍开放、未施工。第 63/64 程只修第 60 程样图问题中的背景纵向接缝与入口休整文案路由（表现/文案路由修复 + 截图复核与记录），未新增待拍板项；与第 13/15 项相关的问题（底部 HUD 遮挡、`boss_background` 被静态背景遮住）仍未施工、未定口径，第 11–16 项仍开放、未施工。第 67 程只做接力复核、基线复跑与按项提交（未改产品行为、未改可达性或章节路由），未新增待拍板项；第 11–16 项仍未碰、未施工。
 
 1. ~~**Windows 发行形态**~~：已由用户拍板（2026-11-03）：正式发行（代码签名 + 安装器）推迟到很久以后；第 3 程的安装器脚本与签名文档留档，不扩展、不删除、现阶段不做编译验证。当前无发行阻塞项。
 2. ~~**封闭试玩安排**~~：已由用户拍板（2026-11-03）：搁置，不组织、不冻结功能。
@@ -109,8 +1646,2513 @@ Chapter 1 demo `0.11.0-demo` 已可完整游玩（标题 → Hub 教学 → 六�
 6. ~~**第 2–4 章**~~：已由用户拍板（2026-11-03）：维持「代码保留但 demo 不可达」，等 Windows 主体达标后再排入完整版内容制作。
 7. ~~**暂停菜单里打开设置后关闭的去向**~~：已由监工拍板（2026-11-04，`.supervisor/DECISIONS.md`）：关闭设置返回暂停菜单并把焦点还给打开设置前选中的暂停菜单项，不直接恢复游戏。本程任务 2 已按此口径实现并补真实手柄/键盘断言，详见本程日志。
 8. ~~**标题页有局内存档时的首帧焦点**~~：已由监工拍板并实现（2026-11-04，本程任务 2）。有局内存档时首帧焦点落在「继续本局」，无存档维持「继续旅程/开始旅程」；按 A 仍只关闭标题并续玩/进入 Hub，不立刻开始新局、不覆盖检查点。真实键盘与手柄断言已并入 `tests/integration_menus.gd`。不再是开放问题。
+9. ~~**大地图形态的口径**~~：**已由监工拍板（见 `.supervisor/DECISIONS.md`「监工拍板（2026-11-04 深夜）：大地图两项口径」）：第 9 项定为「大区连通图」**——第 2–4 章大地图 = 6–9 个大区（MDS room）组成的连通图 + 门/短过渡，图内可回环、有纵深；不做字面意义的单场景无缝大图。第 27/28/29 程均按此口径施工，不再悬置。
+10. ~~**垂直交通是否允许新增移动能力**~~：**已由监工拍板（见同一节）：第 10 项定为 A「不新增移动能力」**——不加二段跳/蹬墙跳/攀爬；纵向交通用台阶、电梯/移动平台、单向落台与 top/bot 门实现。第 29 程的单向落台「下+跳」下落穿过使用现有输入动作，属于单向落台道具行为，不是新增移动能力；第 27/28/29 程均未新增任何移动能力。
+11. **第 2 章捷径 `ch2_shortcut` 的获取来源（开放问题）**：当前只有测试通过 `grant_ability("ch2_shortcut")` 授予，游戏内没有获得它的交互/事件/道具。开放第 2 章可达性前需要定：是放在 Hub NPC（信任/交易）、支路事件奖励、精英区掉落，还是书库探索奖励？不同选择会改第 2 章内容与节奏，本程未实现、未猜测。
+12. **第 2 章电梯/移动平台的节奏（开放问题）**：`ch2_branch_b` 与纵向井的 `MovingPlatform` 作者速度当前为 70 px/s，乘行约 19 秒 / 29 秒。是保留慢速（强调纵向尺度/氛围）还是提高到 120–160 px/s（更紧凑）？属于手感/节奏口径，本程只验证通行，未改数值。
+13. **大区底部相机取景与 HUD 遮挡（开放问题，第 37 程记录）**：第 2 章大图房间的相机限制等于房间边界，玩家站在区底（如 `ch2_entry` y≈1408）时屏幕纵向取景会让下半身落在底部 HUD 面板之后；自动门的地面舱口也会被同一面板遮住。可选口径：给大图相机加底部安全边距/垂直偏移，或调整 HUD 面板高度/透明度，或维持现状接受遮挡。属取景/UI 口径，本程只做门视觉与出生点，未改相机或 HUD，未猜测。
+14. **第 3 章「视野压缩」机制口径（开放问题，第 39 程记录）**：GDD §11 把「污染、视野压缩」列为无光海机制，但仓库当前没有任何 darkness/vignette/光照半径/视野遮罩实现，第 3 章世界 `room_darkness=false`。大区管线不会自动提供；需定是否实现、用什么口径（MDS `room_darkness`/暗角/光照半径/与污染联动），再排期。本程只核查，未设计、未实现、未改世界场景。
+15. **第 3 章大图海面母题（开放问题，第 39 程记录）**：现有 `LivingBackdrop(sea=true)` 的海面线、波光、漂浮纸屑与塔影只属于 `MDSChapterRoom`；大区管线只有平铺静态背景 + `BigRoomAmbient` 的 motes/embers，没有 sea 层。第 3 章大图是否保留该层、以何种方式呈现（新 ambient/背景层，或接受损失），需拍板。本程只记录，未设计、未施工。
+16. **第 3 章捷径 `ch3_shortcut` 获取来源（开放问题，第 39 程记录）**：现有 `ch3_rest`→`ch3_02` 是无条件交互门；若第 3 章大图计划写 `shortcuts`，`MDSGateBarrier` 需要一个 ability id 和游戏内授予来源（Hub NPC/事件/精英/书库等）。来源选择会改第 3 章内容与节奏，本程未实现、未猜测；与第 11 项同类。
+
+## 例行扫描（第 68 程）
+
+> 依据 brief72 / `.supervisor/DECISIONS.md` 的收口规则；本程只做例行扫描与
+> 「扫描发现的产品行为缺陷」修复，不开新功能、不碰待确认第 11–16 项、
+> 不改可达性/章节路由/结局与存档格式。
+
+### 任务 0 · 基线核验（HEAD `250bcd6`，Godot 4.7.stable.official.5b4e0cb0f）
+
+- `--headless --path . --import` / `--headless --path . --quit` 退出 0、`ERROR` 0。
+- 单元 `tests/run_tests.gd` **13429 / 0**（与第 67 程逐字一致）。
+- 十一套集成全部跑完，与第 67 程逐套件一致、全 0 失败、各日志 `ERROR` 0：
+  `integration_playability` **894** / `integration_ch1_demo` **102** /
+  `integration_run_save` **613** / `integration_gamepad` **207** /
+  `integration_ui_prompts` **113** / `integration_ch1_event` **59** /
+  `integration_menus` **419** / `integration_ai_settings` **45** /
+  `integration_ch2_bigmap` **2315** / `integration_ch3_bigmap` **4358** /
+  `integration_ch4_bigmap` **5133**。
+- `tests/check_exit_clean.sh <godot> 10` → **10/10 clean**；
+  `tests/check_pixel_assets.py --demo` → **36 / 0**。
+- 结论：基线无漂移，可施工；本程全程未出现 Magpie 网关中断。
+
+### 扫描面逐项结论
+
+1. **关闭回退（各覆盖页 → 上一层/焦点）——未发现新缺陷。**
+   逐层核对并复用既有集成：暂停 → 设置 → 子页（AI/键位/帮助）关闭时先退子页、
+   再退设置、最后回暂停并还原打开设置前的焦点（`_pause_return_*` 链路，
+   `integration_menus` 的 B/Esc/Start 与设置子页断言）；背包/图鉴/帮助/地图/
+   商店/事件页/权柄/归档/奖励/结局屏/画廊均有 `ui_cancel`（手柄 B）与键盘
+   等价出口；权柄/归档/奖励是显式必选模态，B/Esc 只被吞掉、不关页
+   （`game.gd` 的 `_input` 分支）。从暂停进入设置后再按键切换到别的页面会
+   清掉 `_pause_return_overlay`、关闭后直接回游戏——这是 `_toggle_overlay`
+   注释写明的「页面并列替换」口径，不是死路，未按缺陷处理。
+2. **焦点（标题/暂停/子页/商店/事件/对话）——未发现新缺陷。**
+   标题有/无局内存档分别聚焦「继续本局」/「开始旅程」
+   （`integration_menus`、`integration_run_save` 覆盖）；暂停菜单打开即抓
+   可用项；设置子页关闭把焦点还给打开它的按钮；商店/事件/对话/画廊打开
+   即抓首个可点项、关闭还原；键盘与手柄切换由 `GameFlow.input_device_changed`
+   统一驱动提示与焦点，`integration_gamepad` 207 断言复跑 0 失败。
+3. **存档边界（run save 写盘/续玩/坏档）——未发现新缺陷。**
+   `RunSave._has_valid_shape` 覆盖 `[run]/[inventory]/[progress]/[world]/
+   [authority]/[mds]` 的全部写出键（含第 27 程新增的按节点 id 列表、第 29 程
+   的 `frenzy`、第 25 程的权柄使用位）；`_restore_*` 对类型异常做兜底转换；
+   `save_run_now()` 在死亡/结局/奖励页/非 MDS 时不写，失焦与关窗分别走
+   `NOTIFICATION_APPLICATION_FOCUS_OUT`（先保存再开暂停）与
+   `NOTIFICATION_WM_CLOSE_REQUEST`（`save_run_on_exit`）；死亡先清档再开归档
+   模态（`_death_committed`），胜利保留 Boss 已死检查点直到 `Flow.end_run`
+   清档；「Boss 已死但权柄未选」在续玩时由 `_resume_boss_aftermath` 重新
+   授予权柄。`integration_run_save` 613 断言复跑 0 失败。
+4. **性能（第 1 章 9 房间 + Hub 冷/热、门过渡、Boss 战帧）——只记录，未发现
+   需要处理的产品性能缺陷。** 本程临时探针（测后删除）在真实主场景内实测：
+   - Hub 冷加载 3 次：`load` **971.8 / 1095.2 / 1064.1 ms**、`instantiate`
+     **28.0 / 28.9 / 5.2 ms**、`_ready` + 首帧 **552.7 / 502.3 / 480.8 ms**；
+     Hub 60 帧 avg **8.09–8.12 ms**、p95 **8.53–8.63**、max **8.60–9.86**。
+   - `main.tscn` 冷加载 3 次：`load` **2023.5 / 2127.8 / 2077.4 ms**、
+     `instantiate` **6.1–12.1 ms**、`_ready` + 首帧 **672.4–684.7 ms**。
+   - 第 1 章首房共 7 个 120 帧窗口（4 次运行）：avg 全部 **8.33 ms**
+     （120 FPS 预算 8.33）、p95 **8.67–8.79**；5 个窗口 max 8.83–10.50，
+     2 个首次进房窗口出现一次性 20.56 / 16.17 ms 尖峰，紧随其后的窗口
+     回落到 9.77–10.00，无可复现持续掉帧。
+   - 门过渡 `ch1_01.right1 → ch1_02`（作者 0.2 s 淡出+淡入）：
+     **226.6 / 226.8 / 231.9 / 240.0 ms**（与第 2–4 章 228–244 ms 同量级）。
+   - 逐房原始构建（`fade_time = 0`，首次/缓存）：`ch1_01` 5.5/5.6、
+     `ch1_02` 5.5/15.1、`ch1_03` 13.5/12.1、`ch1_04` 7.0/5.9、`ch1_05`
+     5.1/5.3、`ch1_06` 5.8/5.7、`ch1_rest` 17.6/10.7、`ch1_boss`
+     **77.4/37.0**、`ch1_vault` 23.9/9.9 ms；最重的 Boss 房冷建与第 4 章
+     Boss（71.4–79.7）同量级。
+   - Boss 战 120 帧：avg **8.33**、p95 **8.72–8.81**、max **8.84–12.51**。
+   - 对照第 21 程基线（冷启动到标题 1625/1689/2071 ms、Hub `load`
+     585–734 ms、Hub `_ready` 413–467 ms、`main.tscn` 约 2.9 s、首房 avg
+     8.26–8.31/p95 8.64–8.71）：帧间隔与门过渡无退化；Hub `load` 本次偏高、
+     `main.tscn` 偏低，两者合计与基线同量级，符合开发态首次脚本编译/文件
+     缓存差异，未定位到产品侧持续退化，按任务单不做优化改动。
+5. **文案（第 1 章 + Hub）——发现并修复 1 项。**
+   缺陷：档案馆升级已到 demo 上限 Lv.10 时，行仍显示「升级」+ 价格且可点，
+   点击返回「记忆碎片不足：需要 403，你只有 999999。」——与
+   `Profile.buy_archive_level()` 的 `>= 10` 拒绝不一致，是自相矛盾的假错误。
+   （另：`NPCProfiles` 里陆沉「档案馆升级」描述写「等级没有上限」，与同一
+   Hub 的档案馆页「demo 每个方向上限 10 级」冲突，一并改正。）
+   修复：`ArchiveData.MAX_LEVEL = 10` 单一来源；`Profile` 改读该常量；
+   `ArchiveUI` 满级行显示「已满级」/「已达上限」并禁用，`_buy` 给出
+   「「X」已经修到 demo 上限 Lv.10。」；页内提示改用常量；陆沉描述改为
+   「demo 每个方向上限 10 级」。未改上限数值、价格曲线、存档或成长设计。
+   回归断言：`tests/test_growth.gd` +5（上限值/买满/拒绝越限/不扣碎片），
+   单元 **13429 → 13434 / 0**；`tests/integration_menus.gd` +9（满级行禁用/
+   文案/焦点跳过/不扣费/不报假缺碎片/描述含上限），菜单集成
+   **419 → 428 / 0**。临时探针复现前后各一次后删除。
+   其余抽查：第 1 章事件 7 组文案、Hub 五名 NPC 问候/态度/离线回应、
+   残碑/休息/死亡提示/污染警告未发现新错字或与剧情圣经冲突的点。
+6. **回归抽查——未发现回归。** 隐藏书库进入路径由
+   `integration_ch1_demo`（102/0，真实 `door1` 门进入 `ch1_vault`）复跑通过；
+   结局余味未解锁不泄露/已解锁展示由 `test_ending_echoes`（单元套件内）与
+   `integration_menus` 的画廊断言复跑通过。
+7. **未修的记录项**：无新增产品缺陷；Hub 冷加载偏高只记录、不优化（见第 4
+   项）。待确认第 11–16 项未碰、未新增条目；第 2–4 章仍不可达，
+   `CHAPTER_PLAN_PATHS[2]/[3]` 与 `MDS_WORLD_FILES` 未动。
+
+## 例行扫描（第 69 程）
+
+> 依据 brief73 / `.supervisor/DECISIONS.md` 的收口规则；本程只做例行扫描与
+> 「扫描发现的产品行为缺陷」修复，不开新功能、不碰待确认第 11–16 项、
+> 不改可达性/章节路由/结局与存档格式。
+
+### 任务 0 · 基线核验（HEAD `a034d30`，Godot 4.7.stable.official.5b4e0cb0f）
+
+- `--headless --path . --import` / `--headless --path . --quit` 退出 0、`ERROR` 0。
+- 单元 `tests/run_tests.gd` **13434 / 0**（与第 68 程逐字一致）。
+- 十一套集成全部跑完，与第 68 程逐套件一致、全 0 失败、各日志 `ERROR` 0：
+  `integration_playability` **894** / `integration_ch1_demo` **102** /
+  `integration_run_save` **613** / `integration_gamepad` **207** /
+  `integration_ui_prompts` **113** / `integration_ch1_event` **59** /
+  `integration_menus` **428** / `integration_ai_settings` **45** /
+  `integration_ch2_bigmap` **2315** / `integration_ch3_bigmap` **4358** /
+  `integration_ch4_bigmap` **5133**。
+- `tests/check_exit_clean.sh <godot> 10` → **10/10 clean**；
+  `tests/check_pixel_assets.py --demo` → **36 / 0**。
+- 结论：基线无漂移，可施工；本程全程未出现 Magpie 网关中断。
+
+### 扫描面逐项结论
+
+1. **关闭回退（各覆盖页 → 上一层/焦点）——未发现新缺陷。**
+   复核暂停 → 设置 → 子页（AI/键位/帮助）先退子页、再退设置、最后回暂停
+   并还原打开设置前的焦点（`_pause_return_*` 链路）；背包/图鉴/帮助/地图/
+   商店/事件页/权柄/归档/奖励/结局屏/画廊均有 `ui_cancel`（手柄 B）与键盘
+   等价出口；权柄/归档/奖励是显式必选模态，B/Esc 只被吞掉、不关页。
+   `_toggle_overlay` 的「页面并列替换」口径（替换时清 `_pause_return_*`）
+   仍是既有设计，不是死路。`integration_menus` 433、`integration_gamepad`
+   207 复跑 0 失败。
+2. **焦点（标题/暂停/子页/商店/事件/对话）——未发现新缺陷。**
+   标题有/无局内存档分别聚焦「继续本局」/「开始旅程」；暂停菜单打开即抓
+   可用项；设置子页关闭把焦点还给打开它的按钮；商店/事件/对话/画廊打开
+   即抓首个可点项、关闭还原；键盘与手柄切换由 `GameFlow.input_device_changed`
+   统一驱动提示与焦点。`integration_menus` / `integration_gamepad` 复跑通过。
+3. **存档边界（run save 写盘/续玩/坏档）——未发现新缺陷。**
+   `RunSave._has_valid_shape` 覆盖全部写出键；第 27 程新增的按节点 id 进度
+   键是**可选**键、旧档仍读房间键（`d01aebc` 即按兼容口径加入，未提升
+   `SAVE_VERSION`，缺新键不会误判坏档）；`_restore_*` 对类型异常做兜底转换，
+   坏档回退 `.bak` 并提升。`save_run_now()` 在死亡/结局/奖励页/非 MDS 时不写；
+   失焦走 `NOTIFICATION_APPLICATION_FOCUS_OUT`（先保存再开暂停），关窗走
+   `NOTIFICATION_WM_CLOSE_REQUEST`（`save_run_on_exit`）；死亡先清档再开
+   归档模态（`_death_committed`），胜利保留 Boss 已死检查点直到 `Flow.end_run`
+   清档；「Boss 已死但权柄未选」在续玩时由 `_resume_boss_aftermath` 重新
+   授予权柄。`integration_run_save` 613 断言复跑 0 失败。
+4. **性能（第 1 章 9 房间 + Hub 冷/热、门过渡、Boss 战帧）——只记录，未发现
+   需要处理的产品性能缺陷。** 本程临时探针（测后删除）在真实主场景内实测：
+   - Hub 冷加载：`load` **905.5–981.5 ms**、`instantiate` **2.4–11.1 ms**、
+     `_ready` + 首帧 **355.1–508.8 ms**；Hub 60 帧 avg **8.09–8.19 ms**、
+     p95 **8.60–8.85 ms**、max 8.60–13.28 ms。
+   - `main.tscn` 冷加载：`load` **2015.9–2357.9 ms**、`instantiate`
+     **8.4–26.6 ms**、`_ready` + 首帧 **614.5–820.1 ms**。
+   - 第 1 章首房 120 帧窗口：avg **8.27–8.33 ms**（120 FPS 预算 8.33）、
+     p95 **8.64–8.96**、max 8.96–13.36；未见持续掉帧。
+   - 门过渡 `ch1_01.right1 → ch1_02`（作者 0.22 s 淡入淡出，真实 TOUCH 门）：
+     **264.0 / 274.4 / 274.8 ms**（3 次，比第 68 程 226.6–240.0 ms 约高
+     15%，同量级；本程产品代码只改文案，未定位到产品侧退化，按任务单
+     只记录不优化）。
+   - 逐房原始构建（`fade_time = 0`，首次/缓存）：`ch1_01` 6.6/4.6、
+     `ch1_02` 5.9/4.4、`ch1_03` 13.1/10.2、`ch1_04` 6.5/4.9、`ch1_05`
+     4.4/4.3、`ch1_06` 4.3/4.6、`ch1_rest` 9.9/8.9、`ch1_boss`
+     **38.6/23.6**、`ch1_vault` 20.7/9.3 ms；与第 68 程同量级（Boss 冷建
+     本次更低）。
+   - Boss 战 120 帧：avg **8.33**、p95 **8.72–8.84**、max 11.19–14.30。
+   - 对照第 68 程（Hub `load` 971.8/1095.2/1064.1、`main.tscn`
+     2023.5–2127.8、首房 8.33、门 226.6–240.0、Boss avg 8.33）：本程各项
+     与第 68 程及第 21/22 程基线同量级，未发现产品侧持续退化，按任务单
+     不做优化改动。
+5. **文案（第 1 章 + Hub）——发现并修复 2 项（3 处文案）。**
+   - **陆沉「档案馆升级」开启语自相矛盾**：`hub.gd` 的
+     `perform_npc_function(&"luchen", &"archive")` 仍返回「这里的等级没有
+     尽头」，与 `ArchiveData.MAX_LEVEL = 10`、档案馆页「demo 每个方向上限
+     10 级」和第 68 程已改的职能描述冲突（第 68 程修了上游描述，漏了这句
+     运行时消息）；同一 NPC 的对话服务列表句还把「10 级」硬编码，常量
+     改动时会漂移。修复：开启语按 `ArchiveData.MAX_LEVEL` 生成
+     「demo 每个方向修到 Lv.%d 为止，档案本身没有尽头」，服务列表句同步
+     读常量。未改上限数值、价格曲线、存档或成长设计。
+   - **闻烬「签一份契约」描述与发放不符**：描述写「本局起始多 1 次奖励
+     重选」，实际代码只发放 `start_pages +10` 与 `start_corruption +6`，
+     对话消息也写「多 10 残页，污染 +6」；工程内没有「每局额外奖励重选」
+     计数器或消费点（重选只来自「改写」权柄）。修复：描述改为「本局起始
+     多 10 残页，但污染 +6」。未改发放数值。
+   - **闻烬「买情报」描述/消息与效果不符**：描述写「本局首次攻击附带额外
+     伤害」、消息写「你的第一击会更疼」，工程内没有首次攻击机制；实际是
+     `profile.add_npc_blessing(&"wenjin", "damage", 2.0)`，由
+     `RunLoot.weapon_for_run` 把祝福值永久加到所有武器伤害。修复：描述与
+     消息均改为「所有武器的伤害永久 +2」。未改祝福数值。
+   其余抽查：第 1 章事件 7 组文案、Hub 五名 NPC 问候/态度/离线回应、
+   残碑/休息/死亡提示/污染警告、难度说明/档案馆四轨描述未发现新错字或与
+   数值/剧情圣经冲突的点。
+6. **回归抽查——未发现回归。** 隐藏书库进入路径由
+   `integration_ch1_demo`（102/0，真实 `door1` 门进入 `ch1_vault`）复跑
+   通过；结局余味未解锁不泄露/已解锁展示由 `test_ending_echoes`（单元套件
+   内）与 `integration_menus` 的画廊断言复跑通过；第 68 程的档案馆满级行
+   由 `test_growth`（单元内）与 `integration_menus` 复跑通过（本程又补了
+   开启语/服务句两条上限文案）。
+7. **未修的记录项**：无新增产品缺陷；门过渡本次偏高 15% 与 Hub `load`
+   区间波动只记录、不优化（见第 4 项）。待确认第 11–16 项未碰、未新增
+   条目；第 2–4 章仍不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 与
+   `MDS_WORLD_FILES` 未动。
+
+### 修复与回归断言
+
+- `scripts/hub/hub.gd`：档案馆开启消息按 `ArchiveData.MAX_LEVEL` 生成，
+  服务列表句同步用常量；闻烬情报消息改为「所有武器的伤害永久 +2」。
+- `scripts/hub/npc_profiles.gd`：契约描述改为「本局起始多 10 残页，污染
+  +6」；情报描述改为「所有武器的伤害永久 +2」。
+- `tests/test_hub_final.gd` 新增 `_test_function_copy_matches_effects`：
+  7 条「有价职能描述必须写出正确价格」+ 契约 3 条文案 + 2 条实际发放 +
+  情报 5 条文案/祝福 = **+17**；单元 **13434 → 13451 / 0**。
+- `tests/integration_menus.gd` 新增 5 条：档案馆开启消息写明 Lv.10、不再
+  声称「等级没有尽头」、页面确实打开、陆沉对话服务句写明上限、不再声称
+  「没有尽头」；菜单集成 **428 → 433 / 0**。
+- `integration_gamepad` 207 / `integration_run_save` 613 复跑 0 失败；
+  其余套件本程未改、基线复核时已全绿（三个大图套件均跑完）。
+- 临时性能探针测后删除；`git status` 仅含产品/测试/文档改动，无导入缓存
+  或产物。
+
+## 例行扫描（第 70 程）
+
+> 依据 brief74 / `.supervisor/DECISIONS.md` 的收口规则；本程只做例行扫描与
+> 「扫描发现的产品行为缺陷」修复，不开新功能、不碰待确认第 11–16 项、
+> 不改可达性/章节路由/结局与存档格式。
+
+### 任务 0 · 基线核验（HEAD `381bf26`，Godot 4.7.stable.official.5b4e0cb0f）
+
+- `--headless --path . --import` / `--headless --path . --quit` 退出 0、`ERROR` 0。
+- 单元 `tests/run_tests.gd` **13451 / 0**（与第 69 程逐字一致）。
+- 十一套集成全部跑完，与第 69 程逐套件一致、全 0 失败、各日志 `ERROR` 0：
+  `integration_playability` **894** / `integration_ch1_demo` **102** /
+  `integration_run_save` **613** / `integration_gamepad` **207** /
+  `integration_ui_prompts` **113** / `integration_ch1_event` **59** /
+  `integration_menus` **433** / `integration_ai_settings` **45** /
+  `integration_ch2_bigmap` **2315** / `integration_ch3_bigmap` **4358** /
+  `integration_ch4_bigmap` **5133**。
+- `tests/check_exit_clean.sh <godot> 10` → **10/10 clean**；
+  `tests/check_pixel_assets.py --demo` → **36 / 0**。
+- 结论：基线无漂移，可施工；本程全程未出现 Magpie 网关中断。
+
+### 扫描面逐项结论
+
+1. **关闭回退（各覆盖页 → 上一层/焦点）——未发现新缺陷。**
+   复核 `game.gd::_input` 的模态顺序（权柄/归档必选模态吞 B/Esc、地图先于
+   覆盖页、暂停先退设置子页）、`_toggle_overlay`/`_close_overlay`、
+   `PauseMenu`/`SettingsMenu` 子页栈，以及 Hub 各页 `_unhandled_input`
+   （对话/商店/档案馆/帮助/灵感/教程图鉴均用 `pause`/`ui_cancel` 退出）；
+   背包为只读页、打开不抓焦点，但 `ui_cancel` 出口存在，不是死路。
+   `_pause_return_*` 在页面并列替换时清空是注释写明的口径，非缺陷。
+   本程 `integration_menus` 445、`integration_gamepad` 207 复跑 0 失败。
+2. **焦点（标题/暂停/子页/商店/事件/对话）——未发现新缺陷。**
+   标题有/无局内存档分别聚焦「继续本局」/「开始旅程」；暂停菜单打开即抓
+   可用项；设置子页关闭把焦点还给打开它的按钮；商店/事件/对话/画廊/权柄/
+   归档/奖励打开即抓首个可点项、关闭还原；键盘与手柄切换由
+   `GameFlow.input_device_changed` 统一驱动提示与焦点。复跑同上。
+3. **存档边界（run save 写盘/续玩/坏档）——未发现新缺陷。**
+   逐点核对写盘调用：进房、奖励选择、事件结算、商店买/关、残碑、宝箱、
+   Boss 死亡、权柄授予、暂停、失焦、关窗（`save_run_on_exit`）均有
+   `save_run_now()`；`save_run_now()` 在死亡/结局/奖励页/非 MDS 时拒绝写入。
+   坏档由 `RunSave.read()` 回退 `.bak` 并提升、结构无效则清理；死亡先清档
+   再开归档（`_death_committed`），胜利保留 Boss 已死检查点直到
+   `Flow.end_run` 清档，「Boss 已死但权柄未选」由 `_resume_boss_aftermath`
+   重新授予。`integration_run_save` 613 断言复跑 0 失败。
+4. **性能（第 1 章 9 房间 + Hub 冷/热、门过渡、Boss 战帧）——只记录，未发现
+   需要处理的产品性能缺陷。** 本程临时探针（测后删除）在真实主场景内实测：
+   - Hub 冷加载：首次 `load` **977.0 ms**、`instantiate` **5.1 ms**、
+     `_ready` + 首帧 **603.4 ms**；随后两次（依赖已缓存）`load` 6.3 ms、
+     `_ready` + 首帧 368.4 / 367.9 ms。
+   - `main.tscn` 冷加载：首次 `load` **2346.9 ms**、`instantiate` 5.9 ms、
+     `_ready` + 首帧 **687.7 ms**；随后两次 `load` 7.6 / 9.8 ms，
+     `_ready` + 首帧 627.5 / 696.3 ms。与第 68 程（Hub `load`
+     971.8–1095.2、`main.tscn` 2023.5–2127.8）及第 69 程（Hub
+     905.5–981.5、`main.tscn` 2015.9–2357.9）同量级。
+   - 第 1 章首房 3 个 120 帧窗口：avg **8.25 / 8.33 / 8.33 ms**
+     （120 FPS 预算 8.33）、p95 8.61 / 8.62 / 8.62、max 8.68 / 8.73 / 9.59；
+     过门后 120 帧 avg 8.33、p95 8.68、max 8.94；未见持续掉帧。
+   - 门过渡 `ch1_01 ↔ ch1_02`：完整淡出+淡入 **442.1 / 449.6 ms**（作者
+     `fade_time = 0.22` 两段 + 房间构建），到新房间激活 **121.8 / 221.7 ms**；
+     第 68/69 程记录的 226.6–274.8 ms 是「到房间激活」段的同量级读数，端点
+     口径不同，未发现产品侧退化，按任务单只记录不优化。
+   - 对照第 21/22 程与第 68/69 程基线：帧间隔贴 120 FPS 预算，冷加载与门
+     过渡同量级，未做任何优化改动。
+5. **文案（第 1 章 + Hub）——发现并修复 5 项（8 处文案/常量）。**
+   - **局内商店「缝合书页」数值写反**：`RunLoot.shop_offers` 写「恢复 45
+     生命与 30 墨量」，`game.gd::_apply_reward` 实际是 `heal(35)` /
+     `restore_ink(45)` / 污染 −12；`RestOfferData.EFFECT_TEXT` 也是 35/45。
+     探针经真实主场景 `_apply_reward` 复现（卡面 45/30，实际 +35 HP /
+     +45 墨 / −12 污染）。修复：卡面改为「恢复 35 生命与 45 墨量，并净化
+     12 点污染。」；未改任何数值。
+   - **档案馆买到第 10 级后的提示仍报下一次价格**：`ArchiveUI._buy` 成功
+     后固定拼「下次需要 %d 碎片」，而同一行已显示「已满级/已达上限」，
+     `ArchiveData.MAX_LEVEL = 10` 再也买不了。修复：新等级达到上限时改报
+     「升至 Lv.%d，已达 demo 上限」，其余等级仍报下一次价格。
+   - **阿砚「神铸」描述与消息跟实际祝福不符**：描述写「花费 25 记忆碎片…
+     免费提升 1 级基底」，自相矛盾；消息固定写「锻造祝福 +1」，但
+     `FORGE_BONUS_TOTAL_CAP = 3.0` 封顶时实际加 0、接近封顶时只加余量；
+     代码还硬编码 3.0。修复：描述改为「断页剑基底直接提升 1 级，并获得
+     锻造祝福（上限 3）」；`_forge_god` 改用
+     `NPCProfiles.FORGE_BONUS_TOTAL_CAP`，按实得 0 / 0.5 / 1 点如实报数
+     （封顶时「锻造祝福已至上限」）。
+   - **咕噜货架描述只说「换词」**：黑市 18 件货里有 3 件遗物（深渊钟、净墨
+     灯、不朽档案），描述会让玩家漏看遗物。修复：改为「换词与遗物」。
+   - **零污染遗物的奖励卡印「污染 +0」**：`RunLoot.choices`/`elite_choices`
+     无条件拼污染行，而 `clean_ink_lantern.corruption = 0`（第 1 章 demo
+     遗物池内）；Hub 商店早已用 `corruption > 0` 守卫。修复：新增
+     `_relic_reward_text()`，仅正污染才写该行；其余遗物（如 `ink_heart`
+     +1）仍正常显示。
+   其余抽查：第 1 章事件 7 组文案、Hub 五名 NPC 问候/态度/离线回应、
+   残碑/休息/死亡/污染提示、难度说明、档案馆四轨描述、教程三步与帮助
+   键位说明未发现新错字或与数值/剧情圣经冲突的点。
+6. **回归抽查——未发现回归。** 隐藏书库进入路径由
+   `integration_ch1_demo`（102/0，真实 `door1` 门进入 `ch1_vault`）复跑
+   通过；结局余味未解锁不泄露/已解锁展示由 `test_ending_echoes`（单元
+   套件内）与 `integration_menus` 的画廊断言复跑通过；第 68 程档案馆
+   满级行由 `test_growth` 与 `integration_menus` 复跑通过（本程又补了
+   买到第 10 级后的提示）；第 69 程三处 Hub 文案修正由
+   `test_hub_final` 的契约/情报断言复跑通过。
+7. **未修的记录项**：设置页的「全屏」切换只改 `DisplayServer.window_set_mode`，
+   未写入 `Profile`（音量/震动/闪烁/字号/AI/键位均持久化），重启后回到窗口
+   模式。补持久化会新增 Profile 键、改变设置存档形状，任务单未要求，本程
+   只记录、不修、不新增待确认条目。其余无新增产品缺陷；第 11–16 项未碰，
+   第 2–4 章仍不可达。
+
+### 修复与回归断言
+
+- `scripts/core/run_loot.gd`：缝合书页文案改为 35 生命/45 墨量；新增
+  `_relic_reward_text()`（零污染不写「污染 +0」）并用于 `choices`/
+  `elite_choices`。
+- `scripts/ui/archive_ui.gd`：买到 demo 上限时状态提示改报上限，不再报
+  下一次价格。
+- `scripts/hub/hub.gd`：`_forge_god` 改用 `NPCProfiles.FORGE_BONUS_TOTAL_CAP`，
+  按实际增加的祝福报数。
+- `scripts/hub/npc_profiles.gd`：神铸描述改为「基底直接提升 1 级…（上限 3）」；
+  咕噜货架描述补「与遗物」。
+- 回归断言：`tests/test_shop.gd` +1（缝合书页文案）、
+  `tests/test_hub_final.gd` +9（咕噜货架 2 + 神铸 7）、
+  `tests/test_demo_loot.gd` +4（零污染/有污染遗物卡），单元
+  **13451 → 13465 / 0**；`tests/integration_menus.gd` +12（档案馆最终
+  一级 3 + 神铸 9），菜单集成 **433 → 445 / 0**；
+  `tests/integration_playability.gd` +5（缝合书页标题/三项实际数值/
+  文案与数值一致），可玩性集成 **894 → 899 / 0**。
+- 修复后复跑 `integration_gamepad` 207、`integration_run_save` 613、
+  `integration_ui_prompts` 113 全 0 失败；收尾完整套件数字见下。
+- 临时探针（`tests/_probe_rest_offer.gd`、`tests/_probe_perf.gd`、
+  `tests/_probe_door.gd`）复现/测量后删除；`git status` 仅含产品/测试/
+  文档改动，无导入缓存或产物。
+
+### 收尾复跑（全绿）
+
+- 单元 **13465 / 0**；十一套集成 **899 / 102 / 613 / 207 / 113 / 59 /
+  445 / 45 / 2315 / 4358 / 5133**，全 0 失败、各日志 `ERROR` 0；
+  `--headless --import` / `--quit` 退出 0、`ERROR` 0；退出泄漏
+  **10/10 clean**；demo 像素 **36 / 0**。
+- 第 2–4 章仍不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 与 `MDS_WORLD_FILES`
+  未动；未推送、未更新网页版、未宣布里程碑。
+
+## 例行扫描（第 72 程）
+
+> 依据 brief76 / `.supervisor/DECISIONS.md` 的收口规则。第 71 程（brief75）
+> 开局即因 Magpie 网关中断夭折（`.supervisor/session75.log` 仅两行、零产出、
+> 无提交）；本程是第 71 程例行扫描的全新重跑，不假设其留下任何工作。本程只做
+> 例行扫描与「扫描发现的产品行为缺陷」修复，不开新功能、不碰待确认第 11–16 项、
+> 不改可达性/章节路由/结局与存档格式。
+
+### 任务 0 · 基线核验（HEAD `3847343`，Godot 4.7.stable.official.5b4e0cb0f）
+
+- `--headless --path . --import` / `--headless --path . --quit` 退出 0、`ERROR` 0。
+- 单元 `tests/run_tests.gd` **13465 / 0**（与第 70 程逐字一致）。
+- 十一套集成全部跑完，与第 70 程逐套件一致、全 0 失败、各日志 `ERROR` 0：
+  `integration_playability` **899** / `integration_ch1_demo` **102** /
+  `integration_run_save` **613** / `integration_gamepad` **207** /
+  `integration_ui_prompts` **113** / `integration_ch1_event` **59** /
+  `integration_menus` **445** / `integration_ai_settings` **45** /
+  `integration_ch2_bigmap` **2315** / `integration_ch3_bigmap` **4358** /
+  `integration_ch4_bigmap` **5133**。
+- `tests/check_exit_clean.sh <godot> 10` → **10/10 clean**；
+  `tests/check_pixel_assets.py --demo` → **36 / 0**。
+- 结论：基线无漂移，可施工；本程全程未出现 Magpie 网关中断。
+
+### 扫描面逐项结论
+
+1. **关闭回退（各覆盖页 → 上一层/焦点）——未发现新缺陷。**
+   复核 `game.gd::_input` 的模态顺序（权柄/归档必选模态吞 B/Esc、地图先于
+   覆盖页、暂停先退设置子页）、`_toggle_overlay`/`_close_overlay`、
+   `PauseMenu`/`SettingsMenu` 子页栈，以及 Hub 各页 `_unhandled_input`
+   （对话/商店/档案馆/帮助/灵感/教程图鉴均用 `pause`/`ui_cancel` 退出）；
+   背包为只读页、打开不抓焦点，但 `ui_cancel` 出口存在，不是死路。
+   `_pause_return_*` 在页面并列替换时清空是注释写明的口径，非缺陷。
+   本程 `integration_menus` 445、`integration_gamepad` 207 复跑 0 失败。
+2. **焦点（标题/暂停/子页/商店/事件/对话）——未发现新缺陷。**
+   标题有/无局内存档分别聚焦「继续本局」/「开始旅程」
+   （menus 的 `title_first_focus_no_save` / `title_first_focus_with_save`）；
+   暂停菜单打开即抓可用项；设置子页关闭把焦点还给打开它的按钮
+   （`SettingsMenu._on_subpage_closed`）；商店/事件/对话/画廊/权柄/归档/
+   奖励打开即抓首个可点项、关闭还原；键盘与手柄切换由
+   `GameFlow.input_device_changed` 统一驱动提示与焦点。复跑同上。
+3. **存档边界（run save 写盘/续玩/坏档）——未发现新缺陷。**
+   逐点核对写盘调用：进房、奖励选择、事件结算、商店买/关、残碑、宝箱、
+   Boss 死亡、权柄授予、暂停、失焦、关窗（`save_run_on_exit`）均有
+   `save_run_now()`；`save_run_now()` 在死亡/结局/奖励页/非 MDS 时拒绝写入。
+   坏档由 `RunSave.read()` 回退 `.bak` 并提升、结构无效则清理；死亡先清档
+   再开归档（`_death_committed`），胜利保留 Boss 已死检查点直到
+   `Flow.end_run` 清档，「Boss 已死但权柄未选」由 `_resume_boss_aftermath`
+   重新授予。`integration_run_save` 613 断言复跑 0 失败。
+4. **性能（第 1 章 9 房间 + Hub 冷/热、门过渡、Boss 战帧）——只记录，未发现
+   需要处理的产品性能缺陷。** 本程临时探针（测后删除）每项 3 个新进程样本：
+   - Hub 冷加载：`load` **753.1 / 792.2 / 905.1 ms**、`_ready`+首帧
+     **461.6 / 468.0 / 556.4 ms**；与第 68 程（`load` 971.8–1095.2）、
+     第 69 程（905.5–981.5）、第 70 程（977.0 / 603.4）同量级。
+   - `main.tscn`：**2779.9 / 2801.1 / 2921.8 ms**，比第 69/70 程
+     （2015.9–2357.9）高约 20–25%，仍同量级，只记录不优化。
+   - 第 1 章 9 房间原始构建（`fade_time = 0`）：冷 **3.84–37.39 ms**
+     （`ch1_03` 11.5–11.7、`ch1_rest` 8.6–9.0、`ch1_boss` 30.7–37.4、
+     `ch1_vault` 10.1–14.2，其余 3.8–6.5）、热 **3.77–23.06 ms**；与
+     第 68 程（5.1–77.4）、第 69 程（4.3–38.6）同量级或更低。
+   - Boss 战 120 帧：avg **8.33 / 8.33 / 8.45 ms**（120 FPS 预算 8.33）、
+     peak 10.27 / 10.61 / 25.36 ms（首个样本含刚释放 Hub 的抖动），与
+     第 68/69/70 程的 Boss avg 8.33 一致。
+   - 门过渡 `ch1_01.right1 → ch1_02`（作者 `fade_time = 0.22`，到房间激活）：
+     **225.26 / 225.56 / 225.66 ms**，与第 68 程 226.6–240.0、第 70 程激活段
+     121.8–221.7 同端点、同量级，未发现退化。
+   - 未做任何优化改动。
+5. **文案（第 1 章 + Hub）——发现并修复 1 项产品行为缺陷。**
+   - **跟阿砚打招呼会静默扣碎片、升级断页剑基底。**
+     `scripts/hub/hub.gd::talk_to_npc` 的 `&"ayan"` 分支把
+     `upgrade_sword_base().get("message")` 直接拼进问候语，而
+     `upgrade_sword_base()` 是真正扣碎片、提升基底等级的付费操作；正确入口
+     是「言灵对话」面板里的「锻造基底」（`perform_npc_function` →
+     `upgrade_sword_base`）。无头探针在真实 `hub.tscn` 复现：碎片
+     **100 → 90**、基底 **Lv.0 → Lv.1**，对话出现「记忆碎片 -10。断页剑基底
+     已升至 Lv.1…」。碎片不足时，每次问候还会重复附上「记忆碎片不足」的
+     失败消息。修复：问候改为非交易性说明——报当前基底等级并指向
+     「言灵对话 → 锻造基底」，不写死价格（折扣/托付免费会变）：
+     「断页剑基底现在是 Lv.%d。要再锻一层，在「言灵对话」里选「锻造基底」——
+     花多少碎片，看交情。」未改锻造数值、折扣、信任或存档。
+   其余抽查：第 1 章事件 7 组文案、Hub 五名 NPC 问候/态度/离线回应、
+   残碑/休息/死亡/污染提示、难度说明、档案馆四轨描述、教程三步与帮助
+   键位说明、第 69/70 程修过的契约/情报/神铸/货架/缝合书页/遗物卡，
+   未发现新错字或与数值/剧情圣经冲突的点。
+6. **回归抽查——未发现回归。** 隐藏书库真实 `door1` 进入由
+   `integration_ch1_demo`（102/0，`demo_vault_entered`）复跑通过；结局余味
+   未解锁不泄露/已解锁展示由 `test_ending_echoes`（单元套件内）与
+   `integration_menus` 的画廊断言复跑通过；第 68 程档案馆满级行由
+   `test_growth` 与 `integration_menus` 复跑通过；第 69 程三处 Hub 文案由
+   `test_hub_final` 的契约/情报断言复跑通过；第 70 程五项文案由
+   `test_shop`/`test_hub_final`/`test_demo_loot` + menus + playability 复跑
+   通过。
+7. **未修的记录项**：设置页的「全屏」切换只改
+   `DisplayServer.window_set_mode`，未写入 `Profile`（第 70 程记录项，本程
+   复核仍在）；补持久化会新增 Profile 键、改变设置存档形状，任务单未要求，
+   只记录、不修、不新增待确认条目。第 60 程样图问题 1/3/6 与待确认第 13/15
+   项相关，拍板前不施工；5/7 已判定为取景限制/既有素材，不是缺陷，不动。
+   第 11–16 项未碰，第 2–4 章仍不可达。
+
+### 修复与回归断言
+
+- `scripts/hub/hub.gd`：`talk_to_npc` 的阿砚分支不再调用
+  `upgrade_sword_base()`；改为报当前基底等级并指向「言灵对话 → 锻造基底」，
+  不写死价格。
+- 回归断言：`tests/test_hub_final.gd` **+9**——问候打开对话、碎片仍 100、
+  基底等级不变、对话提到「锻造基底」与当前 `Lv.`、关闭后解冻玩家、显式
+  `perform_npc_function(&"ayan", &"forge")` 仍升 1 级并按 `10 + Lv×10`
+  扣费且消息含 `Lv.`。
+- 结果：单元 **13465 → 13474 / 0**；受影响的集成复跑 menus 445、
+  run_save 613、gamepad 207、ui_prompts 113、playability 899，全 0 失败。
+- 临时探针（`tests/_probe_ayan_talk.gd`、`tests/_probe_pass72_perf.gd`）
+  复现/测量后删除；`git status` 仅含产品/测试/文档改动，无导入缓存或产物。
+
+### 收尾复跑（全绿）
+
+- 单元 **13474 / 0**（+9）。
+- 十一套集成 **899 / 102 / 613 / 207 / 113 / 59 / 445 / 45 / 2315 / 4358 /
+  5133**，全 0 失败、各日志 `ERROR` 0。
+- `--headless --import` / `--quit` 退出 0、`ERROR` 0；退出泄漏
+  **10/10 clean**；demo 像素 **36 / 0**。
+- 第 2–4 章仍不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 与 `MDS_WORLD_FILES`
+  未动；未推送、未更新网页版、未宣布里程碑。
+
+## 例行扫描（第 73 程）
+
+> 依据 brief77 / `.supervisor/DECISIONS.md` 的收口规则。本程只做例行扫描与
+> 「扫描发现的产品行为缺陷」修复，不开新功能、不碰待确认第 11–16 项、
+> 不改可达性/章节路由/结局与存档格式、不推送、不更新网页版。
+
+### 任务 0 · 基线核验（HEAD `8b4244a`，Godot 4.7.stable.official.5b4e0cb0f）
+
+- `--headless --path . --import` / `--quit` 退出 0。
+- 单元 `tests/run_tests.gd` **13474 / 0**（与第 72 程逐字一致）。
+- 十一套集成全部跑完，与第 72 程逐套件一致、全 0 失败：
+  `integration_playability` **899** / `integration_ch1_demo` **102** /
+  `integration_run_save` **613** / `integration_gamepad` **207** /
+  `integration_ui_prompts` **113** / `integration_ch1_event` **59** /
+  `integration_menus` **445** / `integration_ai_settings` **45** /
+  `integration_ch2_bigmap` **2315** / `integration_ch3_bigmap` **4358** /
+  `integration_ch4_bigmap` **5133**。
+- `tests/check_exit_clean.sh` **10/10 clean**；`check_pixel_assets.py --demo`
+  **36 / 0**。
+- 结论：基线无漂移，可施工。
+
+### 扫描面逐项结论
+
+1. **关闭回退（各覆盖页 → 上一层/焦点）——未发现新缺陷。**
+   `game.gd::_input` 的模态顺序、`PauseMenu` 的 `pause`/`ui_cancel` 退出、
+   `SettingsMenu` 子页栈先关子页、`KeybindUI` 捕获态、背包/图鉴/帮助的
+   `ui_cancel` 出口、地图自带暂停、局内商店/剧情/事件/对话/确认框退出、
+   结局屏必选流程与画廊关闭还原焦点均复核；无死路、无 B/Esc 不一致。
+2. **焦点（标题/暂停/子页/商店/事件/对话）——未发现新缺陷。**
+   标题有/无局内存档分别聚焦「继续本局」/「开始旅程」；暂停打开即抓可用项；
+   设置子页关闭把焦点还给打开它的按钮（`_pause_return_focus`）；各覆盖页
+   打开即抓首个可点项；键盘/手柄切换由 `GameFlow.input_device_changed`
+   统一驱动。
+3. **存档边界（run save 写盘/续玩/坏档）——未发现新缺陷。** 进房/事件结算/
+   商店购买与关闭/残碑/宝箱/Boss 死亡/权柄/暂停/失焦/窗口关闭均写盘；
+   奖励选择页故意不写（续玩重放未选奖励）；死亡在归档模态前清档、失败
+   `_finish` 清档、回 Hub/重开/结束战役清档；`RunSave.read()` 版本/形状
+   校验失败与坏主档回退 `.bak` 并提升备份。无残留复活路径。
+4. **性能（只记录、不优化）——未发现退化信号。** 临时探针（测后删除）在
+   真实主场景内实测，每项 3 个新进程样本：
+   - Hub 冷加载 `load` **535.4 / 527.3 / 403.1 ms**、`_ready`+首帧
+     **426.7 / 476.9 / 395.0 ms**（第 72 程 753–905 / 461–556，更低）。
+   - `main.tscn` `load` **1954.6 / 1998.2 / 1710.4 ms**、实例化+首帧
+     **687.5 / 669.0 / 633.5 ms**（第 72 程 2779.9–2921.8，更低）。
+   - 第 1 章 9 房间原始构建（预热房间脚本）：冷 **14.5–23.1 ms**
+     （`ch1_03` 首次 57.3–125.6、另一次 25.6，为首次共享资源加载离群值），
+     热 **14.4–25.6 ms**；地板比第 72 程热 3.77–23.06 高约 10 ms，但门过渡
+     与 Boss 帧逐项同值、本程未动房间构建，按环境/测序差异记录、不优化。
+   - Boss 战 120 帧：avg **8.33 / 8.33 / 8.33 ms**（120 FPS 预算 8.33）、
+     p95 **9.06 / 8.70 / 8.74**、max **12.73 / 10.15 / 10.15 ms**。
+   - 门过渡 `ch1_01.right1 → ch1_02`（`fade_time = 0.22`，到新房间激活）：
+     **225.59 / 226.31 / 226.26 ms**，与第 72 程 225.26–225.66 同端点。
+5. **文案（第 1 章 + Hub 事件/对话/提示）——未发现新矛盾。** 抽查
+   `Ch1EventData` 七组事件、`RestOfferData` 效果行（35 生命 / 45 墨量 /
+   污染 −12，对应 `_apply_reward`）、`VaultRoomData` 八条发现行、残碑重复
+   领取（25 生命 / 30 墨量）、第 69/70/72 程已修文案，以及全仓旧串残留
+   （`没有尽头`/`首次攻击`/`第一击`/`1 次奖励`/`+0`）——无新矛盾，未改文案。
+6. **回归抽查——全部通过。** 隐藏书库进入/返回/无坠落伤害、结局余味
+   （第 66 程）、档案馆满级（第 68 程）、第 69/70/72 程修复的断言均在
+   全量单元与菜单/可玩性/第 1 章 demo 套件中复跑通过。
+
+### 修复与回归断言
+
+**1）Hub 词服务是无限碎片泵（真实产品行为缺陷）。**
+`Hub._unlock_random_word()` 在无可解锁词时给 `memory_fragments += 8`，而
+`Profile.DEFAULT_OWNED` 首次开局即含全部 18 个第 1 章词，兜底每次必走：
+咕噜「买一条传闻」收 3 返 8（净 **+5**）、陆沉「讲述档案」收 6 返 8（净
+**+2**），可无限连点并经 `_save_shared_profile()` 落盘。探针在真实
+`hub.tscn` 复现：3 次传闻 **100 → 115**，界面层 10 次 **100 → 150**、
+10 次讲述档案 **150 → 170**。修复：新增 `Hub.unlockable_word_pool()`；
+`lore`/`rumor` 池空时拒绝并说明「没有新词、不收碎片」，不扣费；
+`_unlock_random_word()` 不再支付碎片；有词时仍按原价扣 3 / 6 并解锁。
+回归断言：`tests/test_hub_final.gd::_test_word_services` **+16**（池空不扣费、
+回话含「不收钱/没要你的碎片」且不含「+8」、连点 10 次不涨、擦掉 `xue` 后
+传闻扣 3 并解锁、擦掉 `dongjie` 后讲述档案扣 6 并解锁、结束池回空）。
+单元 **13474 → 13490 / 0**。
+
+**2）局内商店对已拥有的货仍扣残页（真实产品行为缺陷）。**
+`game.gd::_on_shop_buy()` 先 `spend_pages` 再 `_apply_reward`；货架在首次
+打开时缓存，若之后从奖励/宝箱/残碑拿到同一遗物或词，再买该行时
+`add_relic`/`add_word` 静默拒绝，残页已扣且行未标记、可重复点。探针在真实
+主场景复现：先放入货架上的遗物再买该行——残页 **100 → 75**、遗物数量不变、
+行仍未标记。修复：新增 `game.gd::_shop_offer_owned()`，`relic`/`word` 行
+扣费前检查库存，已拥有则 `RunShopUI.mark_owned()` 禁用该行、标签
+「已拥有：<名>」、回话「这件你已经有了，摊主不收残页。」、**不扣残页**，
+`bought` 写入缓存避免续玩再出现；其他行与正常购买流程不变。回归断言：
+`tests/integration_ch1_demo.gd` 商店段 **+7**（遗物行存在/有资源、已拥有
+购买不扣残页、不重复、行禁用且标签「已拥有」、回话含「不收残页」），
+断言后移除测试注入的遗物。第 1 章 demo 集成 **102 → 109 / 0**。
+
+### 未修记录（只记录，不新增待确认条目）
+
+- `PauseMenu._ask_confirm` 取消后残留 `CONNECT_ONE_SHOT` 的 `confirmed`
+  连接，下一次确认会同时触发两个动作——当前不可见（两个动作最终都走同一个
+  pending scene 槽、`returned_to_hub` 无监听者），未改。
+- `NPC.interact()` / `dialogue_index` 是死代码（Hub 每次对话重放全部台词），
+  属 UX 观察，改动会变更对话设计，未动。
+- 设置页全屏切换不写 `Profile`（沿用第 70 程记录，未修）。
+- 第 60 程样图问题 1/3/5/6/7 维持第 63/64 程结论：1/6 与第 13 项相关、
+  3 与第 15 项相关，拍板前不施工；5/7 不是缺陷。
+- 第 11–16 项未碰、未新增待确认条目；第 2–4 章仍不可达。
+
+### 收尾复跑（全绿）
+
+- 单元 **13490 / 0**（+16）。
+- 十一套集成 **899 / 109 / 613 / 207 / 113 / 59 / 445 / 45 / 2315 / 4358 /
+  5133**，全 0 失败；三个大图套件均跑完。
+- `--headless --import` / `--quit` 退出 0；退出泄漏 **10/10 clean**；
+  demo 像素 **36 / 0**。
+- 临时探针（`_probe_hub_words` / `_probe_pause_confirm` / `_probe_perf` /
+  `_probe_shop_dup`）测后删除；工作区提交后干净。
+- 未推送、未更新网页版、未宣布里程碑。
+
+## README 重写（第 74 程）
+
+> 依据 `.supervisor/DECISIONS.md`「用户批准发布一版 + README 重写」与三次改口
+> （发布 = 里程碑推送 + 网页更新 + GitHub Release v0.12.0 预发布 + Windows 包）。
+> 本程只改仓库根 `README.md`；不做 Windows 导出、不推送、不更新网页版、不创建
+> Release、不改任何游戏代码/场景/资源/测试、不改章节可达性。
+
+### 重写口径与结构
+
+新结构（自上而下）：简介 → 当前可玩范围 → 已建成但未开放 → 核心系统
+（言出法随 / 权柄 / 信任分层 / 结局画廊）→ 操作 → 运行 → 开发状态。
+
+- 当前可玩如实写为：第一章「墨雨档案馆」9 个房间区域（4 战斗 + 精英 + 事件 +
+  休整 + 隐藏书库 + Boss）、清房目标 6、墨骸史官三阶段；T17 系统（吞噬/归档、
+  四档信任、结局画廊）；四档难度、局内存档与手柄。
+- 第 2–4 章统一写为「已建成并通过各自的系统验收，因主流程接线未完成暂不可达」，
+  不再出现「依次穿过四章」。
+- 旧版本日志（0.11.0 / 0.10.0 / 0.7.0 三层倒序堆叠与「当前状态」旧日志）整段删除，
+  历史细节指向 `docs/` 与 git 记录。
+- 删除 SAPI 旁白宣传与 Android/触屏条目；配乐只保留一处口径（6 首，来自
+  `assets/audio/manifest.json` 的 6 条 music tracks），不再提旁白段数。
+- 结局表述按实现核实：demo 内可达成 3/5（深渊回响、未完的注脚、记录中断）；
+  「复原」需跨章仁慈 ≥2（第一章章末只能 +1），「焚毁档案」只在第四章流程触发，
+  二者暂不可达。
+
+### 核实的数字与来源
+
+| 数字 | 来源（仓库实测） |
+|---|---|
+| 词条 95（39 名词 / 29 动词 / 27 修饰） | `resources/words/*.tres` 95 个；`tests/test_content_expanded.gd` 锁定 95 与 39/29/27 |
+| 首次开局 18 个词（6 已解码 + 12 未解码） | `Profile.DEFAULT_OWNED` 18、`Profile.DEFAULT_DECODED` 6、`RunLoot.DEMO_FRAGMENT_WORDS` 12 |
+| demo 6 武器 / 6 遗物；内容库 12 / 9 / 14 | `ContentLibrary.DEMO_WEAPONS` / `DEMO_RELICS` / `WEAPONS` / `RELICS` / `ENEMIES` |
+| 第一章 9 房间、清房目标 6 | `resources/chapters/chapter_1_demo.tres`（4 combat + 1 elite + 1 event + rest + boss + vault） |
+| 13 种法术形态 | `scripts/language/spell_style.gd::SpellStyle.NAMES` |
+| 4 档难度 | `scripts/core/difficulty.gd` |
+| 档案馆 4 方向、demo 上限 10 | `scripts/core/archive_data.gd::TRACKS` / `MAX_LEVEL` |
+| 信任 0/2/6/12 四档 | `scripts/core/trust_data.gd::THRESHOLDS` / `TIER_NAMES` |
+| 5 个结局 | `scripts/core/campaign_data.gd::ENDINGS` |
+| 6 首配乐 | `assets/audio/manifest.json` music.tracks（6 条） |
+| 155 个脚本 / 26,849 行（约 2.7 万） | `scripts/` 下 `.gd` 统计（不含 addons/tests） |
+| 单元 13,490 | `tests/run_tests.gd` 收尾复跑 |
+| 11 套集成 14,296 断言 | 899 / 109 / 613 / 207 / 113 / 59 / 445 / 45 / 2,315 / 4,358 / 5,133 |
+| 第 2/3/4 章大图验收 2,315 / 4,358 / 5,133 | 同上 |
+
+关于 brief 里的「可收集 50」：仓库没有 collectible 标记，95 个词全部在
+`ContentLibrary.WORDS`；demo 实际开局拥有 18 个。按「核不实宁可不写」，
+README 只写 95 与 18，没有写 50。
+
+### 删除 / 修正的旧内容
+
+- 删除 0.11.0-demo（2026-11-03）、0.10.0（2026-11-02）、0.7.0（2026-11-01）三段版本日志与旧「当前状态」段。
+- 删除「公开仓库 … 20–25 分钟」中的未核实时长与「六房 + 精英/事件/休息/书库 → 墨骸史官 → 续命/改写 → 未完待续」旧流程。
+- 删除「依次穿过四章」「章末选择会改变结局」的笼统说法，改为第一章停章与 demo 可达 3 个结局。
+- 删除 SAPI 旁白段、`docs/audio/README.md` 旁白宣传、Android 触屏行与「触屏」操作。
+- 修正配乐口径：旧文一处「六首 + 22 段旁白」、一处「五首 + 18 段旁白」，新文只写「6 首原创循环曲目」。
+- 修正旧测试数字 3083 / 265；改为单元 13,490、集成 14,296。
+- 修正旧「50 个可收集词」「8 种法术形态」；改为 95 词条、13 形态。
+- 补充 T17 与第 2–4 章大地图成果；第 2–4 章明确「已建成未开放」。
+
+### 自查与验证
+
+- 结构顺序符合 DECISIONS 重写口径；全文无 SAPI / Android / 触屏 /「依次穿过四章」/ 旧版本号。
+- 可玩与未开放分区明确；未把第 2–4 章或未达成结局写成可玩。
+- 数字全文各只出现一处（配乐 6 首仅「运行」一处），且均可在仓库复核。
+- 只改 `README.md`；提交 `a5053a4`（docs）。
+- 基线复跑：`--headless --import` / `--quit` 退出 0；单元 **13,490 / 0**；十一套集成
+  **899 / 109 / 613 / 207 / 113 / 59 / 445 / 45 / 2,315 / 4,358 / 5,133** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素 **36 / 0**（与本程开工前一致，无产品改动）。
+
+## Windows 导出（第 75 程）
+
+> 依据 `.supervisor/DECISIONS.md`「再更正：Release 直接带 Windows 包」与任务单
+> brief79。本程只做 Windows 导出、zip 打包与验证；不推送、不更新网页版、不创建
+> Release、不上传资产（这些由监工在里程碑执行，Release 创建需用户配合 passkey）。
+
+### 导出链路
+
+- 引擎 `Godot_v4.7-stable_linux.x86_64`（4.7.stable.official.5b4e0cb0f）；模板
+  `~/.local/share/godot/export_templates/4.7.stable/` 已装，含
+  `windows_release_x86_64.exe`（109,160,448 bytes）。
+- 预设为仓库既有 `Windows Desktop`（`runnable=true`、`export_filter=all_resources`、
+  `binary_format/embed_pck=true`、导出到 `build/windows/changzi-adventure.exe`）；
+  **本程未改 `export_presets.cfg`**。
+- `.mdsworld.json` 由 MDS 用 `FileAccess` 读取；Godot 4.7 把 `.json` 识别为
+  `JSON` 资源（`ResourceLoader.exists` 为 true），`all_resources` 会打包，无需新增
+  `include_filter`；四个章节世界 JSON 与音频 manifest 均已确认可被资源系统识别。
+
+### 导出与产物
+
+- 命令：`<godot> --headless --path . --export-release "Windows Desktop" build/windows/changzi-adventure.exe`
+- 结果：**退出 0，20 秒**；完整日志 `artifacts/releases/v0.12.0/export.log`
+  （1,732 行 / 206,557 bytes）。
+- exe：**132,104,632 bytes（约 126.0 MiB）**，`PE32+ executable (GUI) x86-64,
+  for MS Windows`；SHA-256 `7d4811f43ae27d378cd79570b1e36db9f9ab2dfb35602819185a2e39abd94242`。
+- PCK 内嵌（`embed_pck=true`）：exe 偏移 109,174,272 起 `GDPC` 头，内嵌
+  **22,930,348 bytes**。独立 `--export-pack` 导出同资源集亦为 22,930,348 bytes，
+  与从 exe 提取的内嵌 PCK **逐字节一致**（SHA-256
+  `20ba3fff908bfc31a43039b95bf2170ad51f9fe053629fac4942dda9726c3a9f`）；临时
+  空项目加载该 PCK 逐项检查 12 个关键路径 **MISSING=0**；`--main-pack` 无头启动
+  **退出 0**、无脚本错误。因此「exe + pck 齐全」按单文件 exe 的内嵌 PCK 口径
+  成立（zip 内无独立 `.pck`，与仓库既有发行文档一致）。
+- zip：`artifacts/releases/v0.12.0/changzi-adventure-v0.12.0-windows.zip`
+  **59,572,799 bytes（约 56.8 MiB）**，SHA-256
+  `9e14c4359960f0bae20b341e24d671995ca020550b7d1f24cc02805607024e9e`；
+  `unzip -l` 仅 1 个文件 `changzi-adventure.exe`（132,104,632 bytes），
+  `unzip -t` 通过，包内 exe 哈希与源 exe 一致（`7d4811f4…4242`）。
+  `artifacts/` 已在 `.gitignore`，产物不提交。
+
+### 告警 / 边界
+
+- 导出日志非致命告警：`Invalid version number "0.11.0-demo"` ×2（预设未设数值
+  `application/file_version`/`product_version`，exe 的 VERSIONINFO 数值版本为空，
+  不影响运行）；导出器自身 `973 ObjectDB` / `8 resources` 退出告警（与第 3 程
+  同源，游戏运行退出仍 0 泄漏）；Android `build-tools` 缺失提示与本导出无关。
+- **Windows 实机首跑未验证**（Linux VM 跑不了 exe，未用 wine/虚拟机硬跑）；
+  Release notes 必须如实写「Windows 实机首跑待验证」。`--main-pack` 只证明数据包
+  可被引擎加载，不等于 Windows 运行验证。
+- 版本口径：Release tag / zip 文件名用 `v0.12.0`；但 `project.godot config/version`、
+  标题屏版本标签、Android 预设 `version/name` 仍为 `0.11.0-demo`，本程按任务单
+  「不改游戏代码/产品配置」未动（改标题屏属游戏代码，版本号统一属后续决定）。
+- 交付物（本地、不提交）：`artifacts/releases/v0.12.0/` 下
+  `changzi-adventure-v0.12.0-windows.zip` + `changzi-adventure.exe` + `export.log`。
+- 基线复跑：单元 **13,490 / 0**；十一套集成 **899 / 109 / 613 / 207 / 113 /
+  59 / 445 / 45 / 2,315 / 4,358 / 5,133** 全 0 失败；退出泄漏 **10/10 clean**；
+  demo 像素 **36 / 0**。
 
 ## 本程日志
+
+### 2026-11-06 · 第 75 程（Windows 导出）
+
+- 交接：HEAD `7d11fc2`，`supervisor-dev`，工作区干净；任务单 brief79：按
+  DECISIONS「再更正」从当前 HEAD 导出 Windows release 包并打 zip，不做推送/
+  网页更新/Release 创建，不做 Windows 实机验证。
+- 任务 0 · 基线核验：`--headless --import` / `--quit` 退出 0；单元
+  **13,490 / 0**；十一套集成 **899 / 109 / 613 / 207 / 113 / 59 / 445 / 45 /
+  2,315 / 4,358 / 5,133** 全 0 失败（三个大图套件均跑完）；退出泄漏
+  **10/10 clean**、demo 像素 **36 / 0**——与第 74 程基线逐项一致。
+- 任务 1 · 模板/预设核验：4.7.stable 模板齐全（含 `windows_release_x86_64.exe`）；
+  既有 Windows 预设 `runnable=true` / `embed_pck=true`，未改；`.mdsworld.json`
+  在 Godot 4.7 中作为 JSON 资源导出，确认会进包。
+- 任务 2 · 导出：命令见专节；**退出 0 / 20 秒**；exe **132,104,632 bytes**，
+  PE32+ GUI x86-64，SHA-256 `7d4811f4…4242`；日志
+  `artifacts/releases/v0.12.0/export.log`。
+- 任务 3 · 验证：内嵌 PCK **22,930,348 bytes** 与独立 `--export-pack` 产物逐字节
+  一致；PCK 关键路径 12/12；`--main-pack` 无头启动退出 0；zip **59,572,799 bytes**，
+  1 文件、`unzip -t` OK、包内 exe 哈希一致。
+- 任务 4 · 记录：新增本专节、session 文档
+  `docs/memory/sessions/2026-11-06-windows-export-pass75.md`、MEMORY 索引行，
+  更新「下一程从这里继续」第 ㉓ 条与基线数字；未改产品代码/场景/资源/测试/
+  导出预设；未推送、未更新网页版、未创建 Release。
+
+### 2026-11-06 · 第 74 程（README 重写）
+
+- 交接：HEAD `34475c1`，`supervisor-dev`，工作区干净；任务单 brief78：
+  只重写仓库根 `README.md`，不做 Windows 导出、不推送、不更新网页版、
+  不创建 Release、不改游戏代码/场景/资源/测试。
+- 任务 0 · 基线核验：`--headless --import` / `--quit` 退出 0；单元
+  **13,490 / 0**；十一套集成 **899 / 109 / 613 / 207 / 113 / 59 / 445 / 45 /
+  2,315 / 4,358 / 5,133** 全 0 失败（三个大图套件均跑完）；退出泄漏
+  **10/10 clean**、demo 像素 **36 / 0**——与第 73 程基线逐项一致。
+- 任务 1 · README 重写：按「简介 → 当前可玩范围 → 已建成但未开放 →
+  核心系统 → 操作 → 运行 → 开发状态」重写；删除 0.11/0.10/0.7 三层旧日志、
+  SAPI 旁白宣传、Android 触屏、「依次穿过四章」等旧说法；如实写第一章 +
+  T17 为当前可玩，第 2–4 章为已建成未开放。
+- 数字核实：词条 95（39/29/27）、开局 18（6 解码 + 12 未解码）、demo
+  6 武器/6 遗物/6 敌人、内容库 12/9/14、13 法术形态、第一章 9 房间/清房 6、
+  5 结局（demo 可达 3）、6 首配乐、155 个脚本 26,849 行、单元 13,490、
+  集成 14,296、第 2/3/4 章 2,315/4,358/5,133；未采用 brief 中无法核实的
+  「可收集 50」。
+- 只改 `README.md`，提交 `a5053a4`（docs）；随后按本程记录更新状态文件、
+  `docs/memory/sessions/2026-11-06-readme-rewrite-pass74.md` 与
+  `docs/memory/MEMORY.md` 索引。
+- 收尾：本程无产品代码/场景/资源/测试改动，基线数字不变；未推送、未更新
+  网页版、未创建 Release、未宣布里程碑；第 2–4 章仍不可达、第 11–16 项未碰。
+
+### 2026-11-06 · 第 73 程（全游戏例行扫描）
+
+- 交接：HEAD `8b4244a`，`supervisor-dev`，工作区仅含本程在途改动。任务单
+  brief77：只做例行扫描 + 修扫描发现的产品行为缺陷，不开新功能、不推送、
+  不更新网页版。
+- 任务 0 · 基线核验：与第 72 程逐项一致（单元 13474/0、十一套集成
+  899 / 102 / 613 / 207 / 113 / 59 / 445 / 45 / 2315 / 4358 / 5133、
+  退出 10/10、像素 36/0），三个大图套件均跑完。
+- 逐面扫描：关闭回退/焦点/存档边界/回归抽查逐项复核，未发现新缺陷；性能用
+  临时探针按第 68–72 程同口径实测并记录（测后删除）；文案面复核第 1 章事件/
+  休整/书库/残碑与第 69/70/72 程已修文案，无新矛盾。
+- 修复 1：`hub.gd` 词服务的无限碎片泵——`Profile.DEFAULT_OWNED` 首次开局即
+  含全部 18 个第 1 章词，`_unlock_random_word()` 兜底每次返 8 碎片，使传闻
+  净 +5、讲述档案净 +2 且可无限连点落盘；新增 `unlockable_word_pool()`，
+  池空拒绝并说明不收费，有词时仍按原价解锁。单元
+  **13474 → 13490/0**（+16）。
+- 修复 2：`game.gd::_on_shop_buy` 对缓存货架中「后来已从奖励/宝箱/残碑拿到」
+  的遗物/词仍扣残页且不发货、行可重复点；新增 `_shop_offer_owned()` 与
+  `RunShopUI.mark_owned()`，已拥有则禁用不扣费。第 1 章 demo 集成
+  **102 → 109/0**（+7）。
+- 未修记录：暂停确认取消后的 one-shot 连接残留（当前不可见）、
+  `NPC.interact()` 死代码、设置页全屏不持久、第 60 程样图问题 1/3/5/6/7
+  维持原结论；第 11–16 项未碰。
+- 记忆：新增 `docs/memory/sessions/2026-11-06-routine-scan-pass73.md`，更新
+  `docs/memory/MEMORY.md` 索引。
+- 收尾：单元 13490/0、十一套集成全 0 失败、退出 10/10、像素 36/0；临时探针
+  删除、工作区干净；未推送、未更新网页版、未宣布里程碑。
+
+### 2026-11-06 · 第 72 程（全游戏例行扫描）
+
+- 交接：HEAD `3847343`，`supervisor-dev`，工作区干净；第 71 程开局夭折，
+  本程为重跑。任务单 brief76：只做例行扫描 + 修扫描发现的产品行为缺陷，
+  不开新功能、不推送、不更新网页版。
+- 任务 0 · 基线核验：与第 70 程逐项一致（单元 13465/0、十一套集成
+  899 / 102 / 613 / 207 / 113 / 59 / 445 / 45 / 2315 / 4358 / 5133、
+  退出 10/10、像素 36/0），三个大图套件均跑完。
+- 逐面扫描：关闭回退/焦点/存档边界/回归抽查复用既有套件复跑，未发现
+  新缺陷；性能用临时探针按第 68/69/70 程同口径实测并记录（测后删除）；
+  文案面发现并修复 1 项 Hub 产品行为缺陷——跟阿砚打招呼会静默扣碎片、
+  升级断页剑基底（探针复现 100 → 90 碎片、Lv.0 → Lv.1）。
+- 修复：`hub.gd::talk_to_npc` 的阿砚分支不再调用 `upgrade_sword_base()`，
+  改为报当前基底等级并指向「言灵对话 → 锻造基底」，不写死价格；未改
+  锻造数值、折扣、信任、存档或可达性。
+- 回归断言：`test_hub_final` +9（问候不扣碎片/不升级、提到锻造基底与
+  当前 Lv.、关闭后解冻、显式职能仍扣费升级），单元 13465 → **13474/0**；
+  menus 445、run_save 613、gamepad 207、ui_prompts 113、playability 899
+  复跑 0 失败；收尾其余六套与基线一致。
+- 提交：`68bea06` `fix:`、`2381b6c` `test:`、`<本提交>` `docs:`。
+- 收尾：工作区干净，临时探针已删；未推送、未更新网页版、未宣布里程碑。
+
+### 2026-11-06 · 第 71 程（开局夭折）
+
+- 任务单 brief75：全游戏例行扫描（与第 68–70 程同口径）。
+- `.supervisor/session75.log` 仅两行：一行 `[claude-code:unrecognized_model]`
+  网关报错、一行 `[2026-11-06 04:06:57] pass71 session start; HEAD=3847343;
+  branch=supervisor-dev`；此后无任何输出。
+- 判定：Magpie 网关中断导致开局即死，零产出、无提交、无文件改动、无文档。
+  第 72 程为该任务的全新重跑，未假设/复用任何第 71 程工作。
+
+### 2026-11-06 · 第 70 程（全游戏例行扫描）
+
+- 交接：HEAD `381bf26`，工作区干净，无会话在跑；Magpie 网关未出现中断。
+  任务单 brief74：只做例行扫描 + 修扫描发现的产品行为缺陷，不开新功能、
+  不推送、不更新网页版。
+- 任务 0 · 基线核验：与第 69 程逐项一致（单元 13451/0、十一套集成
+  894 / 102 / 613 / 207 / 113 / 59 / 433 / 45 / 2315 / 4358 / 5133、
+  退出 10/10、像素 36/0），三个大图套件均跑完。
+- 逐面扫描：关闭回退/焦点/存档边界/回归抽查复用既有套件复跑，未发现
+  新缺陷；性能按第 68/69 程同口径用临时探针实测并记录（测后删除）；
+  文案面发现并修复 5 项（8 处）：局内商店「缝合书页」45/30 写反（实际
+  35/45/−12）、档案馆买到第 10 级后仍报下一次价格、阿砚神铸固定报
+  「祝福 +1」且描述写「免费」、咕噜货架只说换词（实际含 3 件遗物）、
+  零污染遗物卡印「污染 +0」。
+- 修复：`run_loot.gd`（卡面数值 + 遗物污染行守卫）、`archive_ui.gd`
+  （满级提示）、`hub.gd`（神铸按共享上限实报）、`npc_profiles.gd`
+  （神铸/货架描述）；未改任何数值、存档、上限、成长设计或可达性。
+- 回归断言：`test_shop` +1、`test_hub_final` +9、`test_demo_loot` +4，
+  单元 **13451 → 13465 / 0**；`integration_menus` +12，菜单集成
+  **433 → 445 / 0**；`integration_playability` +5，可玩性集成
+  **894 → 899 / 0**；gamepad 207、run_save 613、ui_prompts 113 复跑
+  0 失败。
+- 收尾：完整套件复跑全绿（见专节）；临时探针删除，工作区仅含产品/测试/
+  文档改动；未新增待拍板项，第 11–16 项未碰，第 2–4 章仍不可达，
+  `CHAPTER_PLAN_PATHS` / `MDS_WORLD_FILES` 未动；未推送、未更新网页版。
+  提交：`808ec47`（fix）、`249f774`（test）、`f93b58a`（docs）。
+
+### 2026-11-06 · 第 69 程（全游戏例行扫描）
+
+- 交接：HEAD `a034d30`，工作区干净，无会话在跑；Magpie 网关开工前可用，
+  全程未中断。任务单 brief73：只做例行扫描 + 修扫描发现的产品行为缺陷，
+  不开新功能、不推送、不更新网页版。
+- 任务 0 · 基线核验：见「例行扫描（第 69 程）」任务 0 节；与第 68 程逐项
+  一致（单元 13434/0、十一套集成 894 / 102 / 613 / 207 / 113 / 59 / 428 /
+  45 / 2315 / 4358 / 5133、退出 10/10、像素 36/0），三个大图套件均跑完。
+- 逐面扫描：关闭回退/焦点/存档边界/回归抽查均复用既有套件复跑，未发现
+  新缺陷；性能按第 68 程同口径用临时探针实测并记录（测后删除）；文案面
+  发现并修复 2 项（3 处）：档案馆开启语句与 demo 上限矛盾、闻烬契约描述
+  写「1 次奖励重选」但实际发 10 残页、闻烬情报描述/消息写「首次攻击」
+  但实际是永久 +2 武器伤害。
+- 修复：`hub.gd` 两处消息按 `ArchiveData.MAX_LEVEL`/实际效果改写；
+  `npc_profiles.gd` 两处描述改为实际效果；未改任何数值、存档、上限或
+  成长设计。
+- 回归断言：`test_hub_final` +17（职能描述价格/契约/情报文案与实际发放），
+  单元 **13434 → 13451 / 0**；`integration_menus` +5（档案馆开启语/服务句
+  上限文案），菜单集成 **428 → 433 / 0**；gamepad 207、run_save 613 复跑
+  0 失败。
+- 收尾：临时探针删除、工作区仅含产品/测试/文档改动；未新增待拍板项，
+  第 11–16 项未碰，第 2–4 章仍不可达，`CHAPTER_PLAN_PATHS` /
+  `MDS_WORLD_FILES` 未动；未推送、未更新网页版。
+
+### 2026-11-06 · 第 68 程（全游戏例行扫描）
+
+- 交接：HEAD `250bcd6`，工作区干净，无会话在跑；Magpie 网关开工前可用，
+  全程未中断。任务单 brief72：只做例行扫描 + 修扫描发现的产品行为缺陷，
+  不开新功能、不推送、不更新网页版。
+- 任务 0 · 基线核验：见「例行扫描（第 68 程）」任务 0 节；与第 67 程逐项
+  一致（单元 13429/0、十一套集成 894…5133、退出 10/10、像素 36/0）。
+- 任务 1 · 扫描：按六个扫描面逐项核对（关闭回退/焦点/存档边界/性能/文案/
+  回归抽查），详见专节。发现并修复 1 项 Hub 产品行为缺陷（档案馆升级满级行
+  的假「记忆碎片不足」与可点状态），先探针复现、再修、再补回归断言；其余
+  扫描面未发现新缺陷，性能数字照录不优化。
+- 任务 2 · 提交与记录：产品代码 + 测试 + 文档按项提交；状态文件头改为第
+  68 程、新增本专节与「下一程从这里继续」第 ⑰ 条；新增
+  `docs/memory/sessions/2026-11-06-routine-scan-pass68.md` 并在
+  `docs/memory/MEMORY.md` 补一行索引；临时探针已删除，`git status` 收尾为空。
+  提交：`a08a69e`（fix）、`f2550dc`（test）、`6021935`（docs）。
+
+### 2026-11-06 · 第 67 程（接力收尾第 66 程的结局文本加厚）
+
+- 交接：HEAD `0df592f`；工作区有第 66 程的 5 改 + 5 新增（产品代码 4 + 2 个
+  `.uid`、测试 1 + `.uid`、状态文件/session 文档/记忆索引），无提交；第 66 程
+  进程在等三套大图集成时死亡。Magpie 网关开工前复查返回 200。
+- 任务 0 · 复核与基线：逐文件核对 E3 实现（`EndingEchoData` 文本与
+  `display_text` 边界、结束屏 `Echoes` 整块替换、画廊未解锁不泄露、判定/
+  存档未改），未发现缺陷；`--headless --import` / `--quit` 退出 0、`ERROR` 0；
+  单元 **13429 / 0**；十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 419 /
+  45 / 2315 / 4358 / 5133** 全 0 失败；退出泄漏 **10/10 clean**；demo 像素
+  资产 **36 / 0**。数字与第 66 程自称逐项一致，无基线漂移、无回归。
+- 任务 1 · 按项提交：产品代码（含两个新增 `.uid`）、测试（含 `.uid`）、
+  文档三笔；另以「pin」提交补记三笔 hash；`git status` 收尾为空。
+- 任务 2 · 记录：状态文件头改为第 67 程、第 66 程专节补「接力收尾（第 67 程）」、
+  基线行补复跑确认、「下一程从这里继续」补第 ⑯ 条；session 文档就地补一句
+  接力核验。本程未开新功能、未碰待确认第 11–16 项、未推送、未更新网页版。
+
+### 2026-11-06 · 第 66 程（结局文本加厚，叙事审计 E3）
+
+- 交接：HEAD `0df592f`，工作区干净，无会话在跑；Magpie 网关由监工核查正常
+  （`curl http://127.0.0.1:3425/v1/models` 返回模型列表）。任务来源 brief70：
+  第 65 程已完成 E2 第一批，本程做 E3——每个结局补五名 NPC 余味、补
+  「笑面史官身份」「最后一页」的回收，只做文本与展示。
+- 任务 0 · 基线核验（Godot 4.7.stable.official.5b4e0cb0f）：`--headless
+  --import` / `--quit` 退出 0、`ERROR` 0；全量单元 **12960 / 0**；十一套集成
+  **894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 / 5133** 全
+  0 失败——与第 65 程收尾逐套件一致，无基线漂移。
+- 任务 1 · 结局文本加厚：新增 `EndingEchoData`（25 句余味 + 5 段回收），
+  结束屏新增 `Echoes` 标签、画廊已解锁条目追加余味；未解锁仍占位。5 个
+  结局 id/标题/现有正文/`ending_for` 判定/`Profile.endings` 记录与存档格式
+  一字未改。圣经依据、逐句出处与回收方式见上方「结局文本加厚（第 66 程）」
+  专节与 `docs/memory/sessions/2026-11-06-ending-text-thickening.md`。
+- 任务 2 · 测试：新增 `tests/test_ending_echoes.gd` **469 断言**（覆盖/文本
+  质量/主题对应/结束屏/画廊/存档/判定回归）。全量单元 **12960 → 13429 / 0**；
+  十一套集成复跑数字与基线逐套件一致、全 0 失败；`--headless --import` /
+  `--quit` 退出 0、`ERROR` 0；退出泄漏 10/10 clean；demo 像素资产 36 / 0。
+- 任务 3 · 记录与提交：本专节、第 66 程条目、未完成第 8 项与「下一程」更新；
+  新增 session 文档；记忆索引更新；按项提交，收尾工作区干净。
+- 不变项：第 1 章 9 房间/6 波次/事件/清房目标 6/结束流程、Hub 闲聊与关键词
+  回应、信任数值与 `[npc] trust`/`[npc] events` 存档格式、NPC 立绘、经济/
+  锻造/商店数值均未改；第 2/3/4 章仍不可达；`CHAPTER_PLAN_PATHS` /
+  `MDS_WORLD_FILES`、章节路由、相机/HUD、电梯速度、门逻辑、地图标题、
+  敌人美术、战斗密度、`ch4_shortcut` 授予均未动；待确认第 11–16 项未碰、
+  未新增条目；未推送、未更新网页版。
+
+### 2026-11-06 · 第 65 程（三位可见 NPC 的 Hub 个人事件，叙事审计 E2 第一批）
+
+- 交接：HEAD `a9e47d6`，工作区干净，无会话在跑；Magpie 网关已由监工核查正常
+  （`curl http://127.0.0.1:3425/v1/models` 返回 DeepSeek V4.1 Flash）。任务来源
+  brief69：第 2–4 章大地图施工已全部完成并通过系统验收，剩余未完成项均为待拍板
+  项，本程转向叙事审计 E2，先做 demo 中可见的三名 Hub NPC 个人事件。
+- 任务 0 · 基线核验（Godot 4.7.stable.official.5b4e0cb0f）：`--headless --import`
+  / `--quit` 退出 0；单元 **12773 / 0**；`integration_playability` **894 / 0**、
+  `integration_ch1_demo` **102 / 0** 已复跑并与交接一致；其余套件在基线跑到一半时
+  因本程开始修改代码而中止（读到未导入的新类），收尾时统一重跑并与交接对照。
+- 任务 1 · 三位 NPC 个人事件：新增 `NPCEventData`（三事件对白 + 触发判定）、
+  `Profile.npc_events`（`[npc] events` 存档键）、`hub.gd` 事件对话分支。触发 =
+  信任档 + `Profile.demo_cleared`：陆沉 信任（6）、阿砚 托付（12）、咕噜 熟悉（2）；
+  读完最后一行才记录，中途关闭不消耗；零奖励、零数值改动；咕噜事件后不自动开
+  商店。闻烬/白榆保持不可见、无事件。圣经依据、档位理由与对白节拍见上方
+  「NPC 个人事件（第 65 程）」专节与 `docs/memory/sessions/2026-11-06-npc-personal-events.md`。
+- 任务 2 · 测试：新增 `tests/test_npc_events.gd` **187 断言**；`integration_menus`
+  新增 `_test_npc_personal_events`（真实 Hub 场景触发/一次性/早关不消耗/无奖励/
+  商店不跳转），**391 → 419 / 0**（+28）。全量单元 **12773 → 12960 / 0**；
+  十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 / 5133**
+  全 0 失败（只有 `integration_menus` +28，其余与第 64 程基线逐套件一致）；
+  `--headless --import` / `--quit` 退出 0、`ERROR` 0；退出泄漏 10/10 clean；
+  demo 像素资产 36 / 0。
+- 任务 3 · 记录与提交：本专节、第 65 程条目、`SUPERVISOR_STATUS.md` 未完成第 8 项
+  与「下一程」更新；新增 ADR `docs/memory/decisions/2026-11-06-npc-personal-events.md`
+  与 session 文档；记忆索引更新；按项提交，收尾工作区干净。
+- 不变项：第 1 章 9 房间/6 波次/事件/清房目标 6/结束流程、Hub 闲聊与关键词回应、
+  信任数值与 `[npc] trust` 格式未改（只新增 `[npc] events`）；NPC 立绘未改；未新增
+  背包物品类型、未改经济/锻造/商店数值；第 2/3/4 章仍不可达；`CHAPTER_PLAN_PATHS` /
+  `MDS_WORLD_FILES`、章节路由、相机/HUD、电梯速度、门逻辑、地图标题、敌人美术、
+  战斗密度、`ch4_shortcut` 授予均未动；待确认第 11–16 项未碰、未新增条目；未推送、
+  未更新网页版。
+
+### 2026-11-06 · 第 64 程（接力核验第 63 程在途改动并收尾）
+
+- 交接：HEAD `13426f6`；工作区有 7 个未提交文件（180 增 / 11 删），均为第 63 程
+  brief67 任务 1/2/3 范围；第 63 程进程在收尾前死亡（`session67.log` 只有一行
+  `[claude-code:unrecognized_model]`，无提交、状态文件未更新、session 文档未写）。
+  第 2/3/4 章仍不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，
+  本程不施工、不猜测。
+- 任务 0 · 在途改动核查：逐文件对照 brief67 目标——`mds_big_room.gd` 背景改
+  底部锚 + 奇数行镜像、`backdrop_rect_local()` 与房间求交；`game.gd` 统计
+  `BenchCheckpoint` 并只在「非大图 / 有长椅 / 有商店」时走休整分支；截图脚本
+  清第 1 章目标提示；四个测试文件断言与两处产品改动一一对应。无半截代码、
+  无方向性错误，未做返工。
+- 任务 0 · 基线核验（Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --import` / `--quit` 退出 0、`ERROR` 0；单元 **12773 / 0**
+  （第 62 程 12755 + `test_big_room` 新增 18 条背景镜像/接缝断言）；
+  十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2315 / 4358 /
+  5133** 全 0 失败（第 2 章 2209 → 2315 +106、第 3 章 4235 → 4358 +123、
+  第 4 章 5004 → 5133 +129，新增均为接缝/入口文案断言）；退出泄漏
+  **10/10 clean**；demo 像素资产 **36 / 0**。除新增断言外无漂移、无回归。
+- 任务 1 · 截图对照：9 张重截图齐全（2026-11-05 21:40–21:43 UTC，晚于产品与
+  脚本改动），尺寸/非空/非黑非白核验通过（均值 32.1–56.5、暗像素 ≤ 0.6%、
+  白像素 0%）；逐张目视确认入口目标「继续前进」、无休整句；井/ Boss 取景无
+  硬拼接线。三张纵井在接缝行（屏幕 y=472）做行差量化：2.6 / 0.5 / 3.8，
+  低于同段中位数（3.9 / 1.3 / 4.4），修复生效，非取景/渲染口径问题。
+- 任务 2 · 记录与提交：本专节、`docs/memory/sessions/2026-11-06-bigmap-screenshot-fixes.md`、
+  记忆索引、「未完成」第 10 项与「下一程」更新；按项提交，收尾工作区干净。
+- 不变项：未修第 60 程问题 1/3/5/6/7（第 13/15 项相关部分拍板前不施工）；
+  未碰待确认第 11–16 项、未新增条目；`CHAPTER_PLAN_PATHS` / `MDS_WORLD_FILES`、
+  章节路由、相机/HUD、电梯速度、门逻辑、地图标题、敌人美术、战斗密度、
+  `ch4_shortcut` 授予均未动；第 2/3/4 章仍不可达；未推送、未更新网页版。
+
+### 2026-11-06 · 第 63 程（第 2–4 章大图样图问题修复；进程中断，第 64 程接力收尾）
+
+- 交接：HEAD `e5e5f17`，工作区干净。任务来源 brief67：修第 60 程样图里可修的
+  两项表现问题（背景纵向接缝、入口/枢纽套用休整文案）并重拍样图对照。
+- 修复 1 · 背景纵向接缝：`MDSBigRoom._build_backdrop()` 改为以房间底部为锚、
+  自下而上平铺，奇数行 `flip_v` 镜像，使相邻瓦片共用边缘行；`backdrop_rect_local()`
+  与房间求交。成因与验证见「第 2–4 章大图样图问题修复（第 63 程）」专节。
+- 修复 2 · 休整文案路由：`game.gd._on_mds_room_loaded` 统计 `BenchCheckpoint`，
+  无 `Arena` 的大图房间只有作者长椅/商店时才走休整目标与 `RestRoomData` 文案，
+  否则只写「继续前进」；第 1 章与书库分支不变。
+- 测试与截图：`test_big_room` 新增镜像接缝像素断言；第 2/3/4 章大图集成补
+  「底行正立落在房间地面、奇数行镜像」与入口/枢纽目标断言；重拍 9 张样图；
+  截图脚本清掉第 1 章目标提示。
+- 中断说明：本程在收尾前进程死亡，未提交、未更新状态文件与记忆。第 64 程
+  核查确认上述改动完整、测试全绿、截图已反映修复，遂按原方向收尾，未返工。
+
+### 2026-11-06 · 第 62 程（第 4 章大图门视觉专项与敌人美术核查）
+
+- 交接：HEAD `e5e5f17`，工作区干净，无会话在跑；第 61 程（brief65）因 Magpie
+  网关中断从未启动（`session65.log` 仅两行连接失败、无提交），本程为同一任务单
+  的接力重试。第 2/3/4 章仍不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认
+  第 11–16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --import` / `--quit` 退出 0、`ERROR` 0；单元 **12657 / 0**；
+  十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235 /
+  4869** 全 0 失败；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。
+  与第 60 程交接一致，无漂移。
+- 任务 1 · 第 4 章门视觉：先读 `chapter_4_bigmap.mdsworld.json` 与 9 个场景，
+  确认 22 门 = 20 有向 + 2 仅到达，side 5/5/5/5/2；全部由 `MDSBigRoom` 通用
+  `GateVisual` 自动覆盖。逐门核验 22/22 通过；补三类断言（侧门内展、舱口两轴
+  不越界、世界文件直方图/有向/到达交叉校验），第 4 章集成 **4869 → 5004 / 0**。
+  `ch4_well/top1` 标题由第 49 程 `caption_area` 夹到 x=0，无新缺陷、未改产品代码。
+- 任务 2 · 地图标题复核：「笑面剧场地图」由 `integration_ch4_bigmap` 的
+  `chapter_4_map_title` 与 `test_map_overlay` 的 ch1/ch4 断言锁定，复跑成立；
+  未新增断言、未改规则/HUD。
+- 任务 3 · 敌人美术：`ROOM_WAVES[3]` 现算 7 种，全部专属 PNG/`ENEMY_ART`/
+  白 tint/无回退；`mask_enemy`/`seat_husk` 为复用基础场景与数据的贴图变体；
+  第 50/59 程「8 种」的第 8 个 `echo_enemy` 只在旧第 4 章房间组（已有第 1 章
+  美术）。`test_enemy_art` 200 → **298**；第 4 章集成六波真实区域补白 tint/
+  专属图断言。
+- 任务 4 · 下一程候选：第 60 程样图问题（底部 HUD 遮挡/第 13 项、背景纵向
+  接缝、`boss_background` 被静态背景遮住/与第 15 项相关、入口休整文案、
+  电梯贴边、Boss 脚部被 HUD 压住、第 2 章背景色调）只记入下一程候选，本程未修；
+  与第 13/15 项相关的部分拍板前不施工、不定口径。
+- 收尾验证：单元 **12755 / 0**（+98）；第 4 章集成 **5004 / 0**（+135）；
+  其余十套集成与基线一致全 0 失败；`--headless --import` / `--quit` 退出 0、
+  `ERROR` 0；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。
+- 本程提交：`65e815a` `test: audit chapter 4 gate visuals and enemy art`；
+  随后文档提交记录本程状态、session、记忆索引与门视觉 ADR 补充。
+- 不变项：`scripts/` / `scenes/` / `resources/` 零改动；门位/模式/单向语义/
+  `requires`/屏障/过渡目标未改；`CHAPTER_PLAN_PATHS` / `MDS_WORLD_FILES` /
+  章节路由/可达性/相机/HUD/电梯速度/数值/地图标题/敌人美术未动；第 2/3/4 章
+  仍不可达；待确认第 11–16 项未碰。未做打包/导出/安装器/签名/安卓/触屏，
+  未推送、未更新网页版。
+
+### 2026-11-06 · 第 60 程（第 2–4 章样图截图，只截图）
+
+- 交接：HEAD `4cc62fa` 前为 `8f9baa4`（第 59 程文档），工作区干净；第 2/3/4 章
+  仍不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不
+  施工、不猜测。任务来源 `.supervisor/DECISIONS.md`「样图截图（监工决定
+  2026-11-06，用户想看新章节的样子）」与 brief64 / 第 60 程。
+- 任务 0 · 基线核验（Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元
+  **12657 / 0**；十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 391 / 45 /
+  2209 / 4235 / 4869** 全 0 失败；退出泄漏 `tests/check_exit_clean.sh`
+  **10/10 clean**；demo 像素资产 **36 / 0**。与第 59 程交接完全一致，无漂移。
+- 任务 1 · 截图脚本：新增 `tests/capture_bigmap_chapters.gd`（+ 导入生成的
+  `.gd.uid`）。`xvfb-run -a godot --path . --resolution 1280x720
+  --rendering-driver opengl3 --audio-driver Dummy -s
+  tests/capture_bigmap_chapters.gd -- --out-dir=res://artifacts/screens`；
+  真实 `scenes/main.tscn` + 临时挂载第 2/3/4 章计划与大区世界（与
+  `integration_ch2/3/4_bigmap.gd` 同手法），拍完不写回产品默认值。修复首轮
+  两个脚本自身问题：图片路径漏加 `.png` 扩展名；`scene` 为 Variant 导致
+  `room` / `y` / `player_screen` 无法推断类型（补显式类型）。Boss 取景从
+  Arena 局部 x=580 改到 500（`ArenaRoom.entry_half_width = 530` 内），并等
+  2.6 s 拍到入场句 + 血条 + 攻击预警。
+- 任务 2 · 产出 9 张 1280×720 PNG（`artifacts/screens/ch2|ch3|ch4/`，不提交）：
+  `ch2_entry_panorama.png` / `ch2_well_shaft.png` / `ch2_boss_lung_bell.png`；
+  `ch3_entry_panorama.png` / `ch3_well_shaft.png` / `ch3_boss_last_reader.png`；
+  `ch4_entry_theater.png` / `ch4_well_backstage.png` /
+  `ch4_boss_smiling_archivist.png`。逐张核验：尺寸 1280×720、非空、非全黑
+  非全白（像素均值 28.5–46.5、暗像素 ≤ 1.3%、白像素 0%），玩家均在画面内
+  （入口屏幕坐标 (640,452)、纵井 (480,364)、Boss (640,612)）。取景与逐张
+  画面内容见「样图截图（第 60 程）」专节与
+  `docs/memory/sessions/2026-11-06-chapter-screenshots.md`。
+- 任务 3 · 截图发现（只记录，本程不修）：① 底部 HUD 遮挡（第 13 项，确认
+  第 3/4 章同样受影响）；② 1536×864 背景按 1440/2160 房间纵向平铺的接缝
+  （`ch4_boss` 顶部约 290 px 黑带最明显）；③ `boss_background`
+  （`spore_drift` / `deep_water` / `blood_moon`）被 `MDSBigRoom` 静态背景
+  （`z_index = -20` vs MDS 动画背景 `-110`）完全遮住；④ 入口/枢纽区无
+  `Arena` 时套用 `RestRoomData` 休整文案与目标，第 3 章入口出现「纸人」字样；
+  ⑤ 纵井电梯作者位置贴房间左缘、相机夹取后只露一条横线；⑥ Boss 脚部仍在
+  底部 HUD 后；⑦ `breathing_ruins.png` 与第 1 章档案馆色调接近。均只记录，
+  未改产品代码、未修、未新增待确认条目。
+- 提交：`4cc62fa` `test: capture chapter 2-4 sample frames`（2 文件，
+  `tests/capture_bigmap_chapters.gd` + `.gd.uid`）；随后文档提交记录本程
+  状态与 session。PNG 留在 `artifacts/screens/`（`artifacts/` 已 gitignore），
+  不提交。
+- 不变项：`scripts/` / `scenes/` / `resources/` 零改动；`CHAPTER_PLAN_PATHS` /
+  `MDS_WORLD_FILES` / 章节路由 / 可达性 / 数值 / 门 / 地图标题 / 敌人美术 /
+  HUD / 相机均未动；第 2/3/4 章仍不可达，待确认第 11–16 项未碰。未做打包/
+  导出/安装器/签名/安卓/触屏，未推送、未更新网页版。
+
+### 2026-11-05 · 第 59 程（第 4 章大地图系统验收，接力首次尝试）
+
+- 交接：HEAD `70a2510`，工作区不干净——唯一未提交文件是未跟踪的
+  `tests/integration_ch4_bigmap.gd`（1782 行），来自 brief62 / 第 59 程首次
+  尝试（该程 01:07 启动后因 Magpie 网关中断夭折，`.supervisor/session62.log`
+  只有一行 `[claude-code:unrecognized_model]`，无提交、状态未更新）。监工在
+  开程前重启网关并复查 HTTP 200（DeepSeek V4.1 Flash 可用）。第 2/3/4 章仍
+  不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不
+  施工、不猜测。
+- 任务 0 · 基线核验（HEAD `70a2510`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元
+  **12657 / 0**；十套集成 **894 / 102 / 613 / 207 / 113 / 59 / 391 / 45 /
+  2209 / 4235** 全 0 失败；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 遗留初稿核查（结论：可复用，但从未跑通）：`tests/integration_ch4_bigmap.gd`
+  按第 48 程第 3 章验收脚本的口径写成（真实主场景 + 计划/大区世界临时挂载、
+  22 门行走、房间/相机/坠落、宝箱/残碑、双遭遇、事件、存档、Boss/章末），
+  但 `_run()` 内 `enemy_art` / `enemy_fallback` 重复声明，GDScript 解析失败
+  （`There is already a variable named "enemy_art" declared in this scope`）。
+  删除重复声明后首次运行 **4766 断言 / 0 失败**；未重写框架。
+- 任务 2 · 覆盖缺口补齐（对照任务单第 2 条清单）：① 5 台电梯
+  （`branch_b`/`hub`/`vault`/`well`/`elite`）逐一实测 `speed == 80`、行程不
+  夹紧、平台矩形在房间内；② `Ch4EventData` 7 组文案完整（8 个字段非空）、
+  `pick` 确定且不耗 run RNG；③ Boss 阶段 3 文案；④ 权柄基础池 = 续命/改写，
+  吞噬在污染 ≥ 40、归档在记录 ≥ 2 时追加；⑤ `branch_b`/`well`/`elite` 的
+  四个战斗遭遇在真实区域生成并逐区校验精灵 = 计划波次；⑥ 记录战斗密度
+  （大图每遭遇 2 只 vs 旧世界每房 3–4 只，只记录不改）。最终 **4869 断言 /
+  0 失败，连续两次**。
+- 任务 3 · 验收结论：见「第 4 章大地图系统验收（第 59 程）」专节与
+  `docs/memory/sessions/2026-11-06-chapter4-bigmap-acceptance.md`。要点：
+  九区 BFS 全可达、22 门全走、2 扇单向正确；九区单矩形边界/相机 = 世界边界；
+  5 台电梯 80 px/s、纵井 3 单向落台、长椅/坠落/顶底门；门过渡无叠加模态；
+  3 箱 2 碑一次性；`ch4_branch_a` 双遭遇逐场锁门/清怪/奖励，清房 7（HUD 8）；
+  隐藏书库首次发现/地图揭示；捷径屏障默认封闭、测试注入后跨存档保持；
+  世界级存档恢复；`SmilingArchivist` 生成/数值/立绘/入场与阶段 2/3/权柄/
+  章末结束战役/重载不二次生成；笑面剧场平铺背景、灰烬光柱、`embers`、
+  `blood_moon`、地图标题「笑面剧场地图」、8 种敌人专属美术无回退。
+- 任务 4 · 性能基线（两次运行区间）：普通区首次 14.5–19.7 ms、热
+  12.3–16.6 ms；Boss 冷 71.4–79.7 ms / 热 45.6–45.9 ms；关动态背景
+  11.6–12.0 ms、关天气 38.0–38.5 ms、不生成 Boss 21.7–22.8 ms；门过渡
+  236.1–243.8 ms。未发现需要本程处理的性能缺陷。
+- 真实缺陷：**未发现产品行为缺陷**；改动全在验收脚本自身（解析错误修复 +
+  补断言）。未改任何 `scripts/`/`scenes/`/`resources/`，未新增 `ch4_shortcut`
+  授予，未改电梯速度/相机/HUD，未接入 `game.gd`。
+- 记录：本状态文件新增「第 4 章大地图系统验收（第 59 程）」专节与本日志，
+  更新项目现状/已完成/测试汇总/未完成表第 10/13 项/待确认前言/下一程；
+  新增 `docs/memory/sessions/2026-11-06-chapter4-bigmap-acceptance.md`；
+  `docs/memory/MEMORY.md` 补索引与第 59 程记录。
+- 收尾验证：第 4 章大图验收 **4869 / 0**（连续两次）；单元 **12657 / 0**
+  （不变，新断言全在集成层）；其余十套集成 **894 / 102 / 613 / 207 / 113 /
+  59 / 391 / 45 / 2209 / 4235** 与基线一致、全 0 失败；
+  `--headless --import` / `--quit` 退出 0、`ERROR` 0；退出泄漏
+  **10/10 clean**；demo 像素资产 **36 / 0**；工作区干净、无临时探针。
+- 本程提交：`49f245b` test: accept the chapter 4 big map（新增
+  `tests/integration_ch4_bigmap.gd` + `.gd.uid`，4869 断言）；本条收尾文档
+  提交紧随其后。
+- 本程未做：第 4 章接入 `game.gd`/可达性、第 4 章门视觉专项、第 4 章地图标题
+  改动、第 4 章敌人美术核查/接线、Boss 4 机制扩展（删除词/复制武器/舞台机关）、
+  舞台母题呈现层、`ch4_shortcut` 授予、战斗密度调整、`mask_enemy`/`seat_husk`
+  独立数值、阿砚同行、待确认第 11–16 项、新移动能力、NPC 立绘、MDS 插件、
+  打包/导出/签名/安卓/触屏。
+
+### 2026-11-05 · 第 58 程（第 4 章章末收口，只做章末流程与测试层）
+
+- 交接：第 57 程收尾 HEAD `3ee5438`，工作区干净，无会话在跑；第 2/3/4 章仍
+  不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不施工、
+  不猜测。
+- 任务 0 · 基线核验（HEAD `3ee5438`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元
+  **12657 / 0**；十套集成 **869 / 102 / 613 / 207 / 113 / 59 / 391 / 45 /
+  2209 / 4235** 全 0 失败；退出泄漏 **10/10 clean**；demo 像素资产
+  **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 前置核查（结论：章末文本/选项/语音齐全，续玩逻辑章节无关，无需新编）：
+  - `_complete_chapter` 原有分支：第 1 章 `_chapter == 0` → `demo_cleared` +
+    `_finish(true)`；第 2 章 `_chapter == 1` → `_finish(true)`（第 35 程）；
+    第 3 章 `_chapter == 2` → `_finish(true)`（第 46 程）；其余
+    `_chapter + 1 < chapter_count()` → `_start_chapter`，否则 `_finish(true)`。
+    第 4 章 `_chapter == 3` 此前因 `chapter_count() == 4` 落到 `else` 的
+    `_finish(true)`，行为上已结束战役，但没有显式分支。
+  - `CampaignData.chapter(3)`：4 句 `outro`、两选项（重写名册 仁慈 +1 /
+    焚毁名册 污染 +12）、`voice_outro = ch4_outro`
+    （`assets/audio/voice/zh_cn/ch4_outro.ogg` 存在）；`_apply_chapter_choice`
+    已有 `smiling_theater` 分支（选项 1 置 `_burned_final`）；**未新编剧情、
+    未新设选项**。
+  - 续玩/重载沿用章节无关的 `_boss_defeated` → `_resume_boss_aftermath`
+    （Boss 4 已死不二次生成）；本程只补断言，不改逻辑。
+- 任务 2 · 章末收口：`_complete_chapter` 新增 `_chapter == 3` 分支 →
+  `_finish(true)` 结束战役；第 1/2/3 章分支与 `_chapter + 1 < chapter_count()`
+  兜底未改，只更新第 3 章分支上方过时注释。行为与旧 `else` 兜底等价，未产生
+  可玩行为变化。
+- 任务 3 · 测试：`_test_ch4_bigmap_boss` 扩为完整章末链路（+22 断言：第 4 章
+  原文/语音/选项、outro/选择页文案、选项 0 仁慈 +1 与零污染、
+  `_burned_final == false`、结局按 `ending_for` 规则并写入 `Profile.endings`、
+  `chapter_count() == 4`）；旧线性世界遍历补第 4 章停章分支（+3）并同步等待
+  时长与第 3 章注释；可玩性集成 869 → **894**。
+- 任务 4 · 记录：本状态文件新增「第 4 章章末收口（第 58 程）」专节与本日志，
+  更新项目现状/已完成/测试汇总/未完成表第 10/13 项/待确认前言/下一程；新增
+  `docs/memory/sessions/2026-11-06-chapter4-chapter-end.md` 与 ADR
+  `docs/memory/decisions/2026-11-06-chapter4-ending.md`；
+  `docs/memory/MEMORY.md` 补索引与第 58 程记录。
+- 收尾验证：单元 **12657 / 0**（不变，新断言全在集成层）；可玩性集成
+  **894 / 0**（869 + 25）；其余九套集成 **102 / 613 / 207 / 113 / 59 / 391 /
+  45 / 2209 / 4235** 与基线一致、全 0 失败；`--headless --import` / `--quit`
+  退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；
+  工作区干净、无临时探针。
+- 本程提交：`6004413` feat: end the chapter 4 campaign at its boundary
+  （`_complete_chapter` 显式第 4 章终点）；`fcff5e5` test: cover the chapter 4
+  chapter-end closure（章末链路 + 旧世界停章断言）；本条收尾文档提交紧随其后。
+- 本程未做：第 4 章接入 `game.gd`/可达性、第 4 章大图验收、Boss 4 机制扩展
+  （删除词/复制武器/舞台机关）、待确认第 11–16 项、`ch4_shortcut` 授予/战斗
+  密度/`mask_enemy`/`seat_husk` 独立数值/舞台母题/阿砚同行、新移动能力、
+  NPC 立绘、MDS 插件、打包/导出/签名/安卓/触屏。
+
+### 2026-11-05 · 第 57 程（第 4 章 Boss 4 机制与 `boss_scene` 路由，只做机制与测试层）
+
+- 交接：第 56 程收尾 HEAD `870b37c`，工作区干净，无会话在跑；第 2/3/4 章仍
+  不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不施工、
+  不猜测。Magpie 网关正常（HTTP 200 / 模型列表可读）。
+- 任务 0 · 基线核验（HEAD `870b37c`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **12574 / 0**；
+  十套集成 **810 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 前置核查（结论：既有实现可直接复用，无需改脚本）：
+  - `scripts/bosses/smiling_archivist.gd`（`SmilingArchivist extends
+    InkArchivist`）与 `scenes/bosses/smiling_archivist.tscn` 已存在；阶段 1
+    纸页波；阶段 2 每第 3 次镜面弹幕（3 枚、张角 ±0.34 rad、每枚
+    `int(攻击力 × 0.7)`、速度 280），其余纸页波（阶段 ≥2 双发）；阶段 3 四拍
+    `%4` = 改写 → 镜面弹幕 → 墨雨 → 纸页波（墨雨 3 个 `InkWarning`、
+    `int(攻击力 × 0.75)`；改写封一个短语槽 3.0 s）。
+  - `CampaignData.chapter(3)`：名「笑面史官」、HP 520 / 伤害 18 / 速度 92 /
+    `boss_script = &"smiling"` / 立绘 `smiling_archivist.png`，没有 `boss_scene`。
+  - `_spawn_boss` 优先级（战役表 `boss_scene` → 计划 `boss_scene` →
+    `boss_script == smiling` → `reader` → 默认）与 `_enemy_spawn_y()`（计划在
+    → -18 px，无计划 → 250 px）均未改，本轮只补计划字段与断言。
+- 任务 2 · 路由与机制锁定：
+  - `chapter_4_demo.tres` 新增 `smiling_archivist.tscn` 的 `ext_resource` 并写
+    `boss_scene`；Boss 区备注更新为「已路由 + 入场/阶段文案已编写 + 机制扩展
+    仍待拍板」。通用 Boss 流程（生成/血条/阶段横幅/权柄/outro/结束）全复用。
+  - 新增 `tests/test_ch4_boss.gd`（78 断言）：计划路由/场景类型、战役表数值/
+    立绘/`boss_script` 未改、阶段 1/2/3 完整节拍表、纸页波直伤 18、阶段 2 双发
+    36、阶段 3 改写封 0 号槽/3.0 s、生成高度 -18/250、第 4 章选句键不回落
+    第 1/2/3 章、第 1/2/3 章 Boss 隔离、计划槽/旧世界/清房目标 7/波次/权柄池锁。
+  - `tests/test_ch4_plan.gd`（795 → **797**）、`tests/test_ch4_world.gd`
+    （813 → **814**）、`tests/test_ch4_content.gd`（642 → **644**）：把「计划无
+    `boss_scene`」的旧期望改为「已路由且指向 `smiling_archivist.tscn`」。
+  - `tests/integration_playability.gd` 新增 `_test_ch4_bigmap_boss`：真实第 4 章
+    大区世界 + 计划临时挂载（`ch4_boss` 起始），验证计划路由 `SmilingArchivist`、
+    数值来自战役表、生成在 Arena 地面线之上、阶段 2/3 横幅用第 4 章选句键、
+    实树镜面弹幕（3 枚 / 12 / 280）/墨雨（3 个预警 / 13）/改写（封 0 号槽）生效、
+    击败 → 权柄 → outro → 章末选择 → 战役结束、重载不二次生成；测试后恢复旧
+    第 4 章世界。可玩性集成 810 → **869**。
+- 任务 3 · 待确认项与开放问题：未新增 `ch4_shortcut` 授予（屏障保持封闭）；
+  战斗密度未扩波/未增遭遇；`mask_enemy`/`seat_husk` 独立数值未做；Boss 4 机制
+  扩展（删除词/复制武器/舞台机关）未做、未设计、未新增攻击手段；舞台母题未改
+  呈现层；阿砚同行未做；待确认第 11–16 项未碰。
+- 任务 4 · 记录：本状态文件新增「第 4 章 Boss 4 机制与 `boss_scene` 路由
+  （第 57 程）」专节、本日志，更新项目现状/已完成/未完成表第 8/10/13 项/
+  待确认前言/下一程；新增
+  `docs/memory/sessions/2026-11-06-chapter4-boss4-mechanism.md`；
+  `docs/memory/MEMORY.md` 补索引与第 57 程记录。
+- 收尾验证：单元 **12657 / 0**（= 基线 12574 + 83：新增 `test_ch4_boss` 78 +
+  `test_ch4_plan` +2、`test_ch4_world` +1、`test_ch4_content` +2）；可玩性集成
+  **869 / 0**（= 基线 810 + 59）；其余九套集成 **102 / 613 / 207 / 113 / 59 /
+  391 / 45 / 2209 / 4235** 与基线一致、全 0 失败；`--headless --import` /
+  `--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；demo 像素资产
+  **36 / 0**；工作区干净、无临时探针。
+- 本程提交：`fc367d1` feat: route the chapter 4 smiling archivist boss
+  （第 4 章计划 `boss_scene` 路由、`test_ch4_boss` 与三个既有第 4 章套件期望
+  更新、可玩性集成 `_test_ch4_bigmap_boss`）；本条收尾文档提交紧随其后。
+- 本程未做：第 4 章接入 `game.gd`/可达性、Boss 4 机制扩展、第 4 章大图验收/
+  章末收口、待确认第 11–16 项、`ch4_shortcut` 授予/战斗密度/`mask_enemy`/
+  `seat_husk` 独立数值/舞台母题/阿砚同行、新移动能力、NPC 立绘、MDS 插件、
+  打包/导出/签名/安卓/触屏。
+
+### 2026-11-05 · 第 56 程（第 4 章内容数据层第 3 步：事件区真实自动触发，只做触发与测试层）
+
+- 交接：第 54 程收尾 HEAD `3a37d8d`，工作区干净，无会话在跑；第 2/3/4 章仍
+  不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不施工、
+  不猜测。本程为同一任务单第 2 次尝试：第 55 程（session58）在启动时因 Magpie
+  网关中断夭折（日志仅一行 `[claude-code:unrecognized_model]`，无提交、无残留
+  文件）；监工重启网关并复查 HTTP 200 后由本程接力。
+- 任务 0 · 基线核验（HEAD `3a37d8d`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **12573 / 0**；
+  十套集成 **755 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 事件区真实触发验证（只做触发与测试层，见专节）：
+  - 前置核查确认 `_on_mds_room_loaded` 第 34 程的区域级大图事件分支是章节无关
+    判定（`big_map` + 计划区域 `type == "event"` + `_event_data(room_id)` 非空），
+    第 53 程 `_event_data` 已路由第 4 章；`ch4_event` 无需第 4 章专属触发路径。
+    `game.gd` 仅把该分支注释的「Chapters 2–3」更正为「Chapters 2–4」，行为零改动。
+  - `tests/integration_playability.gd` 新增 `_test_ch4_bigmap_event_trigger`，
+    把 `chapter_4_bigmap_world.tscn` 与第 4 章计划临时挂到真实主场景
+    （`ch4_event` 为起始区），走真实 `room_loaded`：进入即开第 4 章事件页，
+    文案/标题/两选项 = `Ch4EventData.pick(run_seed, "ch4_event/event")`，开页与
+    「拿」不耗 run RNG；拿 → 残页 +12、提示与 HUD「档案 1 / 8」；结算写
+    `cleared_encounters["ch4_event/event"]`、清房计数 +1、run save 同一键；重载
+    不重开/不暂停/不重复计数/不重复奖励；回退结算后重进再验「读」→ 污染 +8
+    （倍率/上限 100）+ 解明一残页词或兜底 +6。测试后恢复第 4 章旧世界巡检。
+  - 同测试锁不变项：`CHAPTER_PLAN_PATHS[3]` 空、`MDS_WORLD_FILES[3]` 仍指旧
+    `chapter_4.mdsworld.json`、旧第 4 章 9 房/17 门世界仍在、第 1/2/3 章计划槽
+    不变、计划清房目标 7 / 7 个遭遇 / 波次表（`content_pending = false`）/
+    `boss_scene` 仍空、第 1–3 章事件数值不变、`game.gd` 无 `ch4_event` 专属
+    触发与 `chapter_4_bigmap` 路由。
+  - `tests/test_ch4_content.gd`（641 → **642**）补「触发键 =
+    `RoomProgress.event_encounter_id("ch4_event")` = 计划事件节点 id」断言，
+    文件头注释更新为步骤 1–3。
+- 任务 2 · 待确认项与开放问题：未新增 `ch4_shortcut` 授予（屏障保持封闭）；
+  战斗密度未扩波/未增遭遇（旧世界 5–6 只 vs 大图每遭遇 2 只只记录）；
+  `mask_enemy`/`seat_husk` 独立数值未做；Boss 4 机制/`boss_scene` 未做；
+  舞台母题未改呈现层；阿砚同行未做；待确认第 11–16 项未碰。
+- 任务 3 · 记录：本状态文件新增「第 4 章内容数据层第 3 步（第 56 程）」专节、
+  本日志，更新项目现状/已完成/未完成表第 10/13 项/待确认前言/下一程；
+  新增 `docs/memory/sessions/2026-11-05-chapter4-event-trigger.md`；
+  `docs/memory/MEMORY.md` 补索引与第 56 程记录。
+- 收尾验证：单元 **12574 / 0**（= 基线 12573 + 1，`test_ch4_content`）；可玩性
+  集成 **810 / 0**（= 基线 755 + 55：新增测试 54 条 + 第 4 章旧世界恢复 1 条）；
+  其余九套集成 **102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 与基线
+  一致、全 0 失败；`--headless --import` / `--quit` 退出 0、`ERROR` 0；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；工作区干净、无临时探针。
+- 本程提交：`4981b47` test: cover the chapter 4 event region trigger（第 4 章
+  事件区触发集成测试、触发键单元断言、`game.gd` 分支注释改为 Chapters 2–4）；
+  本条收尾文档提交紧随其后。
+- 本程未做：第 4 章接入 `game.gd`/可达性、Boss 4 机制/`boss_scene`、第 4 章
+  大图验收、待确认第 11–16 项、`ch4_shortcut` 授予/战斗密度/`mask_enemy`/
+  `seat_husk` 独立数值/舞台母题/阿砚同行、新移动能力、NPC 立绘、MDS 插件、
+  打包/导出/签名/安卓/触屏。
+
+### 2026-11-05 · 第 54 程（第 4 章内容数据层第 2 步：波次接线，只做数据层）
+
+- 交接：第 53 程收尾 HEAD `c6178b3`，工作区干净，无会话在跑；第 2/3/4 章仍
+  不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不施工、
+  不猜测。监工在本程开始前已核查 Magpie 网关 HTTP 200，本程未遇模型调用失败。
+- 任务 0 · 基线核验（HEAD `c6178b3`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **12545 / 0**；
+  十套集成 **755 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 波次接线（只做数据层，见专节）：
+  - `chapter_4_demo.tres` 的 4 个战斗区补 `wave` 字典，6 个键 = 6 个战斗遭遇
+    节点 id，值按计划顺序逐字复用 `ROOM_WAVES[3]` 六波（`mask_enemy`+`seat_husk`
+    / `choir_summoner`+`page_swarm` / `seat_husk`+`mirror_sniper` /
+    `mask_enemy`+`typo_beast` / `ink_bomber`+`mask_enemy` /
+    `mirror_sniper`+`page_swarm`），波次内容未新增/未修改。
+  - 事件节点 `ch4_event/event` 无波，Boss 区不占普通波次，入口/枢纽/书库不带
+    `wave`；清房目标仍 7（HUD 分母 8）。
+  - `content_pending` 按第 40/43 程约定由 `true` 改回 `false`，波次表进入
+    `validate()` 正常校验；标志本身保留在 `ChapterPlanData`（默认 `false`、
+    向后兼容）；图骨架夹具顶层的 `content_pending: true` 是夹具元数据、未改。
+  - 产品代码未改：`game.gd`、`ChapterPlanData`、第 4 章世界 JSON/场景、
+    Boss 4 数值与文案均保持原样。
+- 任务 2 · 校验：`test_ch4_content`（641 断言，+28）波次段从「未接线」改为
+  接线校验（6 个键 == 6 个战斗遭遇节点 id、逐键值 == `ROOM_WAVES[3]` 原文、
+  键锚定且唯一、事件节点/事件区/Boss 区无波、`validate_waves()`/`validate()`
+  干净、`content_pending` 清零），新增 `_test_runtime_wave_lookup` 把第 4 章
+  计划挂到独立 `game.gd` 实例经 `_plan_wave()` 按节点 id 读回六波（不改章节
+  路由）；`test_ch4_plan`（795，−1）`_test_pending_content` → `_test_wave_wiring`
+  并把 `content_pending` 局部性改为「删波次 + 标志开 → 干净；标志关 → 六条
+  缺波次」；`test_ch4_world`（813，+1）计划侧期望同步为已接线。既有断言保留：
+  `CHAPTER_PLAN_PATHS[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指旧世界、旧第 4 章
+  9 房/17 门世界仍在、第 1/2/3 章计划与世界不变、清房目标仍 7。
+- 任务 3 · 待确认项与开放问题：未新增 `ch4_shortcut` 授予（屏障保持封闭）；
+  战斗密度未扩波/未增遭遇（旧世界 5–6 只 vs 大图每遭遇 2 只只记录）；
+  `mask_enemy`/`seat_husk` 独立数值未做；Boss 4 机制/`boss_scene` 未做；
+  舞台母题未改呈现层；阿砚同行未做；待确认第 11–16 项未碰。
+- 任务 4 · 记录：本状态文件新增「第 4 章内容数据层第 2 步（第 54 程）」专节、
+  本日志，更新项目现状/已完成/未完成表第 10/13 项/待确认前言/下一程；
+  新增 `docs/memory/sessions/2026-11-05-chapter4-wave-wiring.md`；
+  `docs/memory/MEMORY.md` 补索引与第 54 程记录。
+- 收尾验证：单元 **12573 / 0**（= 基线 12545 + 28：`test_ch4_content` +28、
+  `test_ch4_plan` −1、`test_ch4_world` +1）；十套集成
+  **755 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败
+  （与基线一致）；`--headless --import` / `--quit` 退出 0、`ERROR` 0；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；工作区干净、无临时探针。
+- 本程提交：`cf909a8` feat: wire the chapter 4 plan waves（计划波次表、
+  `content_pending` 清零、第 4 章测试三件套同步）；本条收尾文档提交紧随其后。
+- 本程未做：第 4 章接入 `game.gd`/可达性、事件区真实自动触发验证、Boss 4
+  机制/`boss_scene`、第 4 章大图验收、待确认第 11–16 项、舞台母题/战斗密度/
+  `mask_enemy`/`seat_husk` 独立数值、阿砚同行、新移动能力、NPC 立绘、
+  MDS 插件、打包/导出/签名/安卓/触屏。
+
+### 2026-11-05 · 第 53 程（第 4 章内容数据层第 1 步，只做数据层）
+
+- 交接：第 52 程收尾 HEAD `18ce085`，工作区干净，无会话在跑；第 2/3/4 章仍
+  不可达，`CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不施工、
+  不猜测。本程为同一任务单第 2 次尝试（首次 session56 因 Magpie 网关不通夭折，
+  无提交无残留）；监工已重启网关并复查 HTTP 200，本程未遇模型调用失败。
+- 任务 0 · 基线核验（HEAD `18ce085`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **11925 / 0**；
+  十套集成 **755 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 第 4 章内容数据层第 1 步（只做数据层，见专节）：
+  - 新增 `scripts/data/ch4_event_data.gd`（`Ch4EventData`）：7 组笑面剧场事件
+    文案（纸人/面具/名册/幕布/台词/聚光灯/谢幕），固定读/拿两选项；读 →
+    污染 +8 + 解明一个残页词 / 兜底残页 +6，拿 → 残页 +12；按
+    `hash("%d:%s")` + 事件节点 id `ch4_event/event` 确定性轮换、不耗 run RNG。
+  - `game.gd` 的 `_event_data` 扩到第 4 章（索引 3）；第 1 章 `Ch1EventData`
+    原键与原值、第 2/3 章 `Ch2/Ch3EventData` 不变，索引 ≥ 4 仍返回 `{}`。
+  - `chapter_4_demo.tres` 补 `authority_pool = [续命, 改写]`（条件项仍由
+    `AuthorityController.build_pool` 从 `ContentLibrary` 追加吞噬/归档）。
+  - `BossEntranceData` 新增第 4 章「笑面史官」8 条入场文案（`variants(3)`）；
+    `BossPhaseData` 新增阶段 2/3 各 8 条（`variants(phase, 3)`）；第 1 章保留
+    `"%d:%d"` 选句键，第 2/3/4 章用 `"%d:%d:%d"`，不回落第 1/2/3 章。
+    `BossEntranceData` 既有键 `"%d:%d" % [seed, chapter_index]` 经核查后保持原样。
+  - Boss 4 HP 520 / 伤害 18 / 速度 92 / `smiling_archivist.png` /
+    `boss_script = smiling` 未改；计划仍无 `boss_scene`、无专章机制。
+  - 计划仍 `content_pending = true`、7 个区域均无 `wave` 表；6 场战斗与
+    `ROOM_WAVES[3]` 六波只校验计划顺序（事件节点无波、Boss 区不占普通波），
+    清房目标仍 7、HUD 分母 8；计划仍不被 `game.gd` 引用，第 4 章仍不可达。
+  - 旧第 4 章 9 房/17 门世界与场景原样保留、不改语义、不删除。
+- 任务 2 · 校验：新增 `tests/test_ch4_content.gd`（**613 断言**）锁定事件
+  确定性/效果类型/轮换/不耗 RNG、章节事件路由、权柄基础池 + 条件项、Boss 文案
+  不回落第 1/2/3 章与选句键不变、Boss 4 数据未改、7 个遭遇节点与
+  `ROOM_WAVES[3]` 六波顺序对应、清房目标 7、`content_pending` 保持、事件触发
+  谓词输入，并锁 `CHAPTER_PLAN_PATHS[2]/[3]` 仍空、`MDS_WORLD_FILES[3]` 仍指
+  旧世界、旧第 4 章世界与第 1–3 章计划/世界不变。同步更新 `test_ch4_plan`/
+  `test_ch4_world` 的旧占位期望，以及 `test_ch2_content`/`test_ch3_content`/
+  `test_boss_entrance_content`/`integration_ch1_demo` 中「第 4 章静默」的旧
+  期望；图骨架夹具只改说明文字，图形数据未改。无临时探针残留。
+- 任务 3 · 待确认项与开放问题：未新增 `ch4_shortcut` 授予（屏障保持封闭）；
+  战斗密度未扩波/未增遭遇（旧世界 5–6 只 vs 大图每遭遇 2 只只记录）；
+  `mask_enemy`/`seat_husk` 独立数值未做；Boss 4 机制/`boss_scene` 未做；
+  舞台母题未改呈现层；阿砚同行未做；待确认第 11–16 项未碰。
+- 任务 4 · 记录：本状态文件新增「第 4 章内容数据层第 1 步（第 53 程）」专节、
+  本日志，更新项目现状/已完成/未完成表第 10/13 项/待确认前言/下一程；
+  新增 `docs/memory/sessions/2026-11-05-chapter4-content-data.md`；
+  `docs/memory/MEMORY.md` 补索引与第 53 程记录。
+- 收尾验证：单元 **12545 / 0**（= 基线 11925 + 新测试 613 + 既有测试净 +7）；
+  十套集成 **755 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败
+  （与基线一致）；`--headless --import` / `--quit` 退出 0、`ERROR` 0；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；工作区干净、无临时探针。
+- 本程提交：`c095c8a` feat: author chapter 4 content data layer（`Ch4EventData`、
+  `game.gd` 事件路由、计划权柄池、Boss 4 文案、`test_ch4_content.gd` 与既有测试
+  期望更新）；文档提交 `c4ac509` docs: record the chapter 4 content data layer
+  （本状态文件、会话记录、记忆索引）。
+- 本程未做：第 4 章接入 `game.gd`/可达性、波次接线、事件区真实自动触发验证、
+  Boss 4 机制/`boss_scene`、第 4 章大图验收、待确认第 11–16 项、舞台母题/
+  战斗密度/`mask_enemy`/`seat_husk` 独立数值、阿砚同行、新移动能力、NPC 立绘、
+  MDS 插件、打包/导出/签名/安卓/触屏。
+
+### 2026-11-05 · 第 52 程（第 4 章真实大区世界，只做结构层）
+
+- 交接：第 51 程收尾 HEAD `f6e200b`，工作区干净，无会话在跑；第 2/3/4 章仍不可达，
+  `CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不施工、不猜测。
+  监工在本程开始前已核查 Magpie 网关 HTTP 200，本程未遇模型调用失败。
+- 任务 0 · 基线核验（HEAD `f6e200b`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **11095 / 0**；
+  十套集成 **755 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 真实大区世界（只做结构层，见专节）：
+  - 新增 `resources/rooms/ch4_bigmap/*.tres`（9 个 `BigRoomData`）与
+    `scenes/mds/ch4_bigmap/*.tscn`（9 个 `MDSBigRoom`）——尺寸/内容节点 id 严格按
+    第 51 程计划（2560×1440；纵井 2560×2160；精英/Boss 3840×2160），地面贴底边、
+    平台 80 px 阶梯链、`validate()` 全空、每区 `fall_margin = 240`；
+    `backdrop_path = smiling_theater.png`（`backdrop_pixel_art = false`）、
+    `ambient_kind = embers`、每区暖色调；复用 `ch1_tiles.tres`。
+  - `ch4_entry` 作者 `SpawnPoint`（`save_point`，(400,1328) = 第一级台阶面 −
+    `FOOT_Y`）与惰性 `shortcut_arrival` 到达门。
+  - 独立世界 `scenes/mds/chapter_4_bigmap.mdsworld.json` +
+    `chapter_4_bigmap_world.tscn`：9 区单矩形、原点 32 px 对齐、
+    `start_room = ch4_entry`；区域 `Smiling Theater` 镜像旧世界（灰烬 + 光柱、
+    `background` 空、`boss_background = blood_moon`），不写 `backdrop_image`、
+    不加 theater 层；22 门 = 20 有向 + 2 只到达，`elite_boss` 单向、
+    `hub_shortcut_entry` 带 `requires = ["ch4_shortcut"]` 默认封闭；
+    世界 JSON 由第 51 程夹具镜像（仅加 `scene_path`），夹具未改语义。
+  - 纵向/捷径骨架复用第 29 程管线：`ch4_branch_b`/`ch4_hub`/`ch4_vault`/
+    `ch4_well`/`ch4_elite` 5 台电梯、`ch4_well` 3 个单向落台、`ch4_hub` 长椅
+    检查点、捷径屏障；电梯沿用管线默认 80 px/s（未碰第 12 项第 2 章节奏）。
+  - 旧第 4 章 9 房/17 门世界与场景原地保留、不改语义、不删除；新世界不被
+    `game.gd` 引用（`CHAPTER_PLAN_PATHS[3]` 仍空），第 4 章仍不可达。
+- 任务 2 · 校验：新增 `tests/test_ch4_world.gd`（**812 断言**）交叉校验计划 ↔ 世界
+  并锁定不变项；`tests/test_ch4_plan.gd` 的「`ch4_bigmap` 目录尚未创建」锁改为
+  目录/文件存在（778 → **796**），其余路由锁不变。临时探针
+  `tests/probe_ch4world52.gd` 用真实 `MDSWorldGame` 逐区加载新世界：
+  9 区 `validation_errors` 全空、`fall_below_bounds = 240`、门数与世界 JSON 一致
+  （合计 22）、枢纽 1 个 `MDSGateBarrier`、背景平铺、`Ambient` 存在、入口出生点
+  (400,1328)；**0 失败**，测后删除（含 `.uid`）。
+- 任务 3 · 待确认项与开放问题：舞台母题只按既有区域氛围落地（未加大区 theater 层、
+  未改 `TheaterBackdrop`、未新绘背景）；未新增任何授予 `ch4_shortcut` 的交互/事件/
+  掉落（屏障保持封闭）；战斗密度未扩波/未增遭遇（旧世界 5–6 只 vs 大图 2 只只记录）；
+  `mask_enemy`/`seat_husk` 独立数值未做；Boss 4 机制/`boss_scene`/文案未做；
+  章末流程未改（第 3 章停章替身仍在）；阿砚同行未做（仓库仍无 companion 控制器）。
+- 任务 4 · 记录：本状态文件新增「第 4 章真实大区世界（第 52 程）」专节、本日志，
+  更新项目现状/已完成/未完成表第 10/13 项/待确认前言/下一程；
+  新增 `docs/memory/sessions/2026-11-05-chapter4-bigmap-world.md`；
+  `docs/memory/MEMORY.md` 补索引与第 52 程记录。未创建临时探针残留。
+- 收尾验证：单元 **11925 / 0**（+830：`test_ch4_world` 812 + `test_ch4_plan` +18）；
+  十套集成 **755 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败
+  （与基线一致）；`--headless --import` / `--quit` 退出 0、`ERROR` 0；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；工作区干净、无临时探针。
+- 本程提交：`0125562` feat: build the chapter 4 big-map region world（9 个
+  `BigRoomData`、9 个 `MDSBigRoom` 场景、独立世界 JSON/场景、`test_ch4_world.gd`、
+  `test_ch4_plan.gd` 目录断言更新）；文档提交 `695b505` docs: record the chapter 4 real region
+  world（本状态文件、会话记录、记忆索引）。
+- 本程未做：第 4 章接入 `game.gd`/可达性、`Ch4EventData`、权柄池、波次接线、
+  Boss 4 机制/`boss_scene`/文案/测试、第 4 章大图验收、待确认第 11–16 项、
+  舞台母题/战斗密度/`mask_enemy`/`seat_husk` 独立数值、阿砚同行、新移动能力、
+  NPC 立绘、MDS 插件、打包/导出/签名/安卓/触屏。
+
+### 2026-11-05 · 第 51 程（第 4 章计划与图骨架，只做数据层）
+
+- 交接：第 50 程收尾 HEAD `b1af454`，工作区干净，无会话在跑；第 2/3/4 章仍不可达，
+  `CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不施工、不猜测。
+  **本程为接力重试**：第 51 程首次尝试（brief53 / session53）因 Magpie 网关中断夭折，
+  日志只有 `[claude-code:unrecognized_model]`，无提交、无文档、无残留；动手前已核对
+  `resources/chapters/chapter_4_demo.tres` 与 `tests/test_ch4_plan.gd` 确实不存在。
+  监工在本程开始前已重启网关并复查 HTTP 200。
+- 任务 0 · 基线核验（HEAD `b1af454`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **10315 / 0**；
+  十套集成 **754 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 第 4 章计划（只做数据层，见专节）：新增
+  `resources/chapters/chapter_4_demo.tres`——9 区连通图（`ch4_entry` /
+  `ch4_branch_a` / `ch4_branch_b` / `ch4_hub` / `ch4_well` / `ch4_vault` /
+  `ch4_event` / `ch4_elite` / `ch4_boss`），6 个战斗遭遇按计划顺序对应旧
+  `ROOM_WAVES[3]` 六波（本程不接线）+ 1 个事件占位 `ch4_event/event` →
+  `clear_target()` 派生 7；3 宝箱/2 残碑；11 门 = 9 双向 + 2 显式单向；
+  每区 `fall_below_bounds = 240`；`content_pending = true` 只推迟波次表。
+  Boss 门按第 2/3 章先例单向，旧世界 `ch4_boss/left1` 仍返回 `ch4_rest`
+  （原样保留，两种行为分别由测试锁定）。计划不写 `wave`/`authority_pool`/
+  `boss_scene`/Boss 文案/事件数据/`ch4_shortcut` 授予；占位处均写明待后续内容程。
+- 任务 2 · 图骨架夹具与校验：新增
+  `tests/fixtures/big_room/ch4_graph.mdsworld.json`（`fixture: true`、
+  `content_pending: true`、无房间场景、游戏从不引用；20 扇有向门 + 2 扇到达门；
+  镜像 `Smiling Theater` 灰烬/光柱与 `blood_moon` Boss 背景，不写
+  `backdrop_image`）与 `tests/test_ch4_plan.gd`（**778 断言**：计划形状/尺寸/
+  坠落平面/内容 id/清房目标/图可达性/单向门/捷径占位/待内容标记 +
+  `content_pending` 只推迟波次表 + 6 场战斗 ↔ `ROOM_WAVES[3]` 六波按计划顺序 +
+  计划↔夹具逐区逐门交叉校验 + 夹具几何 + 第 1–3 章与旧第 4 章世界不变）。
+- 任务 3 · 路由锁同步：`tests/test_ch2_world.gd`、`tests/test_ch3_content.gd`、
+  `tests/integration_playability.gd` 在既有「第 4 章计划槽为空」旁补
+  「计划资源已存在但未接入」（+3 断言）；`CHAPTER_PLAN_PATHS[3]` 仍为空，
+  `game.gd` 仍用旧 `chapter_4.mdsworld.json` / `chapter_4_world.tscn`，
+  无计划时清房目标 6 / 坠落平面 850 的默认行为断言原样成立。
+- 任务 4 · 记录：本状态文件新增「第 4 章计划与图骨架（第 51 程）」专节，
+  更新项目现状/已完成/未完成表第 10/13 项/待确认前言/下一程；
+  新增 `docs/memory/sessions/2026-11-05-chapter4-plan-graph.md` 与
+  `docs/memory/decisions/2026-11-05-chapter4-plan-graph.md`；
+  `docs/memory/MEMORY.md` 补索引与第 51 程记录。未创建临时探针，无残留。
+- 收尾验证：单元 **11095 / 0**（+780：`test_ch4_plan` 778 + 两处路由锁）；
+  十套集成 **755 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败
+  （仅可玩性 +1 路由锁）；`--headless --import` / `--quit` 退出 0、`ERROR` 0；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；工作区干净、无临时探针。
+- 本程提交：`9379cbf` feat: author chapter 4 big-map plan and graph skeleton
+  （计划/夹具/测试/路由锁）；文档提交 `cddb2bf` docs: record the chapter 4 plan and
+  graph skeleton pass（本状态文件、会话记录、ADR、记忆索引）。
+- 本程未做：第 4 章真实大区世界/房间、`Ch4EventData`、权柄池、波次接线、
+  Boss 4 机制/`boss_scene`/文案/测试、第 4 章大图验收、第 2/3/4 章可达性、
+  待确认第 11–16 项、舞台母题/战斗密度/`mask_enemy`/`seat_husk` 独立数值、
+  阿砚同行、新移动能力、NPC 立绘、MDS 插件、打包/导出/签名/安卓/触屏。
+
+### 2026-11-05 · 第 50 程（第 4 章大地图可行性核查，只查不施工）
+
+- 交接：第 49 程收尾 HEAD `38a3b05`，工作区干净，无会话在跑；第 2/3/4 章仍不可达，
+  `CHAPTER_PLAN_PATHS[2]/[3]` 仍空；待确认第 11–16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `38a3b05`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **10315 / 0**；
+  十套集成 **754 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 4235** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 第 4 章大地图可行性核查（只查不施工，结论见专节）：
+  - 现有世界：9 房/17 门（7 right / 7 left / 3 door）、单矩形 1280×720、单层地面、
+    `MDSChapterRoom(chapter_index=3)`；6 战斗 + 休整（商店/残碑/捷径）+ 书库
+    （宝箱/残碑）+ Boss；区域 `Smiling Theater` 灰烬+光柱、`boss_background=blood_moon`。
+  - 文本/语音：第 4 章 8 句开场、4 句章末、2 选项；`chapter_theater.ogg`、
+    `ch4_intro/outro`、`boss_smiling_phase2/3` 均在；章末焚毁分支置 `_burned_final`。
+  - Boss 4：HP 520 / 伤害 18 / 速度 92 / `boss_script=smiling` / 立绘
+    `smiling_archivist.png` / `boss_voice=smiling`；`SmilingArchivist` 专属脚本与场景
+    已有镜面弹幕（3 枚 ×0.7、280）+ 基类纸页波/墨雨/改写；无 `boss_scene` 键、
+    无入场/阶段文案、无 `test_ch4_boss`；剧情圣经的删除词/复制武器/舞台机关未实现。
+  - 敌人/波次：`ROOM_WAVES[3]` 6 波 + `CampaignData.rooms[3]` 6 组首发；实际 8 种
+    spawn id 全部有专属精灵、全部在 `ENEMY_ART`、白 tint、**回退表命中 0**；
+    `mask_enemy`/`seat_husk` 是美术变体（场景/数据复用 `hanging_scribe`/
+    `collapse_husk`）；`echo_enemy` 数据 id 仍为 `amnesiac_echo`。
+  - 计划/内容：`chapter_4_demo.tres` 不存在、`CHAPTER_PLAN_PATHS[3]` 空、无
+    `ch4_bigmap` 目录、无 `Ch4EventData`、无权柄池、Boss 文案静默；清房目标 6 /
+    HUD 分母 7 / 坠落 850；地图标题「笑面剧场地图」；第 4 章为最后一章，
+    `_complete_chapter` 已走 `_finish(true)` 结束战役。
+  - 结论：大区管线章节无关、可直接承载；缺口在计划/大区世界/内容数据/Boss 4 机制/
+    验收套件；施工顺序与前置依赖见专节。第 4 章可达性仍须单独拍板且不能早于第 2/3 章。
+- 任务 2 · 第 4 章美术素材核查（用户 2026-11-04 事实更正遗留项，只读不改）：
+  - 舞台：`smiling_theater.png` 1536×864 RGB 绘画，已接入 `MDSChapterRoom`
+    `BACKGROUNDS[3]` + `TheaterBackdrop(generated_art=true)`；后者只叠加聚光灯/
+    光斑/浮尘，程序化帷幕/观众席分支不执行；概念源
+    `assets/concept/environments/smiling_theater_source.png` 仅参考。
+  - Boss：`smiling_archivist.png` 256×256 RGBA，alpha 0/255、四角透明、底行对齐、
+    无压缩/无 mipmap；由 `CampaignData.boss_texture` 接线。
+  - 敌人：`mask_enemy.png`/`seat_husk.png` 96×96 RGBA 同样合规；第 4 章 8 种敌人
+    全部专属精灵、无回退；没有缺失或未接线的第 4 章美术素材。
+  - 道具/瓦片：共享第 1 章像素道具与 `ch1_tiles`，与第 2/3 章大图一致；
+    没有第 4 章专属 tileset，属既定路线而非缺美术。
+  - 音频：`chapter_theater.ogg`、`ch4_intro/outro.ogg`、`boss_smiling_phase2/3.ogg`
+    均在并已接线。
+  - 文档：README/GDD 的旧「程序化绘制、待替换插画」已在第 7 程更正，本次复核与
+    当前描述一致；结论已记入本状态文件专节，后续按「美术已就绪」规划。
+- 任务 3 · 记录：新增 `docs/memory/sessions/2026-11-05-chapter4-bigmap-audit.md`；
+  本状态文件新增「第 4 章大地图可行性核查（第 50 程）」专节并更新项目现状/
+  未完成表第 8/10/13 项/下一程；`docs/memory/MEMORY.md` 补索引与第 50 程记录。
+  本程只改文档，未新增测试与产品代码；未创建临时探针，无残留。
+- 本程提交：`821ed0c` docs: audit chapter 4 big-map feasibility（本状态文件、
+  会话记录、记忆索引）。
+- 本程未做：第 4 章计划/图骨架/大区世界/内容数据/Boss 机制/验收；第 2/3/4 章可达性；
+  待确认第 11–16 项；阿砚同行；新移动能力；NPC 立绘；MDS 插件；打包/导出/签名/
+  安卓/触屏。
+
+### 2026-11-05 · 第 49 程（第 3 章大图门视觉专项与敌人美术核查）
+
+- 交接：第 48 程收尾 HEAD `28ee4c1`，工作区干净，无会话在跑；第 2/3 章仍不可达，
+  `CHAPTER_PLAN_PATHS[2]` 仍空；待确认第 11–16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `28ee4c1`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **10207 / 0**；
+  十套集成 **754 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 / 3424** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 第 3 章大图门视觉专项（只做表现层与测试，未改门逻辑）：
+  - 核查：第 37 程的 `GateVisual` 由 `MDSBigRoom._add_gate_visuals()` 通用挂载
+    （自动门 + 作者门）；第 41 程 9 个第 3 章场景全部是 `MDSBigRoom`、`auto_gates`
+    全开，22 扇门（20 有向 + 2 仅到达）已被通用管线自动覆盖，**未另起视觉实现**。
+    22 扇构成：left/right/top/bot 各 5 + 中置 `door` 2；仅到达门 =
+    `ch3_entry/shortcut_arrival`（door）与 `ch3_boss/left1`（left）。
+  - 逐门断言（扩展 `tests/integration_ch3_bigmap.gd`）：每门有 `GateVisual`；
+    `marker.position == Vector2.ZERO`（视觉不移动门）；side 与世界文件一致；
+    left/right 门向房间内展开、门底 = 门下方真实地面/台阶面（`floor_offset` 现算），
+    door 中置，top/bot 舱口贴天花板/地面且不越界；标题 x/y 按 side 规则并被夹进房间；
+    有向门 `arrival=false`（绘制路径画朝向箭头）+「前往 <目标区名>」，
+    仅到达门 `arrival=true`（「来路」、无箭头）；汇总 22 = 20 有向 + 2 到达、
+    side 5/5/5/5/2（计数按房间覆盖写，重访不累加）。
+  - 真实缺陷（就地修复）：`ch3_well/top1` 与 `ch2_well/top1`（门位 x = 80）的
+    天花板舱口标题按门中心居中，200 px 标签框左边缘 x = −20，越出房间左边界 20 px。
+    根因是第 37 程的「边上标题内收」只实现了 left/right，top/bot 未夹取。
+    修复：`GateVisual` 新增可选 `caption_area`（marker 局部坐标、按标题尺寸内缩的
+    房间矩形），`MDSBigRoom` 为每扇门传入 `room_bounds - 标题尺寸`，
+    `_caption_x()`/`_caption_y()` 夹取；空值保持原 side 规则，左右门位置不变。
+    回归：`test_big_room` +2（舱口内收 x/y）；第 3 章集成逐门断言标题矩形必须被
+    `room_bounds.encloses()`（修复前 `ch3_well/top1` 会失败）。
+  - 不变项：纯 `Node2D`（`z=-1`）、无碰撞/信号/输入；门位/模式/单向语义
+    （`ch3_elite/right1` 不可返回）/`requires`/`MDSGateBarrier`（`ch3_hub/shortcut`
+    默认封闭）/过渡目标一字未改；第 1 章无 `GateVisual`；第 2 章 22 扇门断言
+    2209/0 无回归；第 3 章仍不可达。
+- 任务 2 · 第 3 章敌人美术核查（只核查/接线锁定，不新绘不拼凑）：
+  - 以 `ROOM_WAVES[2]` 六波实际引用为准，共 8 种：`mirror_sniper`（第 3 章专属）、
+    沿用第 1 章的 `hanging_scribe`/`echo_enemy`/`typo_beast`/`page_swarm` —— 5 种都有
+    专属 PNG、已在 `ENEMY_ART`、不在回退表、实际白 tint；沿用第 2 章的
+    `rust_whisperer`（→`scribe_bug`）/`lung_moth`（→`hanging_scribe`）/
+    `collapse_husk`（→`blank_man`）—— 无专属美术，继续第 1 章回退并染
+    `ENEMY_FALLBACK_TINT`（`#c8e1cd`）；缺失清单记录在案，`assets/concept/enemies/`
+    也无这些原图，按任务单不新绘。
+  - `echo_enemy` 是刷怪/场景 id，其数据资源沿用旧名 `amnesiac_echo.tres`
+    （`id = amnesiac_echo`）；美术按刷怪 id 接线，测试锁别名。
+  - 测试：`tests/test_enemy_art.gd` 94 → **200 断言**（第 3 章 8 敌逐一核对场景/
+    数据/唯一美术来源；5 接线白 tint、3 缺失回退第 1 章美术 + 回退 tint；
+    审计集合由 `ROOM_WAVES[2]` 现算，波次改动引入未审计敌人会失败）。
+    `tests/integration_ch3_bigmap.gd` 在真实遭遇中断言 `ch3_branch_a/Arena` 的
+    `mirror_sniper`/`hanging_scribe` 用专属图 + 白 tint、`Arena2` 的
+    `rust_whisperer`/`lung_moth` 用回退图 + `#c8e1cd`。
+  - 地图标题复核：第 38 程的 `CampaignData.chapter(i)["region"]` 派生规则未动，
+    第 3 章集成既有断言「无光海地图」复跑成立；第 1 章「档案馆地图」一字未改。
+  - 不变项：未新增/修改任何敌人贴图或场景美术；第 1/2 章敌人美术与波次未改；
+    第 3 章仍不可达。
+- 任务 3 · 收尾验证：
+  - 单元 **10315 / 0**（第 48 程 10207，+108：敌人美术 94 → 200 即 +106、
+    `test_big_room` 111 → 113 即 +2）；第 3 章大图集成 **4235 / 0**
+    （3424 → +811：逐门 visual/落面/标题内缩/箭头语义 + 真实遭遇敌人美术）；
+    第 2 章大图集成 **2209 / 0**（共享门视觉改动无回归）；其余八套集成
+    **754 / 102 / 613 / 207 / 113 / 59 / 391 / 45** 与基线一致、全 0 失败。
+    `--headless --import` / `--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；
+    demo 像素资产 **36 / 0**。
+  - 记录：新增 `docs/memory/sessions/2026-11-05-chapter3-gate-visuals-enemy-art.md`，
+    更新 `docs/memory/MEMORY.md` 与大区门视觉 ADR（「补充（第 49 程）」）。
+    临时探针已全部清理，无残留。
+- 本程提交：`2725e81` fix: keep big-map gate captions inside the room
+  （`GateVisual.caption_area` + `MDSBigRoom` 传入 + `test_big_room` 舱口内收 2 条）；
+  `c631a3d` test: audit chapter 3 gate visuals and enemy art（第 3 章集成逐门/落面/
+  标题/敌人美术断言、`test_enemy_art` 94 → 200）；`a60080f` docs: record the
+  chapter 3 gate visuals and enemy art pass（本状态文件、会话记录、记忆索引与 ADR）。
+- 本程未做：第 3 章可达性/接入 `game.gd`；待确认第 11–16 项；3 个缺失敌人的
+  专属美术；阿砚同行；新移动能力；NPC 立绘；MDS 插件；打包/导出/签名/安卓/触屏。
+
+### 2026-11-05 · 第 48 程（第 3 章大地图系统验收，接力第 47 程）
+
+- 交接：第 47 程（brief49）因 Magpie 网关中断夭折，无提交，只留下未跟踪的
+  `tests/integration_ch3_bigmap.gd`（1481 行）；本程开工时网关复查 HTTP 200
+  （DeepSeek V4.1 Flash 可用）。HEAD `940f505`，工作区仅该未跟踪文件。
+- 任务 0 · 基线核验（HEAD `940f505`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **10207 / 0**；
+  九套集成 **754 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 第 3 章大地图系统验收（只做验收与验收脚本修正，未改产品代码）：
+  - 核查：第 47 程脚本按 brief49 第 2 节口径覆盖第 36 程 D 节 1–10 项与第 3 章
+    专属断言，挂接手法与第 45–46 程一致（真实主场景 + 第 3 章计划/大区世界临时
+    挂载，测毕恢复旧世界）；逐项核对第 40–46 程的计划/世界/事件/波次/Boss 3/
+    章末收口，验收对象一致。缺口语义就地补齐，未另起框架。
+  - 验收结果：`tests/integration_ch3_bigmap.gd` **3424 断言 / 0 失败**，连续两次
+    运行一致。覆盖：计划图入口 BFS 九区全可达；世界 22 门 = 20 连通 + 2 到达
+    全部实走，2 扇单向语义正确（`elite_boss` 进 Boss 不可返回、
+    `hub_shortcut_entry` 带 `requires` 默认封闭）；九区单矩形边界 = 计划尺寸、
+    相机四边 = 世界边界；电梯/顶底门/单向落台/长椅检查点/坠落平面；门过渡无
+    叠加暂停/剧情/奖励/地图/权柄/商店；3 宝箱 + 2 残碑按节点 id 一次性；
+    `ch3_branch_a` 两场遭遇逐场锁门/清怪/奖励，清房到 7（HUD 8）；隐藏书库首次
+    发现与地图揭示；捷径屏障跨存档保持（仅测试注入 `ch3_shortcut`，未新增游戏内
+    授予）；世界级存档恢复到正确房间/坐标；`LastReader` 生成/战役数值/立绘/
+    入场阶段文案/权柄池/章末停章；地图标题「无光海地图」、`lightless_sea.png`
+    平铺（线性过滤）、雾 + 雨、`deep_water` Boss 背景、`room_darkness=false`、
+    无 sea 层（第 14/15 项只记录现状）。
+  - 性能基线（`fade_time=0` 原始构建，两次运行区间）：普通区首次 6.0–9.2 ms、
+    热 6.1–7.7 ms；Boss 区冷 41.1–41.4 ms / 热 24.0–24.4 ms；精英 7.3 ms；
+    关动态背景 5.6–5.8 ms、关天气 19.8–20.3 ms、不生成 Boss 12.5–12.8 ms；
+    真实门过渡 228–234 ms。headless 无垂直同步/帧率上限，单帧耗时无代表性；
+    大区按「门 + 0.22 秒淡入」、`seamless_rooms=false`，故记录门过渡墙钟。
+  - 真实缺陷：**未发现产品行为缺陷**。首次跑通过程中的失败全部在验收脚本自身，
+    已就地修正并补断言：① HUD 目标断言误用章节表目标（房间加载后由房间类型
+    覆盖，入口房为「休整，或继续前进」）；② 性能段在 0.35 秒门冷却内直接
+    `use()`，门过渡未启动（改为等 0.45 秒）；③「不生成 Boss」测量用
+    `_finished`/`_boss_defeated` 抑制延迟后续流程，`call_deferred` 在标志复位后
+    才跑，打开权柄页并暂停场景树，卡住下一次淡入（改为保持
+    `_boss_aftermath_started` 守卫并先跑两帧；仅测试构造态，真实流程无此问题）；
+    ④ `MDSWorld.get_transition()` 不暴露 `one_way`，改为读世界门数据并断言无
+    反向转移。脚本连续两次 3424/0。
+  - 不变项：未改任何 `scripts/`/`scenes/`/`resources/`；`CHAPTER_PLAN_PATHS[2]`
+    仍空、旧第 3 章 9 房/17 门世界仍被 `game.gd` 使用、第 3 章仍不可达；第 2 章
+    仍不可达；第 1/2/4 章计划/世界/流程未动；未新增 `ch3_shortcut` 授予、
+    未实现视野压缩/sea 层、未改电梯速度/相机/HUD、未做门视觉、地图标题改动、
+    敌人美术接线、阿砚同行、新移动能力、NPC 立绘、MDS 插件、导出/签名/安卓。
+  - 记录：新增 `docs/memory/sessions/2026-11-05-chapter3-bigmap-acceptance.md`
+    （逐项结论 + 性能基线 + 脚本修正根因），并更新 `docs/memory/MEMORY.md`。
+    临时诊断已全部清理，无残留探针。
+- 任务 2 · 验证（HEAD 见本程日志末尾）：
+  - 新增第 3 章大图集成 **3424 / 0**（连续两次）；单元 **10207 / 0**；九套既有
+    集成 **754 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 与基线一致、
+    全 0 失败；`--headless --import` / `--quit` 退出 0、`ERROR` 0；退出泄漏
+    **10/10 clean**；demo 像素资产 **36 / 0**。
+- 本程提交：`f50eb60` test: accept the chapter 3 big map（新增
+  `tests/integration_ch3_bigmap.gd` 与 `.uid`，1502 行，3424 断言）；`3001686`
+  docs: record the chapter 3 big-map acceptance pass（本状态文件 + 会话记录 +
+  记忆索引）。临时诊断已全部清理，收尾工作区干净。
+
+### 2026-11-05 · 第 47 程（第 3 章大地图系统验收，夭折）
+
+- 交接：第 46 程收尾 HEAD `940f505`，工作区干净，第 2/3 章均不可达。
+- 本程未产生任何提交：`.supervisor/session49.log` 只有一行
+  `[claude-code:unrecognized_model]`，模型调用不可用；监工在第 48 程开工前重启
+  Magpie 网关并复查通过（HTTP 200，DeepSeek V4.1 Flash 可用）。
+- 唯一产出是未跟踪的 `tests/integration_ch3_bigmap.gd`（1481 行，结构完整、正常
+  收尾），按 brief49 第 2 节口径写成，未经运行验证；由第 48 程核查、补齐并跑通。
+- 状态文件、会话记录均未更新，`SUPERVISOR_STATUS.md` 仍停在第 46 程。
+
+### 2026-11-05 · 第 46 程（第 3 章章末收口）
+
+- 交接：第 45 程收尾 HEAD `1ce61f8`，工作区干净，第 2/3 章均不可达；
+  待确认第 11/12/13/14/15/16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `1ce61f8`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **10207 / 0**；
+  九套集成 **732 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接一致，无漂移。
+- 任务 1 · 第 3 章章末收口（章末流程与测试层，未产生可玩行为变化）：
+  - 核查：`_complete_chapter` 原有分支为第 1 章（`_chapter == 0`）置
+    `demo_cleared` 后 `_finish(true)`、第 2 章（`_chapter == 1`）`_finish(true)`
+    （第 35 程收口）、其余 `_chapter + 1 < chapter_count()` 自动 `_start_chapter`
+    否则 `_finish(true)`——第 3 章（`_chapter == 2`）此前自动进第 4 章。
+    第 3 章章末文本/选项/语音齐全（`CampaignData.chapter(2)` 4 句 outro、
+    两选项、`ch3_outro` 语音；`_apply_chapter_choice` 的 `lightless_sea`
+    分支：选项 0 恢复 20 生命 / 选项 1 获得未拥有遗物），**未新编剧情文本**。
+    续玩/重载逻辑章节无关：`_on_mds_room_loaded` 的 Boss 区在 `_boss_defeated`
+    时调用 `_resume_boss_aftermath`（不二次生成 Boss、无权柄时补授予、随后
+    `_complete_chapter`），`_start_mds_chapter` 从 run save 恢复 `_boss_defeated`。
+  - 改动：`scripts/game.gd` 的 `_complete_chapter` 在既有第 2 章分支之后新增
+    `_chapter == 2` 分支，章末选择后调用现有 `_finish(true)` 停章，不再自动
+    进入未实现的第 4 章；第 1 章分支、第 2 章分支与第 4 章分支（`_chapter + 1
+    < chapter_count()` / `else`）未改，只更新第 2 章分支上方已过时的注释。
+    章末选择界面/结局记录/续玩行为沿用第 35 程口径，不另起流程。
+  - 校验：`tests/integration_playability.gd` 的 `_test_ch3_bigmap_boss` 扩为
+    完整章末链路（第 41 程大区世界 + 第 3 章计划临时挂到真实主场景，
+    `ch3_boss` 起始）：真实 Boss 上击败 `LastReader` → 权柄二选一（基础池
+    续命/改写，按钮数 = `build_pool` 池大小）→ 第 3 章 outro → 章末选择 →
+    `_finish(true)`；断言 `_chapter` 仍 2、`_finished`、结局屏可见、
+    `_boss_defeated` 已记录，测试后 `_restore_chapter_world` 恢复旧第 3 章世界。
+    同一函数开头锁定不变项：`CHAPTER_PLAN_PATHS[2]/[3]` 仍空、
+    `MDS_WORLD_FILES[2]` 仍指旧 `chapter_3.mdsworld.json`、清房目标 7、
+    7 个遭遇节点、`ch3_branch_a/Arena` 波次表、权柄基础池、`boss_scene`
+    指向 `last_reader.tscn`。`_test_mds_chapter` 的旧线性世界章末断言由
+    「自动进第 4 章」改为「停在第 3 章」（`_finished` / `_chapter == 2` /
+    结局屏）；Boss 已死续玩沿用既有「重载不二次生成」断言，本程只把重载前
+    `paused` 复位（结局屏会暂停 SceneTree）。
+  - 不变项：第 3 章计划波次表/权柄池/事件数据/Boss 3 机制与 `boss_scene`
+    不变（`test_ch3_plan` / `test_ch3_content` / `test_ch3_boss` /
+    `test_ch3_world` 锁定）；旧第 3 章 9 房 / 17 门 / 世界文件仍在；第 1 章
+    Boss/流程/9 房间/6 波次/事件/清房目标 6 与章末流程不变；第 2 章计划/
+    波次表/大区世界/事件触发/权柄池/Boss 2 机制与章末收口不变；第 4 章无
+    内容改动。`CHAPTER_PLAN_PATHS[2]` 仍空、第 3 章仍不可达、计划仍未接入
+    `game.gd`。
+  - 未做（按任务单）：第 3 章大图验收套件、第 3 章门视觉、第 3 章地图标题/
+    敌人美术核查、第 3 章可达性开放、阿砚同行、新移动能力、NPC 立绘、MDS 插件、
+    敌人/场景美术、打包/导出/签名/安卓/触屏；待确认第 11/12/13/14/15/16 项
+    未施工、未猜测。
+- 任务 2 · 验证（HEAD 见本程日志末尾）：
+  - 单元 **10207 / 0**（与新断言前持平，本程新断言全在集成层）；
+    可玩性集成 **754 / 0**（732 + 22：章末链路 11、旧世界停章 +3/−1、
+    路线不变项 9）；其余八套集成 **102 / 613 / 207 / 113 / 59 / 391 / 45 /
+    2209** 与基线一致、全 0 失败；`--headless --import` / `--quit` 退出 0、
+    `ERROR` 0；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。
+- 本程提交：`8d721e5` feat: stop chapter 3 at its own boundary（`_complete_chapter`
+  新增 `_chapter == 2` 停章分支）；`bfa23ff` test: cover the chapter 3 ending
+  closure（真实大区世界章末链路 11 条、旧世界停章 +3/−1、路线不变项 9 条）；
+  `dacdf89` docs: record the chapter 3 ending pass（状态文件、session、ADR、
+  记忆索引，并在第 2 章 ADR 标注其「第 3/4 章自动续章」只对第 4 章成立）。
+  临时探针未创建，收尾工作区干净。
+
+### 2026-11-05 · 第 45 程（第 3 章 Boss 3「最后的读者」机制与 `boss_scene` 路由）
+
+- 交接：第 44 程收尾 HEAD `ae22f96`，工作区干净，第 2/3 章均不可达；
+  待确认第 11/12/13/14/15/16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `ae22f96`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **10113 / 0**；
+  九套集成 **705 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接基线一致，无漂移。
+- 任务 1 · 第 3 章 Boss 3 机制与计划路由（机制/测试层，未产生可玩行为变化）：
+  - 核查：第 39 程记录属实——`scripts/bosses/last_reader.gd`
+    （`LastReader extends InkArchivist`）与 `scenes/bosses/last_reader.tscn`
+    已存在，已有镜面三连弹与「读页」封印；战役表 HP 380 / 伤害 15 / 速度 78、
+    立绘 `last_reader.png`、`boss_script == "reader"`，**没有** `boss_scene`；
+    第 3 章计划此前也没有 `boss_scene`，`_spawn_boss` 靠 `boss_script` 兜底。
+  - 机制（依据剧情圣经第三章「镜面弹幕和『读页』封印昌子的短语」与第 42 程
+    章节文案，未新增剧情事实）：镜面弹幕按阶段 **3 / 5 / 7** 枚、张角
+    **0.28 / 0.40 / 0.52 rad**、每枚 **0.7×** 攻击力、速度 **270**；读页阶段 2
+    起每第 3 次攻击，`InkWarning`（**0.8×** 攻击力）标记玩家位置并封印一个
+    短语槽 **3.0 s**（槽位随攻击计数交替），阶段 3 每 4 拍轮到一次；阶段 3
+    空白页 **11 s** 周期——展开 **4.5 s**（承伤 **×1.5**）、合书 **6.5 s**
+    （承伤 **×0.6**），进入阶段 3 先展开，sprite tint 提示窗口；阶段 1–2
+    承伤 **×1.0**；阶段 3 四拍改写 / 读页 / 镜面 / 墨雨。以上全部为**暂定
+    口径**，由 `tests/test_ch3_boss.gd` 锁定，后续试玩校准须同步改测试并登记。
+  - 路由：`resources/chapters/chapter_3_demo.tres` 的 `boss_scene` 指向
+    `res://scenes/bosses/last_reader.tscn`；`_spawn_boss` 优先级不变（战役表
+    `boss_scene` → 计划 `boss_scene` → `smiling` → `reader` 兜底），第 1/2 章
+    Boss 与通用生成/血条/阶段横幅/权柄/outro/结束流程未改。
+  - 大图生成高度：第 35 程 `_enemy_spawn_y()` 已对任意 `big_map` 计划返回
+    `-ENEMY_FOOT_Y - 2`（-18 px），第 3 章计划挂上后自动生效；本程不改函数，
+    只补断言（计划 → -18、无计划 → 旧 250 px）与真实大区集成断言（生成在
+    `Arena` 地面线之上）。
+- 任务 2 · 校验（测试层，就近扩展现有套件，未另起重复套件）：
+  - `tests/test_ch3_boss.gd`（新增，**90** 断言）：计划路由/场景类型、战役
+    数值/立绘/`boss_script` 不变、三阶段镜面数量/张角/伤害、读页槽位/时长/
+    预警、阶段轮换、空白页承伤窗口与信号、生成高度、死亡关闭空白页、
+    第 1/2 章隔离与 `CHAPTER_PLAN_PATHS[2]/[3]` 仍空。
+  - `tests/integration_playability.gd`（705 → **732**，+27）：新增
+    `_test_ch3_bigmap_boss`，把第 41 程大区世界与第 3 章计划临时挂到真实主场景
+    （`ch3_boss` 起始），走真实 `room_loaded` 生成：`LastReader` 由计划路由、
+    数值来自战役表、生成在 `Arena` 地面线之上、阶段 2 文案用第 3 章选句键、
+    空白页窗口在真实 Boss 上开合、继承的纸页波/墨雨在真实树内生成、Boss 击败
+    后重载不再二次生成；测试后 `_restore_chapter_world` 恢复旧世界。
+  - 就地更新 `test_ch3_plan`（726 → **728**）、`test_ch3_content`（614 → **615**）、
+    `test_ch3_world`（764 → **765**）的「无 `boss_scene`」期望，其余不变项断言
+    原样保留。
+- 不变项：`CHAPTER_PLAN_PATHS[2]` 仍空、`game.gd` 章节路由与章末流程未改
+  （第 3 章末仍自动进第 4 章）；旧第 3 章 9 房 / 17 门 / 世界文件仍在；第 3 章
+  计划波次表/权柄池/事件数据/大区世界与场景未改；第 1 章 9 房间 / 6 波次 /
+  事件 / 清房目标 6 不变；第 2 章计划/波次/大区世界/事件触发/权柄池/Boss 2
+  机制与文案不变；`InkArchivist` 基类与 `LungBellGuardian` 未改。
+- 验证（改动后）：单元 **10207 / 0**（基线 10113 +94：`test_ch3_boss` +90、
+  `test_ch3_plan` +2、`test_ch3_content` +1、`test_ch3_world` +1）；九套集成
+  **732** / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209 全 0 失败、各日志
+  `ERROR` 0；`--import` / `--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；
+  demo 像素资产 **36 / 0**。第 1 章无回归，第 2 章计划/世界/事件触发/集成无
+  回归，第 2/3 章仍不可达。
+- 待确认项：第 14（视野压缩，`room_darkness = false`）、15（无 sea 层、未改
+  `LivingBackdrop`、未新绘背景）、16（未新增 `ch3_shortcut` 授予）全部留空
+  未施工；第 11/12/13 项未碰；章末自动进第 4 章的缺口未改。未新增待拍板项。
+- 未做（按任务单）：第 3 章接入 `game.gd`/可达性/章节路由/章末流程、
+  第 3 章大图验收套件、第 3 章门视觉专项打磨、阿砚同行、新移动能力、NPC 立绘、
+  MDS 插件本体、敌人/场景美术、打包/导出/安装器/签名/安卓/触屏。
+- 本程提交：`bea43fa` feat: give the last reader its chapter 3 boss mechanics
+  （Boss 3 机制、计划 `boss_scene` 路由、就地更新三个既有套件的「无
+  `boss_scene`」期望）；`9b99bda` test: cover the chapter 3 boss mechanics and
+  routing（`test_ch3_boss` 90 断言、可玩性集成 +27）；`1cd5f3f` docs: record
+  the chapter 3 boss 3 pass（状态文件、session、ADR、记忆索引）。临时探针未
+  创建，收尾工作区干净。
+
+### 2026-11-05 · 第 44 程（第 3 章内容数据层第 3 步：事件区真实自动触发）
+
+- 交接：第 43 程收尾 HEAD `cecaffa`，工作区干净，第 2/3 章均不可达；
+  待确认第 11/12/13/14/15/16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `cecaffa`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **10100 / 0**；
+  九套集成 **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接基线一致，无漂移。
+- 任务 1 · 第 3 章事件区真实自动触发（触发机制与测试层，未产生可玩行为变化）：
+  - 结论：第 34 程的 `_on_mds_room_loaded` 区域级大图事件分支本身是章节无关的
+    判定（`big_map` + `type == "event"` + `_event_data(room_id)` 非空），第 42 程
+    已把 `_event_data` 的路由扩到第 3 章（`Ch3EventData`）。因此 `ch3_event`
+    无需新增任何触发代码：计划与大区世界挂上后，进入区域即自动打开第 3 章
+    事件页，键 = 计划事件节点 id `ch3_event/event`。本程未新增第 3 章专属
+    触发路径，只给该分支补了一句「章节无关」的注释说明（无行为改动）。
+  - 效果与结算完全沿用既有代码：文案/选项由 `Ch3EventData.pick(run_seed,
+    ch3_event/event)` 确定性轮换、不耗 run RNG；读 → 污染 +8（经难度/抗性倍率、
+    上限 100）+ 解明一个残页词 / 兜底残页 +6；拿 → 残页 +12；结算写
+    `cleared_encounters["ch3_event/event"]`，计入清房目标 7（HUD 分母 8）。
+  - 未接入 `game.gd`：`CHAPTER_PLAN_PATHS[2]` 仍空、章节路由与章末流程未改、
+    旧第 3 章 9 房世界仍被游戏使用；第 3 章仍未开放可达性。
+- 任务 2 · 校验（测试层，就近扩展现有套件，未另起重复套件）：
+  - `tests/test_ch3_content.gd`（601 → **614**，+13）：新增
+    `_test_event_trigger_inputs`——把第 3 章计划挂到独立 `game.gd` 实例，验证
+    区域触发判定的三项输入（`plan.big_map`、`ch3_event` 的 `type == "event"`、
+    `_event_data("ch3_event")` 非空）、触发键 = 计划事件节点 id、事件节点无普通
+    波、清房目标 7 / HUD 分母 8、`RoomProgress.is_recorded` 用同一键的一次性
+    语义；不改章节路由。
+  - `tests/integration_playability.gd`（671 → **705**，+34）：新增
+    `_test_ch3_bigmap_event_trigger`，把第 41 程的 `chapter_3_bigmap_world.tscn`
+    与第 3 章计划临时挂到真实主场景（与 `_start_mds_chapter` 同构），从
+    `ch3_event` 启动并走真实 `room_loaded` 触发：进入即开第 3 章事件页、文案/
+    标题/两选项 = `Ch3EventData.pick(run_seed, ch3_event/event)`、开页与「拿」
+    不耗 run RNG（「读」解明残页词时沿用既有 run RNG）；拿 → 残页 +12 且提示
+    文案正确、结算键 / 清房计数 +1、run save
+    落盘同一键；重载不重开、不暂停、不重复计数/奖励；回退结算后重进再验读 →
+    污染 +8（含倍率与上限）+ 解明一残页词或兜底 +6。测试后调用
+    `_restore_chapter_world` 重新进入第 3 章，让既有旧世界结构巡检照常跑；
+    `CHAPTER_PLAN_PATHS[2]`、游戏路由与旧世界均未改。
+  - 不变项仍由既有断言锁定：`CHAPTER_PLAN_PATHS[2]/[3]` 仍空、旧第 3 章
+    9 房/17 门/世界文件仍在、第 3 章大区世界与场景未改、第 3 章计划波次表与
+    权柄池不变、第 1 章 9 房间/6 波次/事件/清房目标 6 不变、第 2 章计划/波次表/
+    大区世界/事件数据/事件触发/权柄池/Boss 文案不变。
+- 验证（改动后）：单元 **10113 / 0**（基线 10100 +13，全部来自
+  `test_ch3_content`）；九套集成 **705** / 102 / 613 / 207 / 113 / 59 / 391 /
+  45 / 2209 全 0 失败、各日志 `ERROR` 0；`--import` / `--quit` 退出 0、`ERROR` 0；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。第 1 章无回归，第 2 章
+  计划/世界/事件触发/集成无回归，第 2/3 章仍不可达。
+- 待确认项：第 14（视野压缩，`room_darkness = false`）、15（无 sea 层、未改
+  `LivingBackdrop`、未新绘背景）、16（未新增 `ch3_shortcut` 授予）全部留空
+  未施工；第 11/12/13 项未碰；章末自动进第 4 章的缺口未改。未新增待拍板项。
+- 未做（按任务单）：第 3 章接入 `game.gd`/可达性/章节路由/章末流程、Boss 3
+  机制/`boss_scene`/专属场景、第 3 章大图验收套件、第 3 章门视觉专项打磨、
+  阿砚同行、新移动能力、NPC 立绘、MDS 插件本体、敌人/场景美术、打包/导出/
+  安装器/签名/安卓/触屏。
+- 本程提交：`babd537` docs: note the big-map event trigger is chapter-agnostic
+  （`game.gd` 注释：分支章节无关、可达性仍由计划槽决定）；`1203ed9` test: cover
+  the chapter 3 event region trigger（`test_ch3_content` +13、可玩性集成 +34）；
+  `631a930` docs: record the chapter 3 event trigger（状态文件、session、记忆
+  索引）；`47b9a53` docs: keep the chapter 3 trigger RNG wording exact（选句与
+  「拿」不耗 RNG、「读」解词沿用既有 RNG 的措辞校正）。临时探针未创建，收尾
+  工作区干净。
+
+### 2026-11-05 · 第 43 程（第 3 章内容数据层第 2 步：波次接线）
+
+- 交接：第 42 程收尾 HEAD `4bdeb28`，工作区干净，第 2/3 章均不可达；
+  待确认第 11/12/13/14/15/16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `4bdeb28`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **10084 / 0**；
+  九套集成 **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接基线一致，无漂移。
+- 任务 1 · 第 3 章波次接线（数据层与测试层，未产生可玩行为变化）：
+  - `resources/chapters/chapter_3_demo.tres`：4 个战斗区补 `wave` 字典，键 =
+    6 个战斗遭遇节点 id（`ch3_branch_a/Arena`、`ch3_branch_a/Arena2`、
+    `ch3_branch_b/Arena`、`ch3_well/Arena`、`ch3_well/Arena2`、
+    `ch3_elite/Arena`），值按计划顺序逐字复用 `ROOM_WAVES[2]` 六波；未新增、
+    未修改波次内容。事件节点 `ch3_event/event` 无波、`ch3_boss` 不占普通波次、
+    清房目标仍 7。
+  - `content_pending` 处置：该标志第 40 程只承载「推迟波次表校验」；波次接线
+    完成后按 ADR 约定改回 `false`，`validate()` 恢复校验波次表（区域/节点 id/
+    门图校验不变）。标志本身保留在 `ChapterPlanData`（默认 `false`、向后兼容）；
+    图夹具 `tests/fixtures/big_room/ch3_graph.mdsworld.json` 顶层的
+    `content_pending: true` 是夹具元数据（不是该字段），本程未改，测试仍锁定。
+  - 仅更新 `chapter_plan_data.gd` 中 `content_pending` 的文档注释（不再以第 3 章
+    「波次待补」为例）；无行为改动。`game.gd`、章节路由、章末流程、第 1/2 章
+    计划与波次、第 3 章大区世界/场景均未改。
+- 任务 2 · 校验（测试层，就近扩展现有套件，未另起重复套件）：
+  - `tests/test_ch3_content.gd`（570 → 601）：波次段改为接线校验——6 个 `wave`
+    键恰好等于 6 个战斗遭遇节点 id、每键取值 == `ROOM_WAVES[2]` 对应波原文、
+    键锚定本区且唯一、事件节点/事件区/Boss 区无波、`validate_waves()` 干净、
+    `content_pending = false`；新增 `_test_runtime_wave_lookup`（12 断言）：把
+    第 3 章计划挂到独立 `game.gd` 实例，经 `_plan_wave()` 按节点 id 读回六波并
+    验证事件/Boss/未知节点为空（证明第 33 程通用大图分支可直接取用，但不把
+    计划接入 `game.gd`、不改章节路由）。
+  - `tests/test_ch3_plan.gd`（734 → 726）：`_test_pending_content` 改为
+    `_test_wave_wiring`，锁 6 个波次键、逐遭遇非空、事件/Boss 无波、计划校验
+    干净；`content_pending` 的局部性改为「副本删波 + 标志开 → `validate()` 干净；
+    标志关 → 报六条缺波次」，保留第 40 程的关口。
+  - `tests/test_ch3_world.gd`（771 → 764）：计划侧期望同步为 `content_pending
+    = false`、`validate_waves()` 干净、共 6 个波次键；世界/场景/门/电梯断言不变。
+  - 不变项仍由既有断言锁定：`CHAPTER_PLAN_PATHS[2]/[3]` 仍空、旧第 3 章
+    9 房/17 门/世界文件仍在、第 3 章大区世界与场景未改、第 1 章 9 房间/6 波次/
+    事件/清房目标 6、第 2 章计划/波次表/大区世界/事件数据/权柄池/Boss 文案不变。
+- 验证（改动后）：单元 **10100 / 0**（+16 = `test_ch3_content` +31、
+  `test_ch3_plan` −8、`test_ch3_world` −7）；九套集成
+  **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败、各日志
+  `ERROR` 0；`--import` / `--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；
+  demo 像素资产 **36 / 0**。第 1 章无回归，第 2 章计划/世界/集成无回归，
+  第 2/3 章仍不可达。
+- 待确认项：第 14（视野压缩，`room_darkness = false`）、15（无 sea 层、未改
+  `LivingBackdrop`、未新绘背景）、16（未新增 `ch3_shortcut` 授予）全部留空
+  未施工；第 11/12/13 项未碰；章末自动进第 4 章的缺口未改。未新增待拍板项。
+- 未做（按任务单）：第 3 章接入 `game.gd`/可达性/章节路由/章末流程、事件区
+  真实自动触发、Boss 3 机制/`boss_scene`/专属场景、第 3 章大图验收套件、
+  第 3 章门视觉专项打磨、阿砚同行、新移动能力、NPC 立绘、MDS 插件本体、
+  敌人/场景美术、打包/导出/安装器/签名/安卓/触屏。
+- 本程提交：`0334602` feat: wire the chapter 3 waves into the plan（计划波次表、
+  `content_pending` 清零与文档注释、`test_ch3_content`/`test_ch3_plan`/
+  `test_ch3_world` 同步）；`f9daea5` docs: record the chapter 3 wave wiring
+  （状态文件、session、记忆索引）。临时探针未创建，收尾工作区干净。
+
+### 2026-11-05 · 第 42 程（第 3 章内容数据层第 1 步：事件 + 权柄池 + Boss 文案）
+
+- 交接：第 41 程收尾 HEAD `64b9c93`，工作区干净，第 2/3 章均不可达；
+  待确认第 11/12/13/14/15/16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `64b9c93`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **9512 / 0**；
+  九套集成交接基线 **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209**
+  （其中 671 / 102 / 613 本机在改动前复测一致，其余六套沿用第 41 程收尾记录）；
+  退出泄漏交接 **10/10 clean**；demo 像素资产 **36 / 0**。无基线漂移。
+- 任务 1 · 第 3 章内容数据层第 1 步（只做数据层，未产生可玩行为变化）：
+  - 新增 `scripts/data/ch3_event_data.gd`（`Ch3EventData`）：7 组无光海文案
+    （倒影 / 盐页 / 小读者 / 镜面 / 海页 / 吊影 / 翻页），固定「读 / 拿」两项，
+    效果复用第 32 程口径（读 → 污染 +8 + 解明一个残页词 / 兜底残页 +6；
+    拿 → 残页 +12），常量与第 2 章一致；`pick` 按 seed + 事件节点 id
+    `ch3_event/event` 轮换，不消耗 run RNG。
+  - `game.gd` 的 `_event_data` 扩到第 3 章（第 1 章原键/原值、第 2 章
+    `Ch2EventData`、第 4 章空均不变）；`_grant_chapter_authority` 已在第 32 程
+    按计划 `authority_pool` 授予，本程只给 `chapter_3_demo.tres` 补
+    `authority_pool = [续命, 改写]`（条件项仍由 `ContentLibrary` 追加）。
+  - `BossEntranceData` 第 3 章 8 条入场文案、`BossPhaseData` 阶段 2/3 各 8 条；
+    第 4 章仍静默；第 1 章选句键与第 2 章选句键/文案不变；Boss 3「最后的读者」
+    数值（HP 380 / 伤害 15 / 速度 78）/ 立绘 / `boss_script = reader` 未改。
+  - 未接入 `game.gd`、未改章节路由与章末流程；计划仍 `content_pending`、
+    无 `wave` 表、无 `boss_scene`。
+- 任务 2 · 校验（测试层）：新增 `tests/test_ch3_content.gd`（**570** 断言）
+  覆盖事件确定性/效果类型/消息格式/RNG、四章 `_event_data` 路由、权柄基础池
+  与条件边界/顺序、Boss 入场/阶段文案不回落第 1/2 章、Boss 3 数值/立绘未改、
+  7 个遭遇节点唯一且锚定、6 场战斗 ↔ `ROOM_WAVES[2]` 六波顺序、事件节点无波、
+  清房目标 7、计划仍无 `wave` 表（6 条缺波次错误），并锁不变项
+  （`CHAPTER_PLAN_PATHS[2]/[3]` 仍空、旧第 3 章 9 房/17 门/世界文件仍在、
+  第 1 章 9 房计划/6 波/事件/清房目标 6、第 2 章计划/大区世界/事件/权柄池/
+  Boss 文案不变）。既有测试同步：`test_ch3_plan` 730 → 734（基础池断言）、
+  `test_ch3_world` 771 不变、`test_ch2_content` 断言数不变、
+  `test_boss_entrance_content` 74 → 72（静默章节收窄到第 4 章）、
+  `integration_ch1_demo` 同一断言改期望（数量不变）。
+- 验证（改动后）：单元 **10084 / 0**（基线 9512 + 570 + 4 − 2）；九套集成
+  **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败、各日志
+  `ERROR` 0；`--import`/`--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；
+  demo 像素资产 **36 / 0**。第 1 章无回归，第 2 章计划/世界/集成无回归，
+  第 2/3 章仍不可达。
+- 待确认项：第 14（视野压缩，`room_darkness = false`）、15（无 sea 层、未改
+  `LivingBackdrop`、未新绘背景）、16（未新增 `ch3_shortcut` 授予）全部留空
+  未施工；第 11/12/13 项未碰；章末自动进第 4 章的缺口未改。未新增待拍板项。
+- 未做（按任务单）：第 3 章接入 `game.gd`/可达性/章节路由/章末流程、波次
+  接线（计划 `wave`）、事件区真实自动触发、Boss 3 机制/`boss_scene`/专属场景、
+  第 3 章大图验收套件、第 3 章门视觉专项打磨、阿砚同行、新移动能力、NPC 立绘、
+  MDS 插件本体、敌人/场景美术、打包/导出/安装器/签名/安卓/触屏。
+- 本程提交：`dd68f54` feat: add the chapter 3 content data layer（`Ch3EventData`、
+  计划权柄池、Boss 3 文案、章节事件路由、`test_ch3_content` 570 断言与既有测试
+  同步）；`7d7c56a` docs: record the chapter 3 content data layer（状态文件、
+  session、记忆索引与 ADR 更新）。临时探针 `tests/probe_free42.gd` 用完已
+  删除，收尾工作区干净。
+
+### 2026-11-05 · 第 41 程（第 3 章大地图施工第 2 步：真实大区世界，只做结构层）
+
+- 交接：第 40 程收尾 HEAD `9f0fe84`，工作区干净，第 2/3 章均不可达；brief42/session42
+  曾因 Magpie 网关不通启动失败（空日志留存），本程按 brief42 原任务完整执行。待确认
+  第 11/12/13/14/15/16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `9f0fe84`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **8739 / 0**；
+  九套集成 **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接逐项一致，无基线漂移。
+- 任务 1 · 第 3 章真实大区世界与房间（只做结构层，未产生可玩行为变化）：
+  - 9 个 `BigRoomData`（`resources/rooms/ch3_bigmap/*.tres`）：计划尺寸
+    2560×1440 / 2560×2160（纵井）/ 3840×2160（精英、Boss）；地面贴底边
+    （`H-16`，16 px 厚）、平台 80 px 阶梯链，`validate()` 全空；复用
+    `ch1_tiles.tres`；背景用既有 `lightless_sea.png`（绘画图、非像素放大）、
+    按区 `backdrop_modulate`、`motes` 氛围密度 0.5。
+  - 9 个 `MDSBigRoom` 场景（`scenes/mds/ch3_bigmap/*.tscn`）：`fall_margin = 240`
+    （metadata `fall_below_bounds = 240`）；内容节点严格按计划 id（`Arena`/
+    `Arena2`/`Chest1`/`Stele1`/`Shop`/`Bench`/`Event`）；事件区作者
+    `ch3_event/event`；Boss 区只放结构 `Arena`；`ch3_entry` 作者 `SpawnPoint`
+    （`save_point`、(400,1328) = 台阶面 1344 − `FOOT_Y`）与惰性到达门
+    `shortcut_arrival`。
+  - 纵向/捷径骨架复用第 29 程管线：`branch_b`/`hub`/`vault` 各 1 电梯、
+    `well` 1 电梯 + 3 单向落台、`elite` 1 电梯、枢纽长椅；电梯未写 `speed`，
+    沿用 `MovingPlatform.speed` 管线默认 **80 px/s**（第 12 项只针对第 2 章，
+    本程未给第 3 章定速度）。
+  - 独立世界 `scenes/mds/chapter_3_bigmap.mdsworld.json` +
+    `chapter_3_bigmap_world.tscn`：9 区单矩形、原点 32 px 对齐、
+    `start_room = ch3_entry`；区域 `Lightless Sea` 雾 + 雨、
+    `boss_background: deep_water`、无 `backdrop_image`；22 门 = 20 有向 +
+    2 只到达；显式单向 `elite_boss` 与 `hub_shortcut_entry`
+    （`requires = ["ch3_shortcut"]`，来源待第 16 项，屏障默认封闭）。
+    世界 JSON 由第 40 程夹具镜像生成（逐区字段一致，仅加 `scene_path`）。
+  - 旧第 3 章 9 小房间世界/场景原地保留、未改语义；新世界不被 `game.gd` 引用。
+- 任务 2 · 校验（测试层）：新增 `tests/test_ch3_world.gd`（**771** 断言）
+  交叉校验计划↔真实世界（逐区尺寸/内容 id/门/坠落/区域氛围/可达性/不重叠/
+  电梯列/出生点/夹具镜像/不变项）；`tests/test_ch3_plan.gd` 728 → **730**
+  （把第 40 程的「目录不存在」改为「目录存在且各 9 个文件」）。临时探针
+  `tests/probe_ch3world41.gd` 用 `MDSWorldGame` 逐区加载确认 9 区 0 校验错误、
+  22 门、1 个捷径屏障、背景覆盖、坠落 240、出生点正确，测后删除。
+- 验证（改动后）：单元 **9512 / 0**（基线 8739 + 773）；九套集成
+  **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败、各日志
+  `ERROR` 0；`--import`/`--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；
+  demo 像素资产 **36 / 0**。第 1 章无回归，第 2 章计划/世界/集成无回归，
+  第 2/3 章仍不可达。
+- 待确认项：第 14（视野压缩，`room_darkness = false`）、15（无 sea 层、未改
+  `LivingBackdrop`、未新绘背景）、16（未新增 `ch3_shortcut` 授予）全部留空未施工；
+  第 11/12/13 项未碰；章末自动进第 4 章的缺口未改。未新增待拍板项。
+- 未做（按任务单）：第 3 章接入 `game.gd`/可达性/章节路由/章末流程、
+  `Ch3EventData`、波次接线、权柄池、Boss 3 机制/`boss_scene`/文案、第 3 章大图
+  验收套件、第 3 章门视觉专项打磨、阿砚同行、新移动能力、NPC 立绘、MDS 插件本体、
+  敌人/场景美术、打包/导出/安装器/签名/安卓/触屏。
+- 本程提交：`b86dff6` feat: build the chapter 3 big-map region world（9 个
+  `BigRoomData`、9 个 `MDSBigRoom` 场景、独立世界 JSON/场景、世界测试、
+  计划测试目录断言、夹具注释）、`662e0b4` test: lock the chapter 3 clear target
+  and kept content（清房目标 7、第 1 章 6 波、第 2 章世界、旧第 3 章 6 波、
+  事件模块不变项）；文档提交 `57dc444`（状态文件、session、记忆索引）、
+  `e59f4a6`（补充断言记录与提交清单）。
+
+### 2026-11-05 · 第 40 程（第 3 章大地图施工第 1 步：计划与图骨架）
+
+- 交接：第 39 程收尾 HEAD `01c29d5`，工作区干净，第 2 章与第 3 章均不可达；待确认第 11/12/13/14/15/16 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `01c29d5`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **8011 / 0**；
+  九套集成 **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接逐项一致，无基线漂移。
+- 任务 1 · 第 3 章计划与图骨架（只做计划层，未产生可玩行为变化）：
+  - `ChapterPlanData` 新增 `content_pending`（默认 `false`，向后兼容）：`validate()`
+    仍校验区域、节点 id 与门图，只跳过 `validate_waves()`；第 1/2 章计划保持
+    `false`，校验结果不变。测试把第 3 章计划的标志临时关掉，确认仍报六条
+    「encounter … needs a wave」，证明跳过范围是局部的。
+  - 新增 `resources/chapters/chapter_3_demo.tres`：9 区连通图（`ch3_entry` 入口、
+    `ch3_branch_a`/`ch3_branch_b` 两条可回环支路、`ch3_hub` 枢纽、`ch3_well`
+    纵井、`ch3_vault` 隐藏书库、`ch3_event` 事件占位、`ch3_elite` 精英、
+    `ch3_boss` 末端）。尺寸 2560×1440 / 2560×2160（纵井）/ 3840×2160（精英、Boss）；
+    每区 `fall_below_bounds = 240`。
+  - 内容节点：6 个战斗遭遇（支路 A 2、支路 B 1、纵井 2、精英 1）对应旧第 3 章
+    `ROOM_WAVES[2]` 六波（本程不写 `wave`），事件区 1 个占位遭遇；
+    `clear_target()` 派生 **7**（第 1 章仍 6、第 2 章仍 7，未改）。3 宝箱、2 残碑，
+    全部 `region/Node` 节点 id。
+  - 门：11 条 = 9 双向 + 2 显式单向（`elite_boss` 进 Boss 不可返回；
+    `hub_shortcut_entry` 捷径 `requires: ["ch3_shortcut"]`，来源待第 16 项拍板、
+    默认不可通行）。图内两个回环，Boss 为末端。
+  - 占位/留空：无 `wave`、无 `authority_pool`、无 `boss_scene`、无事件文案/效果、
+    无 Boss 入场/阶段文案、无 `ch3_shortcut` 授予来源；事件区/Boss 区/捷径门
+    均有注释标明「待后续内容程」或「待拍板」。第 14（视野压缩）、15（海面母题）
+    只在计划注释与夹具顶层注释记录，未实现、未预设数值/机制；未给大区管线加
+    sea 层、未改 `LivingBackdrop`、未新绘背景。
+  - 新增图骨架夹具 `tests/fixtures/big_room/ch3_graph.mdsworld.json`：
+    `fixture: true`、`content_pending: true`、无 `scene_path`/房间场景、游戏从不
+    引用；镜像旧世界区域 `Lightless Sea` 的雾/雨与 `boss_background=deep_water`，
+    不写 `backdrop_image`；20 扇有向门 + 2 扇到达门。
+  - 新增 `tests/test_ch3_plan.gd`（728 断言）：计划形状/类型/尺寸/坠落平面/内容 id/
+    清房目标/图可达性/单向门/捷径占位/待内容标记 + 计划↔夹具逐区逐门交叉校验 +
+    夹具几何（不重叠、门在正确边、门位在房间内、区域相邻、捷径不邻接）+
+    第 1/2 章计划不变 + `game.gd` 路由槽仍为空 + 第 3 章旧世界文件仍在。
+  - 未接入：`CHAPTER_PLAN_PATHS[2]` 仍为空（既有测试锁定），`game.gd` 未改；
+    旧 `chapter_3.mdsworld.json` / `chapter_3_world.tscn` 与 9 个 `MDSChapterRoom`
+    场景未改未删、仍被游戏使用；第 3 章仍不可达，章末仍会自动进第 4 章。
+- 验证（改动后）：单元 **8739 / 0**（+728，全部来自 `test_ch3_plan.gd`）；
+  九套集成 **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败；
+  `--import`/`--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；像素资产 **36 / 0**。
+  第 1 章 9 房间/6 波次/事件/清房目标 6/结束流程与第 2 章计划/世界均无回归。
+- 未做（按任务单）：第 3 章真实大区世界/房间（`resources/rooms/ch3_bigmap/`、
+  `scenes/mds/ch3_bigmap/`、世界 JSON/场景）、`Ch3EventData`、波次接线、权柄池、
+  Boss 3 机制/`boss_scene`/入场与阶段文案、第 3 章大图验收套件、第 2–4 章可达性、
+  第 11/12/13 项相关数值/相机/HUD、第 14/15/16 项机制、阿砚同行、新移动能力、
+  NPC 立绘、MDS 插件本体、敌人/场景美术、打包/导出/安装器/签名/安卓/触屏。
+- 本程提交：`51ce8a7` feat: author the chapter 3 big-map plan and graph skeleton（`content_pending`、第 3 章计划、图夹具、728 断言测试）；文档提交 `ccede15` docs: record the chapter 3 plan and graph skeleton（状态文件、session、ADR、记忆索引）。
+
+### 2026-11-05 · 第 39 程（第 3 章大地图可行性核查，只查不施工）
+
+- 交接：第 38 程收尾 HEAD `5877b2a`，工作区干净，第 2 章仍不可达；待确认第 11/12/13 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `5877b2a`，Godot 4.7.stable.official.5b4e0cb0f）：
+  `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **8011 / 0**；
+  九套集成 **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败；
+  退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接逐项一致，无基线漂移。
+- 任务 1 · 第 3 章大地图可行性核查（只查，未改产品代码/资源）：
+  - 世界/房间：`chapter_3_world.tscn` + `chapter_3.mdsworld.json` 共 **9 房、17 门**
+    （7 right / 7 left / 3 door），全部 1280×720 单矩形、单层地面（面 y=560），
+    平台 2/2/1 块；`ch3_03`/`ch3_05` 各 1 宝箱，`ch3_rest` 商店+残碑+捷径门
+    （door2→`ch3_02`），`ch3_vault` 宝箱+残碑+返回门，`ch3_boss` Arena/Boss；
+    全部 `MDSChapterRoom`（`chapter_index=2`），背景 `lightless_sea.png`
+    + `LivingBackdrop(sea=true)`，区域雾+雨、`background` 为空、
+    Boss 房 `boss_background=deep_water`（探针确认 MDS 解析）。
+  - 文本/语音/Boss：第 3 章 **6 句开场、4 句章末、2 个选项**；`ch3_intro/outro`、
+    `boss_reader_phase2/3` 语音与 `chapter_sea.ogg` 均存在；Boss「最后的读者」
+    HP 380 / 伤害 15 / 速度 78 / `boss_script=&"reader"` / 立绘 `last_reader.png`
+    （256×256 RGBA，持书孩子）/ `boss_voice="reader"`；`last_reader.gd` +
+    `last_reader.tscn` 存在，已实现镜面三连弹与「读页」封印短语；**没有** `boss_scene`
+    键，靠 `_spawn_boss` 的 `boss_script == "reader"` 旧分支路由（探针确认实际脚本）。
+  - 敌人/波次/美术：`ROOM_WAVES[2]` 已配 6 波，六组首发与数据/场景齐全；
+    9 种 spawn 中 6 种已接线专属精灵（`echo_enemy`/`hanging_scribe`/`mirror_sniper`/
+    `typo_beast`/`scribe_bug`/`page_swarm`），3 种继续回退第 1 章美术
+    （`rust_whisperer`→`scribe_bug`、`collapse_husk`→`blank_man`、`lung_moth`→`hanging_scribe`），
+    三种都在第 38 程缺失清单内，**无新增第 3 章专属缺图**；`echo_enemy` 的 data id 是
+    `amnesiac_echo`，美术按 spawn id 解析（已核实渲染正确）。
+  - 计划/内容数据：`chapter_3_demo.tres` 不存在、`CHAPTER_PLAN_PATHS[2]` 为空、
+    测试 `ch2_game_ch3_has_no_plan_yet` 锁住；`resources/rooms/ch3_bigmap/` 与
+    `scenes/mds/ch3_bigmap/` 不存在；`_event_data()` 返回 `{}`（无 `Ch3EventData`）；
+    无计划权柄池（Boss 后不开权柄）；`BossEntranceData`/`BossPhaseData` 第 3 章返回
+    空串/空数组（静默入场、无阶段 flavor、不回落第 1 章）；地图标题已由第 38 程
+    派生为「无光海地图」；无计划时清房目标 6、HUD 分母 7、坠落平面 850；
+    `_complete_chapter()` 仍会自动续章进第 4 章。
+  - 叙事：剧情圣经「最后的读者是孩子」「故事需要有人翻页」等目前只有文本，
+    无事件房/对话节点/剧情实体；仓库无 companion/follower 控制器（MDS `carry_over`
+    未使用），第 3 章没有 NPC 同行实体。
+  - 承载力结论：**第 2 章的大区连通图路线可直接承载第 3 章**——`BigRoomData` +
+    `MDSBigRoom` 无章节判断，第 27 程的节点 id 结算/区域坠落平面/计划目标均章节无关；
+    第 3 章旧世界可原地保留。**缺口在内容层**：计划/图骨架、真实大区世界、事件数据、
+    权柄池、Boss 入场/阶段文案、第 3 章大图验收套件。
+  - 第 3 章独有差异：海面母题只在 `LivingBackdrop(sea=true)` 里（大区管线无 sea 层，
+    `BigRoomAmbient` 仅 motes/embers）；GDD「视野压缩」完全未实现（无 darkness/vignette，
+    `room_darkness=false`）；无水域物理；Boss 3 已有专属脚本但未接计划；捷径
+    `ch3_shortcut` 无授予来源；章末会自动进第 4 章；入口需作者 `SpawnPoint`；
+    背景为 1536×864 绘画（与第 2 章同一已知缺口）；大区性能待实测。
+  - 施工顺序建议（前置依赖见专节 C）：计划/图骨架 → 真实大区世界 → 内容数据层 →
+    Boss 3 机制 → 系统验收；第 3 章可达性仍须单独拍板且不能早于第 2 章。
+  - 新增待确认第 14（视野压缩口径）、15（大图海面母题）、16（`ch3_shortcut` 来源），
+    均为第 3 章施工前需定，本程未设计、未施工。
+- 验证（收尾，改动仅文档）：单元 **8011 / 0**；九套集成 **671 / 102 / 613 / 207 /
+  113 / 59 / 391 / 45 / 2209** 全 0 失败；`--import`/`--quit` 退出 0、`ERROR` 0；
+  退出泄漏 **10/10 clean**；像素资产 **36 / 0**。临时探针 `tests/tmp_ch3_audit.gd`
+  已删除，工作区干净。
+- 未做（按任务单）：第 3 章任何施工（计划/大区/房间/事件/权柄/Boss 内容）、第 2–4 章
+  可达性、Boss 3 新机制、阿砚同行、新移动能力、NPC 立绘、MDS 插件、敌人/场景美术、
+  待确认第 11/12/13 项相关数值/相机/HUD、打包/导出/安装器/签名/安卓/触屏。
+- 本程提交：`109381e` docs: audit chapter 3 for the big-map pipeline（状态文件、核查 session、记忆索引）；`b154549` docs: fix the chapter 3 room wording in the status summary。本程无产品代码/资源改动。
+
+### 2026-11-05 · 第 38 程（第 2 章地图标题 + 敌人美术核查）
+
+- 交接：第 37 程收尾 HEAD `c0a5e53`，工作区干净，第 2 章仍不可达；待确认第 11/12/13 项开放，本程不施工、不猜测。
+- 任务 0 · 基线核验（HEAD `c0a5e53`，Godot 4.7.stable.official.5b4e0cb0f）：`--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **7901 / 0**；九套集成 **665 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2202** 全 0 失败；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接逐项一致，无基线漂移。
+- 任务 1 · 第 2 章地图标题（只改标题派生，不改地图/房间）：
+  - `MapOverlay` 标题从字面量改为成员 `_title`；新增 `DEFAULT_TITLE`、`map_title(chapter_index)`、`set_chapter()`、`title_text()`。第 1 章（索引 ≤0）冻结「档案馆地图」；第 2–4 章读既有 `CampaignData.chapter(i)["region"]` → 「<区域名>地图」，第 2 章为「呼吸废墟地图」；区域空/索引无效回落第 1 章标题，不新造章节名。
+  - `game.gd` 在 `set_world()` 前调用 `set_chapter(chapter_index)`；`_chapter_index` 保留，`_ready()` 前调用也不丢，启动/续玩/重开走同一路径。
+  - 验收：新增 `tests/test_map_overlay.gd` 16 断言（第 1/2 章标题、来源、第 3/4 章同规则、-1 回落、构建前/后、来回切换不残留）；`tests/integration_playability.gd` +6 断言（真实第 1 章标题不变、第 2 章标题正确且非第 1 章、第 3/4 章按区域派生）。第 2 章仍不可达，只在测试层驱动。
+- 任务 2 · 第 2 章敌人专属美术核查与仅接线：
+  - 核查：五种敌人中仅 `choir_summoner` 有专属精灵 `assets/sprites/enemies/choir_summoner.png`（96×96 RGBA），且已在 `ENEMY_ART`、不在 `ENEMY_ART_FALLBACK`，实际白 tint 渲染；无需改动，用测试锁定。
+  - **缺失清单**（无现成专属精灵/原图，按任务单不新绘、不拼凑、不猜测，保持第 1 章精灵 `#c8e1cd` 回退）：`breath_hound`（→`ink_hound`）、`lung_moth`（→`hanging_scribe`）、`rust_whisperer`（→`scribe_bug`）、`collapse_husk`（→`blank_man`）。四个场景内只有程序化 `Polygon2D` 占位；`assets/concept/enemies/` 无对应原图。
+  - 接线/锁定：回退 tint 提为 `ENEMY_FALLBACK_TINT`（行为不变）；新增 `tests/test_enemy_art.gd` 94 断言（第 1 章 8 敌保留原 PNG/不在回退表；第 2 章五敌场景/数据/唯一美术来源；已接线敌白 tint、不走回退；四缺失敌回退源为第 1 章美术、标准路径暂无专属 PNG，日后补图未接线会失败）；`tests/integration_ch2_bigmap.gd` +7 断言（真实遭遇中 `choir_summoner` 用专属图/白 tint，`rust_whisperer` 仍 `scribe_bug`/绿 tint）。未新增/修改任何敌人贴图或场景美术；第 1 章敌人美术与波次未改。
+- 验证（改动后）：单元 **8011 / 0**（+110）；九套集成 **671 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 2209** 全 0 失败（可玩性 +6、第 2 章大地图 +7）；`--import`/`--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；像素资产 **36 / 0**。第 1 章 9 房间/6 波次/事件/清房目标 6/Boss 与结束流程未改；第 2 章仍不可达。
+- 未做（按任务单）：第 2 章可达性；待确认第 11/12/13 项；四个缺失敌人的专属美术；阿砚同行；新增移动能力；NPC 立绘；MDS 插件（零改动）；打包/导出/安装器/签名/安卓/触屏。
+- 本程提交：`0b469ec` feat: name each chapter's map after its region；`0468579` test: lock chapter 2 enemy art wiring；文档提交 `858f0f9` docs: record the chapter 2 map title and enemy art audit。
+
+### 2026-11-05 · 第 37 程（第 2 章自动门视觉 + 新局出生点）
+
+- 交接：第 36 程收尾 HEAD `959c90d`，工作区干净，第 2 章仍不可达；「待用户确认」第 11 项（`ch2_shortcut` 获取来源）明确为开放可达性前的前置，故本程不开放可达性、不碰第 11/12 项。
+- 任务 0 · 基线核验（HEAD `959c90d`，Godot 4.7.stable.official.5b4e0cb0f）：`--headless --path . --import` / `--quit` 退出 0、`ERROR` 0；单元 **7873 / 0**；九套集成 **665 / 102 / 613 / 207 / 113 / 59 / 391 / 45 / 1303** 全 0 失败；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与交接逐项一致，无基线漂移。
+- 任务 1 · 自动门视觉（只加表现，不改门逻辑）：
+  - 新增 `scripts/presentation/gate_visual.gd`（`GateVisual`）：复用既有手动门 `ChapterDoor` 的视觉语言（同一 `door.png`、accent 边框、上浮墨尘、HUD theme 12 px 描边标题），不新增贴图、不引入第二种门风格。
+  - `MDSBigRoom` 新增 `GATE_VISUAL_NAME = "GateVisual"` 与 `_add_gate_visuals()`：自动门生成后给当前房间所有 `MDSGate`（自动 + 作者门）挂视觉；`auto_gates = false` 时只补视觉；作者可用同名节点覆盖。
+  - side 感知：left/right 立门向房间内展开、门底按门下方最近的地面/台阶落面对齐（台阶 16 px、地面 90 px）；top/bot 同一贴图横置为天花板/地面舱口。有去向标「前往 <目标区名>」+ 朝向箭头，无去向的到达门标「来路」无箭头；贴边门标题向房间内收。
+  - 纯 `Node2D`（`z_index = -1`）、零碰撞/信号/输入；门位、模式、单向语义、`requires`/`MDSGateBarrier` 判定、过渡目标未动；MDS 插件本程零改动。
+  - 验收：`tests/test_big_room.gd` 新增门视觉单测（+28 断言）并断言第 1 章 9 场景无 `GateVisual`；`tests/integration_ch2_bigmap.gd` 逐门断言九区全部世界门有可见视觉、side/caption 正确、零碰撞，收尾 **9 区 / 22 扇门视觉**（20 连通 + 2 到达）。xvfb + OpenGL 离屏截图做外观 QA（`/tmp/ch2_gate_caps/`，未提交）。
+- 任务 2 · 第 2 章新局出生点（只改第 2 章大图分支的出生处理）：
+  - 根因：`MDSWorldGame._spawn_position()` 在无到达门/无显式坐标/房间内无 `save_point` 时回退 `MDSWorld.get_room_label_pos()`，即**房间最大矩形中心**（地图标签锚点）；`ch2_entry` 2560×1440 → (1280,720)，比第一级台阶面 y=1344 高 624 px。地面碰撞与落地判定无错，错的是出生坐标；第 1 章房间有程序化 `SavePoint` 所以从未暴露。
+  - 修复：`scenes/mds/ch2_bigmap/ch2_entry.tscn` 作者 `Marker2D` `SpawnPoint`（组 `save_point`，位置 (400,1328) = 台阶面 1344 − `Player.FOOT_Y` 16），走 MDS 既有优先级；不改 MDS 回退顺序，不改第 1 章出生/Hub 流程，经门进入仍用门落点。
+  - 验收：`tests/test_ch2_world.gd` 断言标记存在/组正确/脚底 = `platforms[0].y − FOOT_Y`；集成断言玩家在标记处、`_spawn_position` 命中标记、标记比房间标签锚点低 400+ px、第一物理帧 `is_on_floor()`、0.3 秒内不漂移。探针实测首帧 `pos=(400,1328)`、`vel=(0,0)`、`floor=true`。
+- 验证（改动后）：单元 **7901 / 0**（+28）；八套既有集成 **665 / 102 / 613 / 207 / 113 / 59 / 391 / 45** 全部不变、第 2 章大地图 **2202 / 0**（+899）；`--import`/`--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；像素资产 **36 / 0**。第 1 章 9 个 `MDSChapterRoom`、6 波次、事件房、清房目标 6、Boss 与结束流程未改；第 2 章仍不可达（仅在测试/探针层驱动）。
+- 后续候选（超出本程范围，只记录）：大区相机限制 = 房间边界时，区底角色与地面舱口会被底部 HUD 面板遮挡（已列待确认第 13 项）；待确认第 11/12 项保持开放。
+- 文档：新增 `docs/memory/sessions/2026-11-05-chapter2-gate-visuals-spawn.md`、ADR `docs/memory/decisions/2026-11-05-big-map-gate-visuals-spawn.md`；更新 `docs/memory/MEMORY.md` 与 `SUPERVISOR_STATUS.md`。临时探针与截图产物已删除/未提交。
+- 未做（按任务单）：第 2 章可达性；第 11/12 项本身；阿砚同行、敌人专属美术、第 2 章地图标题；新增移动能力；NPC 立绘；MDS 插件；打包/导出/安装器/签名/安卓/触屏。
+- 本程提交：`131cf14` fix: start chapter 2 on the entry step, not in mid-air；`9a5b7c0` feat: give big-map gates the manual door language；文档提交 `83d2587` docs: record the chapter 2 gate visuals and spawn fix。
+
+### 2026-11-04 · 第 36 程（第 2 章大地图系统验收 + 地面门到达修复）
+
+- 交接：第 35 程收尾 HEAD `0edc028`，工作区干净；第 2 章 Boss 2 已落地、章末停章、大图生成高度已修，但第 2 章仍不可达。本程只做 D 节验收面内的验证与真实缺陷修复，不开放可达性，不改第 1 章 9 房间/6 波次/事件/清房目标 6/结束流程，不扩大施工范围。
+- 任务 0 · 基线核验（HEAD `0edc028`，Godot 4.7.stable.official.5b4e0cb0f，`~/workspace/tools/godot/bin/Godot_v4.7-stable_linux.x86_64`）：
+  - `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0。
+  - 单元 **7873 / 0**；八套集成全部 0 失败——结构/可玩性 **665**、第一章 demo **102**、run save **613**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 35 程收尾逐项一致，无基线漂移。
+- 任务 1 · 第 2 章大地图验收（只加测试/探针，不改正常流程）：
+  - 新增 `tests/integration_ch2_bigmap.gd`：从第 1 章正常启动后由测试进入第 2 章计划世界，真实加载九区、真实使用门、真实清怪/开箱/读碑/乘电梯/打 Boss/存续玩，共 **1303 断言，0 失败**。
+  - 覆盖 D 节 1–10：① 入口有向 BFS 九区全可达、20 扇连通门 + 2 扇到达门全部实走、2 扇显式单向语义正确、无孤立区；② 九区边界 = 计划尺寸、`get_room_bounds()`、相机四边限制 = 世界边界、玩家在房内、区域氛围/背景/雾正确；③ 电梯乘行 → top 门 → bot 门到达出速 -650、落点在门上方、**2 秒内不被同门弹回**、井下层落穿不误判坠落、长椅检查点回退、坠落平面 = 区高 + 240；④ 每扇门过渡目标/到达门/坐标容差、过渡期间不叠暂停/剧情/奖励/地图/权柄/商店（按既定大区图口径用门 + 0.22 秒淡入，不做无缝走进）；⑤ 书库 2 箱 2 碑按节点 id 各只发一次、重载/续玩不重复；⑥ 支路两场遭遇逐场锁门（碰撞层 1）/清怪/开门/按节点 id 发奖、重载不重生、清房推进到 7（HUD 分母 8）；⑦ 书库首次发现反馈与地图揭示、捷径门授予/开门/通行/跨存档保持；⑧ Boss 区生成点/门位/入场与阶段文案/权柄池/续玩不二次生成/章末 `_finish(true)` 停在 `_chapter == 1`；⑨ 性能数字；⑩ 第 2 章事件页、Boss 文案、权柄池、章节收口在真实流程中断言。
+- 修复的真实缺陷 · 地面（bot）门到达回弹：
+  - 症状：从任意 bot 门到达后约 0.7 秒，玩家落地时再次进入同一扇门，被送回上一房间；所有向上纵向连接因此实际变成单向。探针在 `ch2_entry` 复现（修复前 0.8 秒回弹）。
+  - 根因：MDS 对 bot 到达把玩家以 `up_exit_speed`（650 px/s）向上抛出，玩家落回时再次触发同门；原有 3 物理帧保护 + 0.35 秒门冷却覆盖不了整个抛物线。
+  - 修复：`addons/MetroidvaniaDeveloperSystem/nodes/mds_world_game.gd` 新增 `@export var floor_arrival_grace := 1.2`；`load_room()` 记录到达门，仅 bot 门设置宽限截止；`_on_gate_entered()` 在宽限期内忽略来自该门的触发。横向/top 不变，0 可关；其他章节世界无 bot 门，不受影响。第 1 章无回归。细节见 ADR。说明：既有 ADR 的红线是「不重写 MDS」；本次是验收面内真实缺陷的 23 行追加式修复，不改门/房间/存档格式，`floor_arrival_grace = 0` 可完全关闭，已单独写 ADR 记录取舍。
+  - 验证：修复后探针在 `ch2_entry` 停留 3 秒并稳定落地；集成套件用 2 秒窗口断言不回弹，25 段门行走全部走通。
+- 性能基线（`fade_time = 0` 测原始构建耗时；正常游戏由 0.22 秒淡入覆盖）：普通区热加载 **5.6–9.2 ms**；Boss 区首次 **61.0 ms**（冷启动）、第二次 **10.2 ms**、套件内热加载 **24–43 ms**（运行波动）；精英区首次 **35.0 ms**；Boss 区关闭动态背景 **11.7 ms**、关闭天气 **9.1 ms**、不生成 Boss **35.9 ms**。未发现需要本程处理的性能缺陷。
+- 后续候选（超出本程范围，只记录不施工）：① `ch2_shortcut` 无游戏内获取来源（内容/设计缺口，已列待确认第 11 项）；② 自动生成的 `MDSGate` 没有门扉/提示视觉（表现/UX 缺口）；③ 电梯作者速度 70 px/s，乘行约 19 秒 / 29 秒（节奏/调参，已列待确认第 12 项）；④ 第 2 章新局出生点落在房间标签下方空中后稳定落到台阶（打磨）；⑤ 阿砚同行、敌人专属美术、第 2 章地图标题仍为「档案馆地图」（内容/表现缺口，按任务单不扩大施工）。
+- 验证（改动后）：单元 **7873 / 0**；八套既有集成 **665/102/613/207/113/59/391/45** 全 0 失败；新增第 2 章大地图集成 **1303 / 0**；`--import`/`--quit` 退出 0、`ERROR` 0；退出泄漏 **10/10 clean**；像素资产 **36 / 0**。第 1 章 9 个 `MDSChapterRoom`、6 波次、事件房、清房目标 6、Boss 与结束流程未改；第 2 章仍不可达。
+- 文档：新增 `docs/memory/sessions/2026-11-04-chapter2-bigmap-acceptance.md`、ADR `docs/memory/decisions/2026-11-04-floor-arrival-grace.md`；更新 `docs/memory/MEMORY.md` 与 `SUPERVISOR_STATUS.md`。临时探针（`probe_ch2_*`）测后删除。
+- 未做（按任务单）：第 2 章可达性；第 3 章内容；Boss/敌人/NPC 美术与立绘；新增移动能力；打包/导出/安装器/签名/安卓/触屏。
+
+### 2026-11-04 · 第 35 程（第 2 章 Boss 2 独特机制 + 章节过渡）
+
+- 交接：第 34 程收尾 HEAD `571b36c`；本程在该 HEAD 上施工，完成后才提交。只做第 2 章 Boss「肺钟守卫」独特机制与第 2 章结束语义，未开放第 2 章可达性，未改第 1 章 Boss/战斗框架/敌人美术/NPC 立绘，未新增移动能力，未删旧世界/旧场景。
+- 任务 0 · 基线核验（HEAD `571b36c`，Godot 4.7.stable.official.5b4e0cb0f，`~/workspace/tools/godot/bin/Godot_v4.7-stable_linux.x86_64`）：
+  - `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0。
+  - 单元 **7821 / 0**；八套集成全部 0 失败——结构/可玩性 **651**、第一章 demo **102**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 34 程收尾逐项一致，无基线漂移。
+- 任务 1 · 现状核对与分层（先查后写）：
+  - 第 1 章 Boss 走 `CampaignData.chapters[0].boss_scene = ink_archivist_ch1.tscn`（`InkArchivistCh1 extends InkArchivist`）；`game._spawn_boss` 统一负责生成、血条、阶段横幅、权柄三选一、outro/choice 与结束屏。第 2 章此前只有 `boss_script = ink`、数值（360 HP / 14 伤害 / 75 速度）、立绘与入场/阶段文案，没有专属场景或机制。
+  - 口径（歧义已记录并锁定）：独特机制放在 **Boss 场景子类** `LungBellGuardian extends InkArchivist`，由第 2 章计划的 `boss_scene` 路由；通用 Boss 流程一律复用，不改 `InkArchivist`、`InkArchivistCh1` 与 `_spawn_boss` 的通用分支。`_spawn_boss` 原有优先级不变（第 1 章战役表 → 第 2 章计划 → 旧脚本兜底），所以第 1 章仍选 `InkArchivistCh1`，计划字段只影响第 2 章。
+- 任务 2 · 机制实现（`scripts/bosses/lung_bell_guardian.gd` + `scenes/bosses/lung_bell_guardian.tscn`，`chapter_2_demo.tres` 的 `boss_scene` 指向它）：
+  - 呼吸循环：吸气 2.4 s（受到伤害 ×0.5）→ 呼气 1.4 s（受到伤害 ×1.5，并释放扩散气环 560 px / 720 px/s / 0.8× 攻击力）；阶段 2 起呼气额外在玩家位置留下墨池（0.35×、70 px、4 s）；阶段越高节奏越快（0.7× 下限）。sprite tint + 气环给清晰前摇/状态。
+  - 钟摆：基础攻击为正反两枚 `HostileBolt`（前方 0.7×、后方 0.75×），读作钟摆横扫；阶段 2 起每第 3 次改为钟鸣环（620 px / 760 px/s / 0.9×）；气弹 `InkBomb`（0.8×、留池）。
+  - 钉子：阶段 3 起周期性暴露（暴露 5 s，受到伤害 ×1.5；闭合 7 s，受到伤害 ×0.6；周期 12 s），作为阶段 3 的输出窗口；阶段 1–2 仍按呼吸承伤。死亡清空气环并关闭钉子。
+  - **数值口径（歧义已记录）**：剧情圣经/计划只有「钟摆与肺叶」「攻击有清晰前摇」「阿砚给肺钟打过一颗钉子」等定性描述，没有攻击数值。以上数值是本程采用口径，**待试玩校准**，由 `tests/test_ch2_boss.gd` 锁定；后续改数值必须同步改测试并在状态文件登记。
+- 任务 3 · 第 2 章结束语义（`scripts/game.gd::_complete_chapter`）：
+  - 第 2 章（`_chapter == 1`）章末选择结算后调用现有 `_finish(true)` 停在结束屏，不再 `_start_chapter(2)` 进入未实现的第 3 章；第 1 章分支（`_chapter == 0`：`demo_cleared` + `_finish(true)`）代码与流程一字未改，第 3/4 章保留原有自动续章以维持结构测试覆盖。
+  - **界面/结局口径（歧义已记录）**：第 2 章末沿用现有结束屏与结局记录（默认 `unfinished`），不新增「待续」UI、结局 id 或存档键；第 2 章仍不可达，当前只由测试/探针验证。若未来开放第 2 章 demo，需要决定是否改为章节完成屏、避免提前解锁结局画廊。
+- 任务 4 · 必要修复（测试暴露的真实缺陷）：大区 `ArenaRoom` 的原点位于可走地面（`BigRoomData` 表面），旧 `_spawn_group`/`_spawn_boss` 固定 +250 px 生成会把第 2 章敌人/Boss 埋到地下。`game.gd` 新增 `_enemy_spawn_y()`：`big_map` 计划生成在 `-ENEMY_FOOT_Y - 2`，第 1/3/4 章仍 250 px；只影响大图分支，第 1 章生成路径与波次不变。
+- 任务 5 · 测试与验证（本程末实测）：
+  - 新增 `tests/test_ch2_boss.gd`（51 断言）：计划路由/数值/场景类型、吸气承伤、呼气增伤与气环、钟摆双向、气弹留池、阶段 2 钟鸣、阶段 3 钉子窗口与重新暴露、死亡清气环、第 1 章 Boss 无这些方法且场景未变。
+  - `tests/integration_playability.gd` 扩到 **665**（+14）：第 1 章 Boss 仍是 `InkArchivistCh1`；第 2 章 6 场波次生成点在地面之上；`ch2_boss` 生成 `LungBellGuardian`、初始吸气、吸气承伤系数、生成点在地面之上、真实呼气生成气环；第 2 章章末选择后停在 `_chapter == 1`、`_finished`、结束屏可见。
+  - `tests/integration_run_save.gd` 扩到 **613**（+25）：第 2 章 Boss 击败 → 权柄三选一（断言授予来自第 2 章计划池）→ 存档 → 续玩不二次生成 Boss、权柄/残页/击杀不重复发放、outro/choice 可继续 → 选择后停在第 2 章并清档。
+  - `tests/test_ch2_plan.gd` 更新 2 条：第 2 章计划拥有 `boss_scene` 且指向 `lung_bell_guardian.tscn`；第 1 章计划仍指向 `ink_archivist_ch1.tscn`。
+  - 全量单元 **7873 / 0**（基线 7821 + 52）；八套集成全部 0 失败、各日志 `ERROR` 0——结构/可玩性 **665**、第一章 demo **102**、run save **613**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**。
+  - 退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；`--import`/`--quit` 退出 0、`ERROR` 0；临时探针未创建；工作区干净。
+- 本程未做（按任务单）：第 2 章可达性；第 3 章内容；第 1 章 Boss/战斗框架/敌人美术/NPC 立绘改动；新增移动能力；MDS 插件；言灵/权柄/战斗框架；删除旧世界/旧场景；打包/导出/安装器/签名/安卓/触屏。
+- 提交：`9f8caad`（Boss 2 场景/机制/计划路由）、`5346b2b`（大图生成高度修复 + 第 2 章结束收口）、`74f6615`（Boss/边界测试）、`<本提交>`（状态、ADR、session、记忆）。仅本地 `supervisor-dev`，不推送、不更新网页版。
+
+### 2026-11-04 · 第 34 程（第 2 章内容数据层第 3 步：事件区真实自动触发）
+
+- 交接：第 33 程收尾 HEAD `22e0a52`；启动时工作区干净、无在途改动、无会话在跑。本程只给第 2 章事件区接真实自动触发，未开放第 2 章可达性、未实现 Boss 2 独特机制/专属攻击、未做章节过渡、未新增移动能力，未改 MDS 插件/言灵/权柄/战斗框架/敌人美术/NPC 立绘，未删旧世界/旧场景。
+- 任务 0 · 基线核验（HEAD `22e0a52`，Godot 4.7.stable.official.5b4e0cb0f，`~/workspace/tools/godot/bin/Godot_v4.7-stable_linux.x86_64`）：
+  - `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0。
+  - 单元 **7819 / 0**；八套集成全部 0 失败——结构/可玩性 **636**、第一章 demo **102**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 33 程收尾逐项一致，无基线漂移。
+- 任务 1 · 触发点核对（先查后写）：
+  - 第 1 章事件房 `ch1_05` 走 `MDSChapterRoom`、有主 `Arena`，`_on_mds_room_loaded` 的 `is_primary and _chapter == 0 and room_type == "event"` 命中：进房设目标 → `_open_event_after_transition` 延迟 0.8 s 开页，离开房间会取消；结算按 `ch1_05/event` 一次。
+  - 第 2 章 `ch2_event` 只有 `Event`（`ArenaRoom`，`encounter_id = ch2_event/event`）与 `Stele1`，没有主 `Arena`；`is_primary` 永远不成立，且 `_chapter == 0` 把第 2 章排除。计划 `chapter_2_demo.tres` 该区 `type = "event"`、`encounters = ["ch2_event/event"]`。
+  - 口径（歧义已记录并锁定）：触发挂在**区域级**（`big_map` + `type == "event"` + 本章有事件数据），不依赖有没有主 `Arena`；第 1 章原 `is_primary` 分支一字未动，两者汇入同一个 `_open_chapter_event`。理由：事件页属于区域（计划 type + 事件节点），不属于某个战斗 Arena；将来区域内没有 Arena 也能触发。
+- 任务 2 · 接线（`scripts/game.gd`）：
+  - `_on_mds_room_loaded` 在 Arena 循环之后新增区域级事件分支：未结算 → 设目标「事件 · 读或不读」并 `_open_event_after_transition(room_id)`；已结算 → 设目标「事件已经读过」。目标文案沿用第 1 章既有字符串，不写新文案。
+  - 页面仍走 `_event_data(room_id)` → `_open_chapter_event(room_id)`：第 2 章用 `Ch2EventData.pick(run_seed, RoomProgress.event_encounter_id(room_id))`，键 = 计划事件节点 id `ch2_event/event`；两项效果与第 32 程一致（读 → 污染 +8 + 解明一个残页词，无词则残页 +6；拿 → 残页 +12）。
+  - 结算沿用 `_mark_encounter_cleared(room_id, event_encounter_id(room_id))`，复用 `cleared_encounters` 存档键（不新增存档键/格式），只记一次、计入清房目标 7；未结算离开区域会取消延迟开页（沿用第 1 章规则）。续玩由现有 run save 的 `cleared_encounters` 还原覆盖，重载断言锁定触发查询。
+- 任务 3 · 测试与验证（本程末实测）：
+  - `tests/integration_playability.gd` 扩到 **651**（+15）：从大图房间加载路径进入 `ch2_event` 自动打开第 2 章页（不再直接调开页函数），文案/选项来自 `Ch2EventData` 且开页不消耗 run RNG；“拿”+12 残页与消息、“读”+8 污染并解明一个残页词（无词则 +6）；节点 `ch2_event/event` 只结算一次并计入进度；结算后重载不重开、不暂停、不重复发奖励；真实 run save 写入 `cleared_encounters` 后清理临时档。
+  - `tests/test_ch2_content.gd` 扩到 **510**（+2）：`RoomProgress.event_encounter_id("ch2_event") == "ch2_event/event"` 且计划锚定同一节点，锁定触发键与结算键一致。
+  - 全量单元 **7821 / 0**（基线 7819 + 2）；八套集成全部 0 失败、各日志 `ERROR` 0——结构/可玩性 **651**、第一章 demo **102**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**。
+  - 退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；`--import`/`--quit` 退出 0、`ERROR` 0；临时探针未创建；工作区干净。
+- 本程未做（按任务单）：第 2 章可达性；Boss 2 独特机制/专属攻击；章节过渡；新敌人/敌人美术/NPC 立绘；二段跳/蹬墙跳/攀爬；MDS 插件；言灵/权柄/战斗框架；删除旧世界/旧场景；打包/导出/安装器/签名/安卓/触屏。
+- 提交：`f095c78`（`game.gd` 区域级事件触发）、`ec1d2b2`（可玩性集成 + 内容单元断言）、`<本提交>`（状态、ADR、session、记忆）。仅本地 `supervisor-dev`，不推送、不更新网页版。
+
+### 2026-11-04 · 第 33 程（第 2 章内容数据层第 2 步：波次接线）
+
+- 交接：第 32 程收尾 HEAD `40d1d67`；启动时工作区干净、无在途改动、无会话在跑。本程只做第 2 章波次接线，未开放第 2 章可达性、未实现 Boss 2 独特机制、未做事件区真实自动触发、未改波次内容/敌人美术/战斗框架/言灵/权柄/MDS 插件，未新增移动能力，未删旧世界/旧场景。
+- 任务 0 · 基线核验（HEAD `40d1d67`，Godot 4.7.stable.official.5b4e0cb0f，`~/workspace/tools/godot/bin/Godot_v4.7-stable_linux.x86_64`）：
+  - `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0。
+  - 单元 **7733 / 0**；八套集成全部 0 失败、各日志 `ERROR` 0：结构/可玩性 **601**、第一章 demo **102**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 32 程收尾逐项一致，无基线漂移。
+- 任务 1 · 映射核对（先查后写）：
+  - 计划 7 个遭遇 = 6 场战斗 + 1 事件（`ch2_event/event`）；事件节点在扁平 `encounter_ids()` 里位于第 5、6 场战斗之间，**按过滤事件后的战斗顺序**对应 `ROOM_WAVES[1]` 六波（该口径第 32 程已校验，本程用测试锁定）。
+  - 逐场落位：`ch2_branch_a/Arena` → 第 1 波、`ch2_branch_a/Arena2` → 第 2 波、`ch2_branch_b/Arena` → 第 3 波、`ch2_well/Arena` → 第 4 波、`ch2_well/Arena2` → 第 5 波、`ch2_elite/Arena` → 第 6 波。六波内容原样复用，包含 `ink_bomber`/`blank_man`/`page_swarm` 等既有敌人 id，未改波次表。
+  - 第 1 章现状核对：`chapter_1_demo.tres` 的 `wave` 仍是房间级数组；`game.gd` 第 1 章生成路径（计划 wave 前 2 个立即出场、其余 `queue_wave`）与 `ROOM_WAVES[0]` 一字未改。
+- 任务 2 · 计划补 `wave` 键：
+  - `chapter_2_demo.tres` 的 4 个战斗区补 `"wave"` 字典，键为遭遇节点 id（`region/Node`），共 6 个键；事件区、Boss 区、入口/枢纽/书库不带 `wave`。Boss 区没有 `encounters`，不消耗普通波次。
+  - `ChapterPlanData` 新增 `wave_for(room_id, encounter_id)`：字典按节点 id 查；线性计划仍返回房间级数组（第 1 章兼容）。新增 `validate_waves()`（仅大图计划）并接入 `validate()`：键必须锚定本区遭遇、值必须非空敌人数组、每个战斗遭遇必须有一波、事件遭遇不得有波。ADR：`docs/memory/decisions/2026-11-04-chapter2-wave-wiring.md`。
+- 任务 3 · `game.gd` 接线：
+  - 新增 `_plan_wave(room_id, encounter_id)`；`_on_mds_room_loaded` 新增 `big_map` 分支：未清战斗遭遇按自己的 `wave` 生成并加入 `_rooms`，一区多遭遇逐场锁门/清怪/奖励/进度（沿用第 27 程节点 id 语义）；事件区与 Boss 区不生成普通波次。第 1 章原分支、`ROOM_WAVES`、奖励与进度未改；第 2 章仍不可达，事件区仍无自动触发点。
+  - 前 2 个敌人立即出场、其余 `queue_wave` 的既有节奏保持不变（本计划六波均为 2 人，因此每场一次出场）。
+- 任务 4 · 测试与验证（本程末实测，Godot 4.7.stable.official.5b4e0cb0f）：
+  - 新增 `tests/test_ch2_waves.gd`（**67** 断言）：六场战斗 ↔ `ROOM_WAVES[1]` 按计划顺序一一对应；事件无波、Boss 无普通波；键唯一且锚定本区；`wave_for` 大图/线性行为；缺失/非字典/空波/空敌人 id/非字符串/事件带波/未知节点/Boss 带波等坏表逐项报错；第 1 章计划仍房间级、`validate_waves()` 为 no-op、清房目标 6。
+  - `tests/test_ch2_content.gd` 扩到 **508**（+19）：计划波次表有效、6 个 wave 键与六波逐项相等、事件节点无波、Boss 区无 `wave`。
+  - `tests/integration_playability.gd` 扩到 **636**（+35）：逐区检查每个战斗 Arena 的生成数量与敌人种类/顺序与计划波次一致、Arena 已登记；事件 Arena 无敌人且不登记；Boss 区无普通波；支路 A 第二场遭遇单独锁门（第一场不重锁）；清完 7 场后重载支路 A，两场均不再生成、也不再登记。
+  - 全量单元 **7819 / 0**（基线 7733 + 86）；八套集成全部 0 失败、各日志 `ERROR` 0：结构/可玩性 **636**、第一章 demo **102**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**。退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；`--import`/`--quit` 退出 0、`ERROR` 0；临时探针未创建；工作区干净。
+- 本程未做（按任务单）：第 2 章可达性；Boss 2 独特机制/专属攻击；第 2 章事件区真实自动触发；章节过渡；新敌人/敌人美术/NPC 立绘；二段跳/蹬墙跳/攀爬；MDS 插件；言灵/权柄/战斗框架；删除旧世界/旧场景；打包/导出/安装器/签名/安卓/触屏。
+- 提交：`a99d29a`（计划 `wave` + `ChapterPlanData` 校验 + `game.gd` 接线）、`23fdf9e`（`test_ch2_waves` + 内容/集成测试）、`<本提交>`（状态、ADR、session、记忆）。仅本地 `supervisor-dev`，不推送、不更新网页版。
+
+### 2026-11-04 · 第 32 程（第 2 章内容数据层第 1 步：事件 + 权柄池 + Boss 文案）
+
+- 交接：第 31 程收尾 HEAD `23a16a7`；启动时工作区干净、无在途改动、无会话在跑。本程只做第 2 章内容数据层第 1 步（事件数据、按章节路由泛化、权柄池、Boss 入场/阶段文案、遭遇/波次校验），未开放第 2 章可达性、未实现 Boss 2 独特机制与专属攻击、未布置新战斗遭遇、未新增移动能力、未改 MDS 插件/言灵/权柄/战斗框架/敌人美术/NPC 立绘，未删除旧世界或旧房间场景。
+- 任务 0 · 基线核验（HEAD `23a16a7`，Godot 4.7.stable.official.5b4e0cb0f，`~/workspace/tools/godot/bin/Godot_v4.7-stable_linux.x86_64`）：
+  - `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0。
+  - 单元 **7244 / 0**；八套集成全部 0 失败、各日志 `ERROR` 0——结构/可玩性 **581**、第一章 demo **101**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 31 程收尾逐项一致，无基线漂移。
+- 任务 1 · 第 2 章事件数据（`scripts/data/ch2_event_data.gd`，新增）：
+  - 7 组「呼吸废墟」事件文案（呼气/钟摆/灯芯/钉子/肺叶/死名/余气），全部围绕剧情圣经第 2 章的肺钟、雾、死者名字与开场里的阿砚灯/钉子，不新增设定、不新增关键道具/NPC 弧线。
+  - 机制沿用 `Ch1EventData` 的固定两项：读 → 污染 +8 并解明一个残页词（无词可解则残页 +6）；拿 → 残页 +12。常量与 Ch1 同名（`CORRUPTION_COST`/`PAGES_REWARD`/`FALLBACK_PAGES`），未引入新效果类型。
+  - 变体按 `hash(run_seed:event_id)` 固定轮换，键为计划事件节点 id `ch2_event/event`；不消耗 run RNG。第 1 章 `Ch1EventData` 一字未改。
+- 任务 2 · 事件路由泛化（`scripts/game.gd`）：
+  - 新增 `_event_data(room_id)` 按章节查表：第 1 章仍用 `Ch1EventData.pick(run_seed, room_id)` 与原常量（文案、选项、数值全部不变）；第 2 章用 `Ch2EventData.pick(run_seed, RoomProgress.event_encounter_id(room_id))`。
+  - `_open_ch1_event`/`_open_ch1_event_after_transition` 泛化为 `_open_chapter_event`/`_open_event_after_transition`；`_grant_event_word(fallback_pages)` 接收本章兜底残页数（第 1 章传原值 6）。
+  - 红线：第 2 章事件页在正常流程仍不自动打开（`_on_mds_room_loaded` 的触发条件仍是 `_chapter == 0`）；第 2 章路由只由 `tests/integration_playability.gd` 直接以 `ch2_event` 驱动验证。后续接线点：第 2 章可达时给事件区加真实触发（当前 `ch2_event` 的 `Event` 节点是 `ArenaRoom`，没有 `Arena` 主节点，`_on_mds_room_loaded` 的 `is_primary` 分支不会命中）。
+- 任务 3 · 第 2 章权柄池：
+  - `chapter_2_demo.tres` 补 `authority_pool = [续命, 改写]`；条件项不写进池，仍由 `AuthorityController.build_pool` 从 `ContentLibrary` 追加：吞噬（本局污染 ≥ 40）、归档（本局记录 ≥ 2），顺序为 ContentLibrary 顺序（archive → devour）。
+  - `_grant_chapter_authority` 的守卫由「仅第 1 章」改为「有计划且池非空」；第 1 章池/行为不变。第 2 章授予只在 `integration_playability` 的 Boss 流程（测试显式启动第 2 章）里验证，正常游玩第 2 章仍不可达。
+  - 未发明新权柄机制；现有框架外的构想不写入池，不产生不可用选项。
+- 任务 4 · Boss 文案数据：
+  - `BossEntranceData` 新增 `CH2_LINES`（8 条，肺钟/雾/钟摆/阿砚钉子），`variants(1)` 返回第 2 章表；第 3–4 章仍为空。
+  - `BossPhaseData` 签名向后兼容扩展为 `variants(phase, chapter_index = 0)` / `pick(run_seed, phase, chapter_index = 0)`；新增第 2 章阶段 2/3 各 8 条。第 1 章选句键保持原 `"%d:%d"`（不改变现有句子），第 2 章用 `"%d:%d:%d"`；第 3–4 章返回空（不再回落到第 1 章文案）。
+  - `game.gd` 的 `_on_boss_phase` 传 `_chapter`。Boss 名/HP 360/伤害 14/速度 75/立绘 `lung_bell_guardian.png`/`boss_script = ink` 均未改（测试锁定）。
+- 任务 5 · 遭遇与波次校验：
+  - 新增断言：计划 7 个遭遇节点唯一、全部 `region/Node` 锚定（`validate_regions`/`validate_graph` 为空）；6 个战斗遭遇（事件节点 `ch2_event/event` 除外）与 `ROOM_WAVES[1]` 的 6 波按计划顺序一一对应；每波敌人都有场景与 `resources/enemies/*.tres`；五种第 2 章敌人（`breath_hound`/`lung_moth`/`rust_whisperer`/`choir_summoner`/`collapse_husk`）都在波次中出现。
+  - 未新增/改动波次，未给计划加 `wave` 键、未布置敌人（按任务单）。**已知缺口（留给内容程）**：`game.gd` 的计划分支读 `plan_room["wave"]`，第 2 章计划区域尚无该键，因此大区 `Arena` 目前不会生成敌人；接线时按「计划顺序 ↔ `ROOM_WAVES[1]` 顺序」落 `wave` 即可，不需要另起波次表。
+- 任务 6 · 测试：
+  - 新增 `tests/test_ch2_content.gd`（**489** 断言）：事件 7 组文案/键完整/无占位符、`eyebrow` 不与第 1 章重名；`pick` 稳定、按 seed 轮换、按节点 id 变化、不消耗 run RNG；消息格式化；权柄基础池 = 续命/改写、污染 39/40 与记录 1/2 的条件边界、两种条件同时满足的顺序与去重、第 1 章池不变；Boss 入场/阶段第 2 章表非空、唯一、≤24 字、不含 `%`、不与第 1 章重名、可轮换；第 1 章选句键与旧公式一致；第 3–4 章仍静默；Boss 数值/立绘未改；计划 7 遭遇 + 6 波对应 + 清房目标 7。
+  - 更新既有测试：`test_boss_entrance_content`（第 2 章不再静默，第 3–4 章静默）、`test_ch2_plan`（基础权柄池 2 项）、`integration_ch1_demo`（第 2 章入场文案存在、第 3–4 章静默）、`integration_ch1_event`（`_grant_event_word` 显式传兜底值）。
+  - `integration_playability` 扩到 **601**（+20）：第 2 章事件区不自动打开第 1 章页；显式驱动第 2 章事件页 → 文案/选项/残页奖励/节点结算正确；第 2 章 Boss 入场与阶段 2/3 文案来自第 2 章表；Boss 击败后按计划池开权柄三选一并成功授予，然后进入章末流程。
+- 验证（本程末实测，Godot 4.7.stable.official.5b4e0cb0f）：
+  - `--headless --import` / `--quit` 退出 0、`ERROR` 0；全量单元 **7733 / 0**（基线 7244 + 489）。
+  - 八套集成全部 0 失败、各日志 `ERROR` 0：结构/可玩性 **601**（+20）、第一章 demo **102**（+1）、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**。
+  - 退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；临时探针未创建；工作区干净。
+- 本程未做（按任务单）：第 2 章可达性；Boss 2 独特机制/专属攻击；新战斗遭遇与计划 `wave` 接线；二段跳/蹬墙跳/攀爬；MDS 插件；言灵/权柄/战斗框架；敌人美术/NPC 立绘；删除旧世界/旧场景；打包/导出/安装器/签名/商店/安卓/触屏。
+- 提交：`36b4129`（`Ch2EventData` + Boss 文案 + 计划权柄池 + `game.gd` 路由）、`2f93e48`（`test_ch2_content` + 集成/既有测试更新）、`<本提交>`（状态、ADR、session、记忆）。仅本地 `supervisor-dev`，不推送、不更新网页版。
+
+### 2026-11-04 · 第 31 程（第 2 章大地图施工第 4 步后半：真实大区世界与 region 语义）
+
+- 交接：第 30 程收尾 HEAD `b93fc53`；启动时工作区干净、无在途改动。本程只做第 2 章真实大区世界/房间与 `game.gd` 的 region 语义，未写第 2 章事件文本/权柄池/Boss 机制/敌人波次，未改章节可达性（第 2–4 章仍不可达），未新增移动能力，未改 MDS 插件、言灵/权柄/战斗框架或存档格式，未删除旧世界/旧房间场景。
+- 任务 0 · 基线核验（HEAD `b93fc53`，Godot 4.7.stable.official.5b4e0cb0f，`~/workspace/tools/godot/bin/Godot_v4.7-stable_linux.x86_64`）：
+  - `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0。
+  - 单元 **6517 / 0**；八套集成 结构 **392**、第一章 demo **101**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**，全部 0 失败、各日志 `ERROR` 0；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 30 程逐项一致，无基线漂移。
+- 任务 1 · 真实大区世界与房间（独立文件，旧世界保留）：
+  1. **9 个 `BigRoomData`**（`resources/rooms/ch2_bigmap/*.tres`）：按计划 2560×1440 / 2560×2160 / 3840×2160；地面贴房间底边（`H-16`，16 px 厚），平台按 80 px 阶梯链，满足第 28 程校验（垂直 ≤80 px、水平边缘 ≤120 px，只有最低面豁免支撑）；复用 `ch1_tiles.tres`，`breathing_ruins.png` 绘画背景（`backdrop_pixel_art = false`）、按区 `backdrop_modulate`、`motes`/`embers` 氛围。
+  2. **9 个 `MDSBigRoom` 场景**（`scenes/mds/ch2_bigmap/*.tscn`）：`fall_margin = 240.0`；内容节点按计划 id 命名（`Arena`/`Arena2`、`Chest1/2`、`Stele1/2`）；事件区节点 `Event` 作者 `encounter_id = ch2_event/event`；枢纽商店 `ch2_hub_shop` + 长椅 + 残碑 + 电梯；纵井 2 场 + 1 箱 + 3 单向落台 + 电梯；入口作者到达门 `shortcut_arrival`（TOUCH、无 `to`）。
+  3. **独立世界** `scenes/mds/chapter_2_bigmap.mdsworld.json` + `chapter_2_bigmap_world.tscn`：9 区、单矩形、原点 32 px 对齐；`start_room = ch2_entry`；区域 `Breathing Ruins` 带雾 + 萤火、背景与 `boss_background: spore_drift`；20 扇有向门 + 2 扇只到达门；2 扇显式单向（`elite_boss`、带 `requires = ["ch2_shortcut"]` 的 `hub_shortcut_entry`）；侧门在地面上方 90 px、底门在地面线、顶门在上边缘，电梯列避开平台；房间不重叠、双向门相邻、捷径刻意不相邻。
+  4. **旧世界保留**：`chapter_2.mdsworld.json`、`chapter_2_world.tscn` 与 9 个 `ch2_*.tscn` 未改、未删，只是不再被 `game.gd` 引用；测试夹具 `tests/fixtures/big_room/ch2_graph.mdsworld.json` 仍为 `fixture: true`、无 `scene_path`、永不加载，并镜像真实世界门位/尺寸。
+- 任务 2 · `game.gd` 接计划（region 语义）：
+  - 新增 `CHAPTER_PLAN_PATHS`：第 1 章 `chapter_1_demo.tres`、第 2 章 `chapter_2_demo.tres`、第 3/4 章留空（继续 `CampaignData.rooms` + `ROOM_WAVES`）。
+  - 第 2 章世界/场景常量切到 `chapter_2_bigmap_world.tscn` / `chapter_2_bigmap.mdsworld.json`；`_start_mds_chapter` 加载计划，新局起始区 = `start_room`（`ch2_entry`），无计划回退 `chN_01`。
+  - 坠落平面走第 27 程解析链：计划 `fall_below_bounds`（`size.y + 240`）→ 房间 metadata → 默认 850；纵井/精英/Boss 平面 2400，下层平台 y≈1500–2100 不被误杀。
+  - 清房目标 = 计划派生 7（支路 A 2 + 支路 B 1 + 纵井 2 + 精英 1 + 事件 1），HUD 分母 8（含 Boss）；第 1 章仍 6/7。
+  - 宝箱/残碑/遭遇按 `region/Node` 节点 id 结算，一区多内容各自独立；事件页仍只属于第 1 章（`_chapter == 0`）。
+  - **红线**：第 1 章 9 个 `MDSChapterRoom`、原世界 JSON、波次/进度/结算/章末 `_finish(true)` 未改；第 2 章仍不可达，第 1 章结束不自动进入第 2 章。
+- 任务 3 · 测试：
+  - 新增 `tests/test_ch2_world.gd`（**727** 断言）：真实世界 ↔ 计划逐区形状/内容/门/坠落/区域；世界图入口 BFS 全可达（含枢纽/隐藏书库/Boss）；20+2 门与 2 扇单向；房间不重叠、双向门相邻、捷径不相邻；9 个场景为 `MDSBigRoom` 且 `BigRoomData` 校验为空、尺寸/瓦片/背景/氛围/坠落余量/底边地面；内容节点与作者事件 id；顶门房间电梯列避开平台；夹具隔离且 `game.gd` 不引用；旧第 2 章 9 个 1280×720 `MDSChapterRoom` 与第 1 章 9 房/计划 6 目标不变；`game.gd` 四个世界/场景/计划槽位与第 1、3、4 章条目不变。
+  - `tests/integration_playability.gd` 扩到 **581**（+189）：第 2 章从 `ch2_entry` 开始、坠落 1680、目标 7/分母 8；9 区加载与校验；枢纽商店/长椅/捷径屏障解锁并存档；纵井 y≈2100 下层不掉血；书库两箱两碑按节点结算且重载后保留未领取内容；事件区不打开第 1 章事件页；精英 → Boss 单向；支路 A 两场各自计数、重复 `cleared` 不重复结算；补满 7 场后 Boss → 章末 → 选择 → 第 3 章；第 1 章结束仍不进入第 2 章。
+- 验证（本程末实测，Godot 4.7.stable.official.5b4e0cb0f）：
+  - `--headless --import` / `--quit` 退出 0、`ERROR` 0；全量单元 **7244 / 0**（基线 6517 + 727）。
+  - 八套集成全部 0 失败、各日志 `ERROR` 0：结构/可玩性 **581**（+189）、第一章 demo **101**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**。
+  - 退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；临时探针 `tests/probe_ch2map32.gd`、`tests/probe_ch2world32.gd` 用完删除；工作区干净。
+- 本程未做（按任务单）：第 2 章事件文本/权柄池/Boss 机制/敌人波次；章节可达性；二段跳/蹬墙跳/攀爬；MDS 插件修改；言灵/权柄/战斗框架；敌人美术/NPC 立绘；删除旧世界/旧场景；打包/导出/安装器/签名/商店/安卓/触屏。
+- 提交：`ea68f3a`（真实大区世界 + 9 房间场景）、`767ffaf`（`game.gd` 计划加载/region 语义）、`852606c`（世界/计划单元测试 + 可玩性集成 + 夹具镜像）、`<本提交>`（状态、ADR、session、记忆）。仅本地 `supervisor-dev`，不推送、不更新网页版。
+
+### 2026-11-04 · 第 30 程（第 2 章大地图施工第 4 步前半：第 2 章计划与大区图骨架）
+
+- 交接：第 29 程收尾 HEAD `2560f29`；启动时工作区干净、无在途改动、无会话在跑。本程只做第 2 章计划数据与大区连通图骨架（数据层），未创建/重排第 2 章实际房间场景、未改第 2 章世界 JSON、未写第 2 章事件/权柄/Boss 内容、未改章节可达性、未新增移动能力，未改 MDS 插件本体、言灵/权柄/战斗框架或存档格式。
+- 任务 0 · 基线核验（Godot 4.7.stable.official.5b4e0cb0f）：
+  - 干净 `2560f29` worktree：`--import` 退出 0、`ERROR` 0；单元 **5861 / 0**，与第 29 程收尾逐项一致。
+  - 本工作区：`--headless --import` / `--quit` 退出 0、`ERROR` 0；八套集成 0 失败、各日志 `ERROR` 0——结构 **392**、第一章 demo **101**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 29 程一致，无基线漂移。
+  - 操作注记：Godot 4.7 下用位置参数 `tests/run_tests.gd` 会把脚本当主场景并挂起（无输出、不退出）；正确入口是 `--headless --path . --script res://tests/run_tests.gd`。后续会话按此调用。
+- 任务 1 · 第 2 章计划数据（`ChapterPlanData` + 计划资源，未接入 `game.gd`）：
+  1. **`ChapterPlanData` 向后兼容扩展**：`big_map` / `start_room` / `doors`；region 条目新增 `size` / `encounters` / `chests` / `steles` / `shortcuts` / `hidden` / `shop` / `rest` / `vertical`。`clear_target()` 对带 `encounters` 的计划按遭遇节点数派生，第 1 章（无该键）仍按房型得 **6**。新增 `validate_regions()` / `validate_graph()`：尺寸为整屏 1280×720 的 1–3 倍、坠落平面低于本区底边、`region/Node` 节点 id 锚定且全区唯一、门位同房唯一、门对唯一、单向显式、捷径必须有 `requires`、图形态（恰一入口/枢纽/Boss、≥2 支路、纵井/精英/事件/隐藏区各至少一、枢纽含休整+商店+残碑+捷径、至少一个环）、入口有向 BFS 必须到达全部大区。
+  2. **`resources/chapters/chapter_2_demo.tres`**：9 区——入口 `ch2_entry` → 支路 `ch2_branch_a` / `ch2_branch_b` → 枢纽 `ch2_hub` → 纵井 `ch2_well`（2560×2160）→ 事件 `ch2_event` / 精英 `ch2_elite` → Boss `ch2_boss`；`ch2_vault` 为支路下的隐藏书库（2 箱 2 碑）。尺寸 2560×1440 / 2560×2160 / 3840×2160，均在 1–3 屏内。清房目标派生 **7**（支路 A 2、支路 B 1、纵井 2、精英 1、事件 1）；宝箱 5、残碑 5，全部 `region/Node` 节点 id，一区多内容各自结算。每区 `fall_below_bounds = 240`，坠落平面低于整区底边，纵井下层不会被误杀。11 扇门，其中 2 扇显式单向：`elite_boss`（Boss 区单向进入）与 `hub_shortcut_entry`（枢纽 → 入口，`requires = ["ch2_shortcut"]`）。
+  3. **计划暂不加载**：第 2 章现有世界仍是 `ch2_01`…`ch2_boss` 旧 9 小房间，region id 与新图不同；现在接入会把波次/进度指向不存在的房间。等真实大区世界/房间场景落地后再接 `_start_mds_chapter` / `_on_mds_room_loaded`，本程用测试验证计划本身。
+- 任务 2 · 大区图骨架与夹具：
+  - `tests/fixtures/big_room/ch2_graph.mdsworld.json`：顶层 `fixture: true`、无 `scene_path`、永不加载，明确是测试资产不是章节内容；以 MDS 世界形状镜像 9 个房间矩形/原点/类型/门/内容 id。
+  - `tests/test_ch2_plan.gd`（**656** 断言）：计划形状/类型/尺寸/坠落平面/节点 id 唯一与锚定/清房目标 7；图 BFS 全可达（含枢纽/隐藏书库/Boss）、双向/单向门、无孤立区、无重复房对；夹具 ↔ 计划逐项一致、门位在对应边、房间不重叠且双向门相邻、清房目标 = 图上遭遇总数；坏计划（孤立区/坏尺寸/缺坠落平面/缺 encounters/重复宝箱 id/未锚定 id/未知大区/重复门位/重复房对/捷径缺 requires）逐项报错；第 1 章计划仍 9 房、清房目标 6、无图、校验为空。
+- 验证（本程末实测，Godot 4.7.stable.official.5b4e0cb0f）：
+  - `--headless --import` / `--quit` 退出 0、`ERROR` 0；全量单元 **6517 / 0**（基线 5861 + 656）。
+  - 八套集成全部 0 失败、各日志 `ERROR` 0：结构 **392**、第一章 demo **101**、run save **588**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**（与第 29 程逐项一致，无回归）。
+  - 退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；临时探针未创建；工作区干净。
+- 本程未做（按任务单）：第 2 章实际房间/世界 JSON/事件文本/权柄池/Boss 机制/敌人美术；章节可达性（第 2–4 章仍不可达）；二段跳/蹬墙跳/攀爬；MDS 插件修改；言灵/权柄/战斗框架；打包导出/安装器/签名/安卓/触屏。
+- 提交：`9d8cacc`（`ChapterPlanData` 大图字段 + 校验）、`3ba2cc4`（第 2 章计划 + 图夹具 + 单元测试）、`<本提交>`（状态、ADR、session、记忆）。仅本地 `supervisor-dev`，不推送、不更新网页版。
+
+### 2026-11-04 · 第 29 程（第 2 章大地图施工第 3 步：纵向/捷径道具管线）
+
+- 交接：第 28 程收尾 HEAD `ee0c720`；启动时工作区干净、无在途改动。本程只做可复用的关卡道具管线，未创建/调整第 2 章地图、房间、世界 JSON、房间计划、事件、权柄或 Boss 内容，未改章节可达性，未新增移动能力（不加二段跳/蹬墙跳/攀爬），未改 MDS 插件本体、言灵/权柄/战斗框架或存档格式。按 `.supervisor/DECISIONS.md`：第 9 项大区连通图、第 10 项 A 不新增移动能力。
+- 任务 0 · 基线核验（HEAD `ee0c720`，Godot 4.7.stable.official.5b4e0cb0f）：
+  - `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0。
+  - 单元 **5779 / 0**；八套集成 结构 **351**、第一章 demo **101**、run save **561**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**，全部 0 失败、日志 `ERROR` 0；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 28 程逐项一致，无基线漂移。
+- 任务 1 · 纵向/捷径道具管线（新增，第 1 章不迁移）：
+  1. **单向落台 `OneWayPlatform`**（`scripts/levels/one_way_platform.gd`，StaticBody2D）：`size` 左上角即行走面；层 1、无掩码；`one_way_collision`（margin 2）上方可站、下方跳跃穿过。站立时按「下 + 跳」，`player.gd` 只做一次薄片形状查询并对该平台开 0.3 s 碰撞例外，玩家落下去；不新增按键、不改 `jump_velocity`/`gravity`；实心地面上「下+跳」仍是普通跳跃（第 1 章手感不变）。`drop_through=false` 可关。
+  2. **塌陷平台 `CollapsingPlatform`**（StaticBody2D）：`IDLE → WARNING → FALLING → GONE → IDLE`。站立检测用上方 Area2D（掩码 1、只认 `player` 组）；预警期颜色/裂纹/抖动（`warn_time`），随后关碰撞、视觉下落（`fall_time`）、隐藏并在 `respawn_time` 后复位。`advance(delta)` 公开可确定性驱动。`game.gd` 在坠落回退与玩家死亡时对组内调用 `reset_now()`；不改第 27 程坠落平面解析链（章节计划 → 房间 metadata → 默认 850）。
+  3. **移动平台/电梯 `MovingPlatform`**（AnimatableBody2D，`sync_to_physics`）：`travel` 相对作者位置，水平/垂直/斜向；`speed`/`pause_time`/`start_delay`/`ping_pong` 可配；站立玩家由现有 CharacterBody2D 平台逻辑承载，不新增控制器、不改玩家参数。`MDSBigRoom.build()` 用 `set_room_bounds()` 把并集交给子道具，`travel` 越界收紧（`effective_travel`/`travel_clamped`），作者位置本身在并集外时原地不动（`outside_bounds`）；相机限制仍由 MDS 按同一并集设置。
+  4. **长椅检查点 `BenchCheckpoint`**（Node2D）：交互半径 96 px、`interact` 触发，`respawn_position()` = 长椅地面锚点 - 16 px（玩家脚底偏移）。`game.gd` 在商店/宝箱/拾取之后、残碑之前检查长椅：更新 `_last_checkpoint`、清零速度、HUD 提示、调用现有 `save_run_now()`。**不新增存档键、不改版本**；run save 仍写 `run/world/mds` 同一结构，旧档安全。第 1 章无长椅，进房设检查点代码未改。
+  5. **捷径（条件门）**：世界 JSON 门带 `requires` 时，`MDSBigRoom` 在自动生成 `MDSGate` 的同时生成同名 `MDSGateBarrier`（作者门优先、不重复生成）；开门条件与状态复用 MDS 既有机制并进 MDS 存档，跨房间/跨存档保留。不新增可破坏墙运行时脚本。
+- 验证（本程末实测，Godot 4.7.stable.official.5b4e0cb0f）：
+  - `--headless --import` / `--quit` 退出 0、`ERROR` 0；单元 **5861 / 0**（基线 5779 + 82）。
+  - 八套集成全部 0 失败、各日志 `ERROR` 0：结构 **392**（+41）、第一章 demo **101**、run save **588**（+27）、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**。
+  - 退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；临时探针未创建；测试夹具 `tests/fixtures/big_room/` 为永久测试资产（非章节内容）；工作区干净。
+  - 覆盖：单向落台上落/下+跳下落/下方跳跃穿过/实心地面下+跳仍是跳跃；塌陷平台预警（进度+抖动）/塌落/落地不掉血/复位；垂直电梯与水平渡船承载玩家且不滑落、行程在房间并集内、越界行程截断；条件门生成/需求/解锁/存档；长椅交互更新检查点并写 run save（版本不变）、坠落回退到长椅、坠落时塌陷平台整组复位、续玩回到长椅附近；第 1 章 9 个房间场景仍走 `MDSChapterRoom` 且不含任何新道具。
+- 本程未做（按任务单）：第 2 章地图/房间/世界 JSON/房间计划/事件/权柄/Boss/敌人美术；章节可达性；二段跳/蹬墙跳/攀爬；可破坏墙；言灵/权柄/战斗框架；MDS 插件修改；打包导出/安装器/签名/安卓/触屏。第 2–4 章仍不可达，Boss 2–4 机制未做。
+- 提交：`e79ff83`（道具脚本 + 单元测试）、`873df50`（game/player/MDS 接线 + 集成测试 + 夹具）、`<本提交>`（状态与记忆）。仅本地 `supervisor-dev`，不推送、不更新网页版。
+
+### 2026-11-04 · 第 28 程（第 2 章大地图施工第 2 步：房间生产管线）
+
+- 交接：第 27 程收尾 HEAD `3db07f0`；启动时工作区干净、无在途改动。本程只做管线，未创建/调整第 2 章地图、房间、世界 JSON、房间计划、事件、权柄或 Boss 内容，未改可达性，未新增移动能力，未改 MDS 插件本体。
+- 任务 0 · 基线核验（HEAD `3db07f0`，Godot 4.7.stable.official.5b4e0cb0f）：
+  - `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0。
+  - 单元 **5706 / 0**；八套集成 结构 **296**、第一章 demo **101**、run save **561**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**，全部 0 失败、日志 `ERROR` 0；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 27 程逐项一致，无基线漂移。
+- 任务 1 · 房间生产管线（新增，第 1 章不迁移）：
+  1. **`BigRoomData`（`scripts/levels/big_room_data.gd`，Resource）**：`size` 仅是无 MDS 父节点时的后备；MDS 世界里以房间局部矩形并集为准。`ground` 为 `{x, y, width, height=64}`（多层地面 = 不同 `y` 的地面条目），`platforms` 为 `{x, y, width}`（固定 16 px 厚）。有 `tile_set` 时按 16 px 网格吸附，否则灰盒。可达性校验：越界/坏字段/非正宽高/无下方支撑的悬空平台；每个表面到其攀爬来源面的上升 ≤ **80 px**（现有跳跃顶点约 92.6 px，`jump_velocity=-500`、`gravity=1350`），水平边缘距离 ≤ **120 px**。
+  2. **`MDSBigRoom`（`scripts/levels/mds_big_room.gd`，Node2D）**：读取父 `MDSWorldGame` 的当前房间局部矩形并集、区域、天气/动态背景/视差；相机限制仍由 MDS `apply_camera_limits` 按并集设置。地面/平台视觉用 `TileMapLayer`（`collision_enabled=false`），碰撞用每段一个 `StaticBody2D` + `RectangleShape2D`（大房间不产生每格碰撞体）。静态背景按并集宽度平铺（2560 宽 2 列、3840 宽 3 列），图源按 蓝图 → MDS 房间 → 区域 → 世界 `backdrop_image` 解析；像素图 nearest、绘画图 linear。`auto_gates=true` 时按世界 JSON `gates` 生成 `MDSGate`（TOUCH/INTERACT、侧向形状、门提示），同名作者门优先。房间 metadata 写入 `fall_below_bounds = 200`，接第 27 程坠落平面解析链（章节计划仍优先）。
+  3. **`BigRoomAmbient`（`scripts/presentation/big_room_ambient.gd`，Node2D）**：`motes` 横漂 / `embers` 上升，只绘制相机窗口与房间并集的交集（外加 64 px 余量），默认取 MDS 区域色；默认关闭，不复制 MDS 天气。
+  4. **第 1 章零迁移**：`MDSChapterRoom`、`ch1_layout.tres`、9 个 `ch1_*.tscn` 一字未改；新管线按场景 opt-in，单元测试逐场景断言 9 个第一章房间仍是旧构建器，`WIDTH=1280`、`FLOOR_Y=560` 不变。
+- 验证（本程末实测，Godot 4.7.stable.official.5b4e0cb0f）：
+  - `--headless --import` / `--quit` 退出 0、`ERROR` 0；单元 **5779 / 0**（基线 5706 + 73）。
+  - 八套集成全部 0 失败、日志 `ERROR` 0：结构 **351**（基线 296 + 55）、第一章 demo **101**、run save **561**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**。
+  - 退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；临时探针未创建；测试夹具 `tests/fixtures/big_room/` 为永久测试资产（非章节内容）；工作区干净。
+  - 全量套件在功能终稿上跑完后，仅把 `_build_backdrop` 的局部变量 `scale` 改名为 `tile_scale`（消除对 `Node2D.scale` 的遮蔽），重跑单元与结构集成仍 **5779 / 0**、**351 / 0**；其余七套不加载该文件，未重跑。
+- 本程未做（按任务单）：第 2 章地图/房间/世界 JSON/计划/事件/权柄/Boss/敌人美术、章节可达性、移动能力、移动/塌陷/单向平台、MDS 插件修改。待用户确认第 9/10 项保持开放，管线对「大区图 + 短过渡」与「字面单场景无缝」两种口径都成立（房间仍是 MDS 加载单元），且未新增任何移动能力。
+- 提交：`311b843`（管线脚本 + 单元测试）、`eac7b20`（结构集成 + 夹具）、`<本提交>`（状态与记忆）。仅本地 `supervisor-dev`，不推送、不更新网页版。
+
+### 2026-11-04 · 第 27 程（第 2 章大地图施工第 1 步：基础解耦）
+
+- 交接：第 26 程绿基线 `13b4230`；第 27 程首启因 Magpie 网关不通（`ECONNREFUSED`）无产出，本程为原任务单重试。启动时工作区干净、无在途改动。
+- 任务 0 · 基线核验（HEAD `13b4230`，Godot 4.7.stable.official.5b4e0cb0f）：
+  - `--headless --path . --import` / `--quit` 退出 0、`ERROR` 0。
+  - 单元 **5645 / 0**；八套集成 结构 **269**、第一章 demo **81**、run save **541**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**，全部 0 失败、各日志 `ERROR` 0；退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**。与第 26 程逐项一致，无基线漂移。
+  - 说明：gamepad 起的四套首次运行与本会话的编辑重叠，结果不计；改在 `git worktree` 的干净 `13b4230` 副本重跑（`/tmp/ch27_head_logs`），数字与第 26 程一致后才开始施工。
+- 任务 1 · 三项基础解耦（未改第 2 章地图/世界 JSON/可达性，未新增移动能力）：
+  1. **坠落平面按房间/区域配置**：`game.gd` 的固定 `fall_y > 850.0` 改为 `> _fall_limit_local`；房间加载时 `_resolve_fall_limit()` 依次读章节计划房间键 `fall_y`（房间局部绝对 y）或 `fall_below_bounds`（房间并集底边以下）→ 房间节点 metadata 同名键 → `ChapterPlanData.DEFAULT_FALL_Y = 850`。第 1 章计划 9 个房间均未配置，仍 850；无计划的第 2–4 章同样 850。断言覆盖默认/两种配置/非法值/优先级，以及第 1 章 850 坠落与伤害（含难度倍率）、配置 2000 时 y=1200 不误杀、y=2001 才回退。
+  2. **一次性内容与清场进度按节点 id**：新增 `RoomProgress`（`scripts/core/room_progress.gd`），id 取作者 `content_id`/`encounter_id`，否则 `room_id/节点名`，同房重名用 `#2`/`#3` 唯一化；旧 room-key 记录经 `is_recorded()` 兼容回退。`_cleared_encounters` 取代 `_mds_cleared_rooms`；宝箱/残碑/遭遇分别用 `TreasureChest.content_id`、`MemoryStele.content_id`、`ArenaRoom.encounter_id`。房间加载时收集全部直接子 `ArenaRoom`，逐个接线、禁用 `Enemies` 处理并按键记录；`Arena` 仍是主节点，保留事件/Boss/计划波次/房间级文案。存档新增可选键 `progress.cleared_encounters`、`world.claimed_stele_ids`、`world.opened_chest_ids`；旧键 `cleared_rooms`/`claimed_steles`/`opened_chests` 读入 `_legacy_*` 并原样写回，**不从新进度反推旧键**，旧档不判坏档、不丢档。第 1 章单房单内容与基线一致（`ch1_01/Arena`、`ch1_03/Chest`、`ch1_vault/Chest`、`ch1_vault/Stele`、`ch1_rest/Stele`、`ch1_05/event`）。
+  3. **章节清房目标读计划**：`ChapterPlanData.clear_target()` 默认统计 `combat`/`elite`/`event` 房型（第 1 章 = 6），`clear_target_override` 可覆盖；`game.gd` 的上限判断、HUD 分母（目标 + Boss）、奖励种子、改写房号全部改读目标；无计划章节回退 6。第 1 章仍 6 / 7，数值与基线一致。
+- 验证（本程末实测，Godot 4.7.stable.official.5b4e0cb0f；提交见下方记录）：
+  - `--headless --import` / `--quit` 退出 0、`ERROR` 0；单元 **5706 / 0**（+61）。
+  - 八套集成全部 0 失败、各日志 `ERROR` 0：结构 **296**（+27）、第一章 demo **101**（+20）、run save **561**（+20）、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**。
+  - 退出泄漏 **10/10 clean**；demo 像素资产 **36 / 0**；临时探针 `tests/probe_fall27.gd` 用完删除；工作区干净。
+- 本程未做（按任务单）：第 2 章地图/房间计划/事件/权柄/Boss/世界 JSON、章节可达性、移动能力、移动/塌陷平台、敌人美术；「待用户确认」第 9/10 项保持开放，本步解耦不依赖任一选项。
+- 提交：`d01aebc`（数据/存档/单元测试）、`3e6773b`（`game.gd` 接线/集成测试）、`<本提交>`（状态与记忆）。仅本地 `supervisor-dev`，不推送、不更新网页版。
+
+### 2026-11-04 · 第 26 程（第 2 章大地图可行性核查）
+
+- 任务 0 · 基线核验（HEAD `253c18e`，Godot 4.7.stable.official.5b4e0cb0f，本机 `~/workspace/tools/godot/bin/Godot_v4.7-stable_linux.x86_64`）：
+  - `--headless --path . --import` 退出 0、`ERROR` 0；`--headless --path . --quit` 退出 0、`ERROR` 0。
+  - 单元 `tests/run_tests.gd` **5645 / 0**，`ERROR` 0。
+  - 八套集成全部 0 失败且各日志 `ERROR` 0——结构 **269**、第一章 demo **81**、run save **541**、手柄 **207**、UI 提示 **113**、第一章事件 **59**、菜单 A/B **391**、AI 设置 **45**。
+  - `tests/check_exit_clean.sh <godot> 10` → **10/10 clean**；demo 像素资产 **36 / 0**。
+  - 与第 25 程收尾数字逐项一致，无基线漂移、无回归，可以进入核查。
+- 任务 1 · 第 2 章大地图可行性核查（只查不施工）：完整结论写入上方「第 2 章大地图可行性核查」专节，按【已核实】/【推断】/【待施工验证】分列。
+  - 读代码/资源：MDS 世界/房间/门/相机/地图/存档运行时（`addons/MetroidvaniaDeveloperSystem/`）、`game.gd` 的房间接线与存档、第 2 章 `chapter_2_world.tscn` / `chapter_2.mdsworld.json` / 9 个 `ch2_*.tscn`、`CampaignData` 第 2 章条目、Boss/敌人/语音/事件/权柄代码路径、旧线性 `biome_breathing.tscn`（已隐藏的 fallback）。
+  - 临时探针 `tests/probe_ch2map.gd` + `tests/_probe_ch2map/`（合成大房间/L 形房间/上下门 + 真实第 2 章世界逐房加载）：**53 / 0**。实测 3840×1440 房间加载 1.3–3.1 ms、L 形 2560×2160 并集边界正确且缺口不可行走、top/bot 门向与 bot 出速 -650 正确、无缝跨房 1.6–6.1 ms 且相机限制跟随；真实第 2 章 9 房全部加载，热加载 3.7–8.8 ms（Boss 房约 23 ms，`spore_drift` 动态背景）。探针为测试夹具，测后随本程删除，不留在仓库。
+  - 关键结论：MDS 承载力足够，不需要重写；施工面在房间生产管线与 `game.gd` 的“一房一战斗/一房一拾取/固定 6 房进度/850 px 坠落保护”假设。第 2–4 章仍不可达；本程未改任何产品代码、场景、资源或存档格式。
 
 ### 2026-11-04 · 第 25 程（T17 任务 2–4）
 
@@ -832,12 +4874,14 @@ Chapter 1 demo `0.11.0-demo` 已可完整游玩（标题 → Hub 教学 → 六�
 
 ## 下一程从这里继续
 
-1. 先跑基线：`--headless --path . --import`、`--headless --path . --quit`、`tests/run_tests.gd`（预期 **5354 / 0**）、八套集成（`integration_playability` 269 / `integration_ch1_demo` 67 / `integration_run_save` 494 / `integration_gamepad` 207 / `integration_ui_prompts` 113 / `integration_ch1_event` 59 / `integration_menus` 372 / `integration_ai_settings` 45）、`tests/check_exit_clean.sh <godot> 10`、`tests/check_pixel_assets.py --demo`（36 / 0）；确认全绿再动手。
-2. 第 23 程已完成并提交（`cacaadf` → `c068b79` + 本条收尾文档提交）：任务 0 逐份核实并处置第 22 程全部残留（探针 82/82、55/55，空态测试修正后 178/0，runner 守卫改为 `can_instantiate()` 预检）；任务 1 补齐章末完成/选择页、Hub 训练碑、标题设置页的焦点与退出覆盖，章末选择页文字排版性能（29 ms → 0.685 ms），图鉴/背包空态文案；任务 2 实现标题页有存档时的首帧焦点。工作区干净，无在途未提交改动，无阻塞项。
-3. 下一程按收口规则：第一章的例行扫描面（关闭回退/焦点/存档边界/性能/文案单薄）本程已全部走完，**未发现新的产品行为缺陷**；由监工按 `.supervisor/DECISIONS.md`「第一章收口规则」判定是否触发里程碑（推送 main + 更新网页版），执行方不自行推送。收口后不再给第一章开新的扫描面（真机或用户新报的缺陷除外，随报随修）。
-4. **待用户确认**：第 8 项已由监工拍板并实现（标题页有存档时首帧聚焦「继续本局」），不再是开放问题。其余历史项均已拍板。后续若出现需要用户拍板的新问题，只记入「待用户确认」，不要猜、不要擅自改。
+1. 先跑基线：`--headless --path . --import`、`--headless --path . --quit`、`--headless --path . --script res://tests/run_tests.gd`（预期 **13490 / 0**；第 68 程 +5 条档案馆满级断言、第 69 程 +17 条 NPC 职能文案/发放断言、第 70 程 +14 条商店/神铸/遗物卡文案断言、第 72 程 +9 条阿砚问候不扣碎片/不升级断言、第 73 程 +16 条词服务/已拥有货架断言）、十一套集成（`integration_playability` **899**（第 70 程 +5 条缝合书页实际数值断言）/ `integration_ch1_demo` **109**（第 73 程 +7 条商店已拥有断言）/ `integration_run_save` 613 / `integration_gamepad` 207 / `integration_ui_prompts` 113 / `integration_ch1_event` 59 / `integration_menus` **445**（第 68 程 +9 条满级行断言、第 69 程 +5 条档案馆开启语/服务句上限断言、第 70 程 +12 条最终一级/神铸断言）/ `integration_ai_settings` 45 / `integration_ch2_bigmap` **2315** / `integration_ch3_bigmap` **4358** / `integration_ch4_bigmap` **5133**）、`tests/check_exit_clean.sh <godot> 10`、`tests/check_pixel_assets.py --demo`（36 / 0）；确认全绿再动手。注意 Godot 4.7 下不要用位置参数传测试脚本（会挂起），必须用 `--script res://...`。
+2. 第 36–45 程已完成并提交：第 2 章大地图验收集成（2209 断言）、bot 门到达宽限（`floor_arrival_grace` 1.2 秒）、九区 22 扇 `GateVisual`、`ch2_entry` 出生 `SpawnPoint`、地图标题按章节区域派生、敌人美术核查（`choir_summoner` 已接线，其余四种缺美术保留回退）；第 39 程完成第 3 章大地图可行性核查（只查不施工，见专节）；第 40 程完成第 3 章计划与图骨架（9 区、6 战斗遭遇 + 1 事件占位 = 清房目标 7、11 门 = 9 双向 + 2 单向、每区坠落平面 240；`content_pending` 只推迟波次表；计划未接入 `game.gd`，见专节）；第 41 程完成第 3 章真实大区世界（9 个 `BigRoomData` + 9 个 `MDSBigRoom` + 独立世界/场景，22 门 = 20 有向 + 2 只到达，入口 `SpawnPoint`，每区坠落 240；世界仍不被 `game.gd` 引用、计划槽仍空，见专节）；第 42 程完成第 3 章内容数据层第 1 步（`Ch3EventData`、计划基础权柄池、Boss 3 入场/阶段文案与遭遇/波次数据校验；计划仍未接入 `game.gd`、仍无 `wave` 表与事件真实触发）；第 43 程完成第 3 章内容数据层第 2 步（计划 6 个战斗遭遇按节点 id 接 `ROOM_WAVES[2]` 六波、事件/Boss 无普通波、清房目标 7、`content_pending` 清零；计划仍未接入 `game.gd`、事件无真实触发、Boss 3 无 `boss_scene`/机制）；第 44 程完成第 3 章内容数据层第 3 步（`ch3_event` 沿用第 34 程通用大图区域触发、进入即开第 3 章事件页、`ch3_event/event` 一次性结算、读/拿沿用第 42 程口径；未新增触发路径、仍未接入 `game.gd`）；第 45 程完成第 3 章 Boss 3 独特机制与计划 `boss_scene` 路由（镜面弹幕 3/5/7 枚、读页封印短语 3.0 s、阶段 3 空白页承伤窗口、计划路由既有 `last_reader.tscn`，数值为暂定口径由 `test_ch3_boss` 锁定；`CHAPTER_PLAN_PATHS[2]` 仍空）。第 46 程完成第 3 章章末收口：`_complete_chapter` 新增 `_chapter == 2` 分支，章末选择后 `_finish(true)` 停章、不再自动进第 4 章（第 1/2/4 章分支未改）；真实大区世界 + 计划走完 Boss 3 击败 → 权柄 → 第 3 章 outro → 章末选择 → 停章，旧线性世界结构遍历同步改为「停在第 3 章」；可玩性集成 732 → **754**，`CHAPTER_PLAN_PATHS[2]` 仍空、第 3 章仍不可达、计划仍未接入 `game.gd`。第 1 章 9 房间/6 波次/事件/清房目标 6/结束流程无回归，第 2 章计划/大区世界/Boss 2/章末收口无回归，第 2–4 章仍不可达；单元 10207/0、九套集成全绿、退出泄漏 10/10、像素 36/0。第 47 程因 Magpie 网关中断夭折（无提交、无文档，只留下未跟踪的验收脚本）。第 48 程接力完成第 3 章大地图系统验收：`tests/integration_ch3_bigmap.gd` **3424 断言 / 0 失败（连续两次）**，覆盖九区连通/边界相机/纵向/过渡/一次性内容/多遭遇/捷径隐藏/Boss 章末/性能/叙事与第 3 章专属（无光海背景平铺、雾雨、`deep_water` Boss 背景、地图标题「无光海地图」）；未发现产品缺陷（4 处验收脚本自身问题已修并补断言），性能基线与逐项结论见 `docs/memory/sessions/2026-11-05-chapter3-bigmap-acceptance.md`；`CHAPTER_PLAN_PATHS[2]` 仍空、旧第 3 章 9 房/17 门世界仍被 `game.gd` 使用、第 3 章仍不可达。第 49 程完成第 3 章大图门视觉专项（22 扇门逐门断言、修复 `ch3_well/top1`/`ch2_well/top1` 舱口标题越界）与敌人美术核查（`ROOM_WAVES[2]` 8 种：5 接线白 tint / 3 缺美术回退并记录），单元 10315/0、第 3 章集成 4235/0、第 2 章集成 2209/0；第 1/2 章无回归，第 3 章仍未接入 `game.gd`、仍不可达。第 50 程完成第 4 章大地图可行性核查（只查不施工）：第 2/3 章大区管线可直接承载；第 4 章现有旧世界 9 房/17 门/单层、6 战斗 + 休整 + 书库 + Boss、文本语音与 Boss 4 脚本/场景/立绘均在；缺口为计划/大区世界/事件/权柄/Boss 文案与第 4 章验收；美术素材已画好并接线、8 种敌人无回退；第 4 章仍不可达，可达性须单独拍板且不能早于第 2/3 章。第 51 程完成第 4 章计划与图骨架（只做数据层）：`chapter_4_demo.tres` 9 区连通图、6 战斗遭遇 + 1 事件占位 = 清房目标 7、3 宝箱/2 残碑、11 门 = 9 双向 + 2 单向、每区坠落 240；`content_pending = true` 只推迟波次表；Boss 门按第 2/3 章先例单向、旧世界可返回行为原样保留；计划未接入 `game.gd`（`CHAPTER_PLAN_PATHS[3]` 仍空）、旧第 4 章世界原样保留、第 4 章仍不可达；真实大区世界/`Ch4EventData`/权柄池/波次/Boss 4 机制与文案均未开始。第 52 程完成第 4 章真实大区世界（只做结构层）：9 个 `BigRoomData` + 9 个 `MDSBigRoom` + 独立世界/场景（22 门 = 20 有向 + 2 只到达、`elite_boss` 单向、`hub_shortcut_entry` 带 `requires` 默认封闭、入口 `SpawnPoint`、每区坠落 240、5 台电梯 + 纵井 3 单向落台 + 枢纽长椅）；区域 `Smiling Theater` 灰烬/光柱 + `blood_moon`、`smiling_theater.png` 静态平铺、`embers` 氛围，无 theater 层；世界仍不被 `game.gd` 引用（`CHAPTER_PLAN_PATHS[3]` 仍空）、旧第 4 章世界原样保留、第 4 章仍不可达；`test_ch4_world` 812 断言、`test_ch4_plan` 目录锁改为存在性（796）；临时探针用真实 MDS 运行时逐区加载 0 失败后删除。第 53 程完成第 4 章内容数据层第 1 步（`Ch4EventData` 7 组事件、计划权柄基础池续命/改写、Boss 4 入场 8 条 + 阶段 2/3 各 8 条；计划仍 `content_pending`/无 `wave` 表/无 `boss_scene`、仍不被 `game.gd` 引用；`test_ch4_content` 613 断言，单元 12545/0，十套集成不变）。第 54 程完成第 4 章内容数据层第 2 步（波次接线，只做数据层）：`chapter_4_demo.tres` 的 4 个战斗区补 `wave` 字典，6 个战斗遭遇按计划顺序逐字接上 `ROOM_WAVES[3]` 六波（`mask_enemy`+`seat_husk` / `choir_summoner`+`page_swarm` / `seat_husk`+`mirror_sniper` / `mask_enemy`+`typo_beast` / `ink_bomber`+`mask_enemy` / `mirror_sniper`+`page_swarm`），事件节点与 Boss 区不占普通波次、清房目标仍 7；`content_pending` 清零、波次表进入正常校验；`test_ch4_content` 641（+28）、`test_ch4_plan` 795（−1）、`test_ch4_world` 813（+1），单元 12573/0，十套集成与基线一致全 0 失败；计划仍未接入 `game.gd`（`CHAPTER_PLAN_PATHS[3]` 仍空）、第 4 章仍不可达。第 56 程完成第 4 章内容数据层第 3 步（事件区真实自动触发验证，只做触发与测试层）：`ch4_event` 沿用第 34 程的通用大图区域分支（`big_map` + 类型 `event` + 本章有事件数据），进入区域即按 `Ch4EventData.pick(run_seed, "ch4_event/event")` 打开第 4 章事件页；拿 → 残页 +12，读 → 污染 +8（倍率/上限 100）+ 解明一个残页词或兜底 +6；结算写 `cleared_encounters["ch4_event/event"]`、清房计数 +1（目标 7、HUD 分母 8），重载不重开/不重复奖励，run save 落盘同一键。未新增第 4 章专属触发路径（`game.gd` 仅注释改为 Chapters 2–4）、未接入 `game.gd`、未改章节路由与章末流程；`test_ch4_content` 642（+1）、可玩性集成 810（+55），单元 12574/0，其余九套集成与基线一致全 0 失败；第 4 章仍不可达。第 57 程完成第 4 章内容数据层第 4 步（Boss 4 机制与 `boss_scene` 路由，只做机制与测试层）：计划 `boss_scene` 指向既有 `smiling_archivist.tscn`，通用 Boss 流程复用；既有机制（阶段 1 纸页波、阶段 2 每第 3 次镜面弹幕、阶段 3 改写/镜面/墨雨/纸页波四拍）与数值 HP 520 / 伤害 18 / 速度 92 / 立绘由 `test_ch4_boss` 78 断言 + 可玩性集成锁定；大图生成高度 -18/250 未改。`test_ch4_plan` 797、`test_ch4_world` 814、`test_ch4_content` 644，可玩性集成 869，单元 12657/0；第 4 章仍不可达，第 4 章大图验收与章末收口未开始。第 58 程完成第 4 章章末收口（只做章末流程与测试层）：`_complete_chapter` 新增显式 `_chapter == 3` → `_finish(true)` 结束战役（与旧 `else` 兜底等价）；真实大区世界走完 Boss 4 → 权柄 → 第 4 章 outro → 章末选择 → 战役结束，章末原文/语音/选项/结局规则由可玩性集成锁定；第 1/2/3 章章末流程未改，可玩性集成 869 → 894，第 4 章仍不可达、第 4 章大图验收未开始。第 59 程完成第 4 章大地图系统验收：接力首次尝试（brief62）因 Magpie 网关中断留下的未跟踪初稿 `tests/integration_ch4_bigmap.gd`，核查发现其 `_run()` 内 `enemy_art`/`enemy_fallback` 重复声明导致 GDScript 解析失败、从未跑通，修复后 4766/0，再按任务单补 5 台电梯逐一测速/行程、7 组事件文案与确定性/RNG、Boss 阶段 3 文案、权柄基础池 + 吞噬/归档条件项、其余四个战斗区实际波次与精灵校验，最终 **4869 断言 / 0 失败（连续两次）**；覆盖九区 BFS 连通、22 门实走（20 连通 + 2 只到达）、单矩形边界/相机、纵向（电梯 80 px/s、顶/底门、单向落台、长椅、坠落平面）、门过渡无叠加模态、3 箱 2 碑一次性、多遭遇逐场结算、捷径屏障默认封闭（仅测试注入 `ch4_shortcut`，无游戏内授予）、Boss 4 生成/权柄/章末结束战役、续玩、性能基线、事件/Boss 文案/权柄池与第 4 章专属表现（`smiling_theater.png` 平铺、灰烬/光柱、`embers`、`blood_moon`、其余区空背景且无 theater 层、地图标题「笑面剧场地图」、8 种敌人全专属精灵无回退）；未发现产品缺陷，改动全在验收脚本，未改任何 `scripts/`/`scenes/`/`resources/`；`CHAPTER_PLAN_PATHS[3]` 仍空、第 4 章仍不可达。
+3. 下一程建议先由监工定排期：① 第 2 章是否进入可达性开放/演出打磨（验收已证明连通、纵向、战斗、捷径、Boss、续玩链路可用，门视觉/出生点/地图标题已补齐；开放前需拍板第 11/12/13 项并处理四个第 2 章敌人缺美术）；② 第 3 章真实大区世界（第 41 程，结构层）、内容数据层第 1–3 步（第 42 程事件/权柄/Boss 文案，第 43 程计划 `wave` 接线，第 44 程事件区真实自动触发）、Boss 3 机制/`boss_scene`（第 45 程）、章末收口（第 46 程）、大图验收（第 48 程）、门视觉专项与敌人美术核查（第 49 程）均已完成；第 14（视野压缩）、15（海面母题）、16（`ch3_shortcut` 来源）项未拍板前，相关机制/氛围/捷径授予仍不施工；③ 第 3 章剩余的是可达性开放与第 4 章内容，可达性仍须单独拍板，且第 3 章可达性不能早于第 2 章。第 3 章已知美术缺口仍是 `rust_whisperer`/`lung_moth`/`collapse_husk` 三种敌人无专属贴图（与第 2 章同一清单，按任务单不新绘）。④ 第 50 程完成第 4 章大地图可行性核查（只查不施工，见「第 4 章大地图可行性核查（第 50 程）」专节）：大区管线可直接承载，缺口为计划/大区世界/内容数据/Boss 4 机制/验收套件；第 4 章美术素材已画好并接线、8 种敌人全部专属精灵无回退；施工顺序按「计划/图骨架 → 真实大区世界 → 内容数据层 → Boss 4 机制 → 系统验收」，每步前置依赖见专节；第 4 章可达性仍须单独拍板且不能早于第 2/3 章；第 4 章特有开放问题候选（舞台母题、`ch4_shortcut` 来源、是否加事件区、Boss 4 机制范围、战斗密度）只记录在专节，是否新增「待用户确认」条目由监工定。⑤ 第 51 程完成第 4 章计划与图骨架（只做数据层，见「第 4 章计划与图骨架（第 51 程）」专节）：9 区连通图、6 战斗遭遇 + 1 事件占位 = 清房目标 7、11 门 = 9 双向 + 2 单向、每区坠落 240；`content_pending` 只推迟波次表；计划已落地但未路由（`CHAPTER_PLAN_PATHS[3]` 仍空），旧第 4 章世界仍被游戏使用；下一步按第 50 程 D 节顺序是第 4 章真实大区世界，但施工前需先定舞台母题呈现口径（专节 E），本程不猜；第 4 章可达性仍须单独拍板且不能早于第 2/3 章。⑥ 第 52 程完成第 4 章真实大区世界（结构层，见「第 4 章真实大区世界（第 52 程）」专节）：9 个 `BigRoomData` + 9 个 `MDSBigRoom` + 独立世界/场景（22 门 = 20 有向 + 2 只到达、`elite_boss` 单向、捷径屏障默认封闭、入口出生点、每区坠落 240、电梯/单向落台/长椅骨架）；舞台母题只按既有区域氛围落地（无 theater 层），旧第 4 章世界仍被游戏使用，计划仍不路由；下一步按第 50 程 D 节顺序是第 4 章内容数据层（`Ch4EventData`/波次接线/权柄池/Boss 文案与 `boss_scene`），前置是战斗密度与 Boss 4 机制范围口径（专节 E），未拍板前不施工；第 4 章可达性仍须单独拍板且不能早于第 2/3 章。⑦ 第 53 程完成第 4 章内容数据层第 1 步（只做数据层，见「第 4 章内容数据层第 1 步（第 53 程）」专节）：`Ch4EventData` 7 组笑面剧场事件文案（读/拿沿用第 32 程口径、按 seed + 节点 id 轮换、不耗 run RNG）、计划 `authority_pool = [续命, 改写]`（条件项仍走 `ContentLibrary`）、`BossEntranceData` 8 条入场 + `BossPhaseData` 阶段 2/3 各 8 条（不回落第 1/2/3 章，Boss 4 数值/立绘/`boss_script` 未改）；计划仍 `content_pending = true`、无 `wave` 表、无 `boss_scene`，6 场战斗与 `ROOM_WAVES[3]` 六波只校验顺序、清房目标 7；计划仍未接入 `game.gd`（`CHAPTER_PLAN_PATHS[3]` 仍空）、旧第 4 章世界原样保留、第 4 章仍不可达；`test_ch4_content` 613 断言。下一步按第 50 程 D 节顺序是第 4 章内容数据层第 2 步（计划 `wave` 接线，按计划顺序复用 `ROOM_WAVES[3]`，然后 `content_pending` 清零）与第 3 步事件区真实触发验证（沿用第 34/44 程通用分支），两者都不需要第 50 程专节 E 的开放问题拍板；Boss 4 机制/`boss_scene` 仍等机制范围口径（专节 E）。第 4 章可达性仍须单独拍板且不能早于第 2/3 章。⑧ 第 54 程完成第 4 章内容数据层第 2 步（波次接线，只做数据层，见「第 4 章内容数据层第 2 步（第 54 程）」专节）：`chapter_4_demo.tres` 的 4 个战斗区补 `wave` 字典、6 个战斗遭遇按计划顺序逐字接 `ROOM_WAVES[3]` 六波、事件/Boss 无普通波、清房目标 7、`content_pending` 清零；`test_ch4_content` 641（+28，含独立 `game.gd` 实例经 `_plan_wave()` 读回六波）、`test_ch4_plan` 795（−1）、`test_ch4_world` 813（+1）；计划仍未接入 `game.gd`（`CHAPTER_PLAN_PATHS[3]` 仍空）、第 4 章仍不可达。第 56 程完成第 4 章内容数据层第 3 步（事件区真实自动触发验证，只做触发与测试层，见「第 4 章内容数据层第 3 步（第 56 程）」专节）：`ch4_event` 沿用第 34/44 程通用大图区域分支、进入即开第 4 章事件页、`ch4_event/event` 一次性结算、读/拿沿用第 53 程口径；未新增触发路径、计划仍未接入 `game.gd`、第 4 章仍不可达；`test_ch4_content` 642、可玩性集成 810，单元 12574/0。⑨ 第 57 程完成第 4 章 Boss 4 机制与 `boss_scene` 路由（只做机制与测试层，见「第 4 章 Boss 4 机制与 `boss_scene` 路由（第 57 程）」专节）：计划 `boss_scene` 指向既有 `smiling_archivist.tscn`，阶段映射/镜面弹幕/墨雨/改写/数值/生成高度由 `test_ch4_boss` 与可玩性集成锁定；计划仍不路由（`CHAPTER_PLAN_PATHS[3]` 仍空）、第 4 章仍不可达。下一步是第 4 章章末收口与第 4 章大图验收；Boss 4 机制扩展（删除词/复制武器/舞台机关）仍等第 50 程专节 E 拍板，未拍板前不施工。第 4 章可达性仍须单独拍板且不能早于第 2/3 章。⑩ 第 58 程完成第 4 章章末收口（只做章末流程与测试层，见「第 4 章章末收口（第 58 程）」专节）：`_complete_chapter` 新增显式 `_chapter == 3` 分支 → `_finish(true)` 结束战役（与旧兜底等价）；真实大区世界 + 计划走完 Boss 4 击败 → 权柄 → 第 4 章 outro（4 句原文 / `ch4_outro` 语音）→ 章末选择（重写/焚毁）→ 战役结束，结局按 `ending_for` 并写入 `Profile.endings`；旧线性世界遍历补第 4 章停章断言，可玩性集成 869 → 894；`CHAPTER_PLAN_PATHS[3]` 仍空、第 4 章仍不可达。下一步是第 4 章大图验收；Boss 4 机制扩展仍等第 50 程专节 E 拍板；第 4 章可达性仍须单独拍板且不能早于第 2/3 章。⑪ 第 59 程完成第 4 章大地图系统验收（见「第 4 章大地图系统验收（第 59 程）」专节）：接力 brief62 遗留的 `tests/integration_ch4_bigmap.gd`（修复重复声明解析错误后 4766/0，再补齐任务单缺口至 **4869 断言 / 0 失败、连续两次**），覆盖第 36/48 程 D 节 1–10 项 + 第 4 章专属表现；性能基线已记录（普通区首次 12.1–19.7 ms、热 12.3–16.6 ms、Boss 冷 71.4–79.7 ms / 热 45.6–45.9 ms、关背景 11.6–12.0 ms、关天气 38.0–38.5 ms、不生成 Boss 21.7–22.8 ms、门过渡 236.1–243.8 ms）；未发现产品缺陷、未改产品代码；`CHAPTER_PLAN_PATHS[3]` 仍空、第 4 章仍不可达。下一步是第 4 章可达性开放排期（须单独拍板且不能早于第 2/3 章）与第 2/3 章可达性/演出；Boss 4 机制扩展、舞台母题呈现层、`ch4_shortcut` 授予来源、战斗密度等仍等第 50 程专节 E 拍板，未拍板前不施工。⑫ 第 62 程完成第 4 章大图门视觉专项与敌人美术核查（见「第 4 章大图门视觉专项与敌人美术核查（第 62 程）」专节）：第 52 程 9 区 22 门（20 有向 + 2 仅到达，side 5/5/5/5/2）逐门核验，补「侧门内展」「舱口两轴不越界」「世界文件 20+2/直方图交叉校验」，第 4 章集成 4869 → **5004/0**；`ch4_well/top1` 标题已由第 49 程 `caption_area` 夹到 x=0，无产品缺陷、未改产品代码；地图标题「笑面剧场地图」既有断言复核成立（第 1 章不变）；`ROOM_WAVES[3]` 现算 7 敌全部专属 PNG/白 tint/无回退，`mask_enemy`/`seat_husk` 为复用基础场景的美术变体，第 8 个 `echo_enemy` 只在旧第 4 章房间组；`test_enemy_art` 200 → 298，单元 12755/0，第 2/3 章集成无回归；第 4 章仍不可达。**下一程候选（只记录、本程未修）**：第 60 程样图问题——底部 HUD 遮挡（待确认第 13 项）、1536×864 背景纵向平铺接缝、`boss_background` 被静态背景遮住（与第 15 项相关）、无 `Arena` 的入口/枢纽套用休整文案、纵井电梯贴房间左缘、Boss 脚部被 HUD 压住（同第 13 项）、`breathing_ruins.png` 与第 1 章色调接近；其中与第 13/15 项相关的部分拍板前不施工、不定口径，其余待监工排期。⑬ 第 63 程（施工后进程中断）与第 64 程（接力核验收尾）完成第 60 程样图的两项可修问题（见「第 2–4 章大图样图问题修复（第 63 程）」专节）：① 大区静态背景改为以房间底部为锚、自下而上平铺，奇数行 `flip_v` 镜像，相邻瓦片共用边缘行，1440/2160 高房间的纵向硬接缝消除（`ch4_boss` 顶部黑色舞台地面带、`ch2_boss`/`ch3_boss` 顶部拼接线消失）；② 无 `Arena` 的大图房间只有作者了长椅或商店时才走休整目标与 `RestRoomData` 文案，三章入口改回「继续前进」、不再抽别章休整句（枢纽仍保留休整分支）。9 张样图重拍并核验（尺寸/非空/非黑非白、接缝行行差低于同段中位数），测试 +18/+106/+123/+129 条断言、全 0 失败；`CHAPTER_PLAN_PATHS` / `MDS_WORLD_FILES` / 章节路由/可达性/相机/HUD/电梯/门逻辑未动。第 60 程剩余问题只记录、本程未修：问题 1/6（底部 HUD 遮挡、Boss 脚部被 HUD 压住）对应待确认第 13 项，拍板前不改相机边距/偏移、不改 HUD 面板高度/透明度；问题 3（`boss_background` 被 `z_index=-20` 静态背景遮住）与待确认第 15 项相关且范围更大（三章 Boss 背景都受影响），拍板前不定口径、不改 z 层级；问题 5（纵井电梯贴房间左缘）是作者布局 + 相机夹取的取景限制、不是缺陷，不修、不动电梯位置与相机；问题 7（第 2 章入口背景与第 1 章色调接近）是既有素材，仅记录供监工判断样图代表性，不换图、不改色调。待确认第 11–16 项未碰、未新增条目。⑭ 第 65 程按 brief69 转向叙事审计 E2 第一批（见「NPC 个人事件（第 65 程）」专节）：demo 可见的陆沉/阿砚/咕噜各一个 Hub 个人事件（陆沉·红色文件夹/信任 6、阿砚·再烧一次炉/托付 12、咕噜·不卖的「永」/熟悉 2），触发 = 信任档 + `Profile.demo_cleared`，用现有 `DialogueUI`，读完最后一行才写 `[npc] events`、中途关闭不消耗、零奖励、咕噜事件不跳商店；闻烬/白榆仍不可见、无事件。单元 12960/0（+187）、菜单集成 419/0（+28），其余十套集成与基线一致全 0 失败；第 1 章 9 房间/6 波次/事件/清房目标 6/结束流程、Hub 闲聊与关键词回应、`[npc] trust` 与信任数值、NPC 立绘、经济/锻造/商店数值均未改；第 2–4 章仍不可达。下一程候选：① 结局文本加厚（E3：每个结局补五名 NPC 余味、「笑面史官身份」「最后一页」回收）；② 闻烬/白榆的可见性与个人事件——须先由用户/监工拍板是否在 demo 中可见，未拍板前不设为可见、不写事件；③ 阿砚「叫出真名」完整分支（真名、锤子留在铁砧、第一次走出铁匠铺）与关键道具物品化（红色文件夹/玻璃瓶进背包或收藏）本程只记录缺口，未施工。第 60 程样图问题 1/3/5/6/7 仍未修，与第 13/15 项相关的部分拍板前不施工；第 11–16 项仍开放、未施工。⑮ 第 66 程完成叙事审计 E3（结局文本加厚，见「结局文本加厚（第 66 程）」专节）：`EndingEchoData` 五结局 × 五 NPC 各一句余味（25 句）+ 每结局一段「笑面史官身份 / 最后一页」回收（5 段）；结束屏 `Echoes` 标签与结局画廊已解锁条目展示，未解锁仍按原占位；5 个结局 id/标题/现有两句正文/`ending_for` 判定/`Profile.endings` 记录与存档格式未改，demo 内不可达的复原/焚毁余味由测试层验证。单元 12960 → **13429/0**（+469），十一套集成与基线逐套件一致全 0 失败；第 2–4 章仍不可达、`CHAPTER_PLAN_PATHS` / `MDS_WORLD_FILES` 未动。下一程候选：① 闻烬/白榆可见性与个人事件——待拍板，未拍板前不设可见、不写事件；② 阿砚「叫出真名」完整分支（真名、锤子留在铁砧、第一次走出铁匠铺）与关键道具物品化（红色文件夹/玻璃瓶/断尖笔/手绘地图）——仍只记录缺口；③ 结局余味的配音/插画/独立场景（本程只做文本与展示）；④ 第 60 程样图问题 1/3/5/6/7 仍未修，与第 13/15 项相关的部分拍板前不施工；第 11–16 项仍开放、未施工。⑯ 第 67 程接力收尾第 66 程（E3 结局文本加厚，第 66 程进程死亡后重跑）：独立复核 `EndingEchoData` 文本/结束屏 `Echoes`/画廊已解锁展示/判定与存档不变，未发现实现缺陷、未返工；`--headless --import` / `--quit` 退出 0、`ERROR` 0，单元 **13429/0**、十一套集成 **894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 / 5133** 全 0 失败（三个大图套件均跑完）、退出泄漏 **10/10 clean**、demo 像素 **36/0**，与第 66 程自称逐项一致；产品/测试/文档按项提交后工作区干净，未开新功能、未改产品行为。下一程候选沿用第 ⑮ 条四项：① 闻烬/白榆可见性与个人事件——待拍板，未拍板前不设可见、不写事件；② 阿砚「叫出真名」完整分支与关键道具物品化——仍只记录缺口；③ 结局余味的配音/插画/独立场景；④ 第 60 程样图问题 1/3/5/6/7 仍未修，与第 13/15 项相关的部分拍板前不施工；第 11–16 项仍开放。⑰ 第 68 程完成全游戏例行扫描（brief72，见「例行扫描（第 68 程）」专节）：六个扫描面逐项核对（关闭回退/焦点/存档边界/性能/文案/回归抽查），基线复核与第 67 程逐项一致（单元 13429/0、十一套集成 894 / 102 / 613 / 207 / 113 / 59 / 419 / 45 / 2315 / 4358 / 5133、退出 10/10、像素 36/0），三个大图套件均跑完。发现并修复 1 项 Hub 产品行为缺陷：档案馆升级已到 demo 上限 Lv.10 时行仍可点、价格照显示，点击返回「记忆碎片不足：需要 X，你只有 Y」（Y > X）的假错误——`ArchiveData.MAX_LEVEL` 单一来源、`Profile` 改读常量、`ArchiveUI` 满级行改「已满级」/「已达上限」并禁用、`_buy` 报满级、陆沉职能描述同步改「demo 上限 10 级」；回归断言单元 13429 → **13434/0**（+5）、菜单集成 419 → **428/0**（+9）。其余五个扫描面未发现新缺陷；第 1 章 9 房间/Hub 冷热加载、门过渡、Boss 帧与第 21/22 程基线同量级（帧间隔贴 120 FPS 预算，门过渡 226.6–240.0 ms，逐房原始构建 5.1–77.4 ms），Hub `load` 偏高与 `main.tscn` 偏低互相抵消、按任务单只记录不优化；隐藏书库与结局余味抽查无回归。下一程候选沿用第 ⑯ 条四项：① 闻烬/白榆可见性与个人事件——待拍板，未拍板前不设可见、不写事件；② 阿砚「叫出真名」完整分支与关键道具物品化——仍只记录缺口；③ 结局余味的配音/插画/独立场景；④ 第 60 程样图问题 1/3/5/6/7 仍未修，与第 13/15 项相关的部分拍板前不施工；第 11–16 项仍开放。本程未新增待拍板项、未推送、未更新网页版。⑱ 第 69 程完成全游戏例行扫描（brief73，见「例行扫描（第 69 程）」专节）：六个扫描面逐项核对（关闭回退/焦点/存档边界/性能/文案/回归抽查），基线复核与第 68 程逐项一致（单元 13434/0、十一套集成 894 / 102 / 613 / 207 / 113 / 59 / 428 / 45 / 2315 / 4358 / 5133、退出 10/10、像素 36/0），三个大图套件均跑完。发现并修复 2 项（3 处）Hub 文案与行为不符：① 陆沉「档案馆升级」开启语仍写「等级没有尽头」（第 68 程漏改的运行时消息），与 `ArchiveData.MAX_LEVEL = 10` 冲突——改为按常量生成「demo 每个方向修到 Lv.%d 为止，档案本身没有尽头」，服务列表句同步读常量；② 闻烬「签一份契约」描述写「本局起始多 1 次奖励重选」，实际发放 10 残页 + 污染 6——描述改为实际效果；③ 闻烬「买情报」描述/消息写「首次攻击/第一击」，实际是 `wenjin damage` +2 永久加到所有武器——两处改为「所有武器的伤害永久 +2」。未改任何数值/存档/上限/成长设计。回归断言：单元 13434 → **13451/0**（+17）、菜单集成 428 → **433/0**（+5）；gamepad 207、run_save 613 复跑 0 失败。性能按第 68 程同口径实测（Hub `load` 905.5–981.5 ms、`main.tscn` 2015.9–2357.9 ms、首房 avg 8.33 ms/p95 8.70–8.72、门过渡 264.0–274.8 ms、逐房构建 4.3–38.6 ms、Boss avg 8.33/p95 8.72–8.84），与第 68/21 程基线同量级，门过渡略高 15% 只记录不优化；隐藏书库、结局余味、档案馆满级行抽查无回归。下一程候选沿用第 ⑯ 条四项：① 闻烬/白榆可见性与个人事件——待拍板，未拍板前不设可见、不写事件；② 阿砚「叫出真名」完整分支与关键道具物品化——仍只记录缺口；③ 结局余味的配音/插画/独立场景；④ 第 60 程样图问题 1/3/5/6/7 仍未修，与第 13/15 项相关的部分拍板前不施工；第 11–16 项仍开放。本程未新增待拍板项、未推送、未更新网页版。⑲ 第 70 程完成全游戏例行扫描（brief74，见「例行扫描（第 70 程）」专节）：六个扫描面逐项核对，基线复核与第 69 程逐项一致（单元 13451/0、十一套集成 894 / 102 / 613 / 207 / 113 / 59 / 433 / 45 / 2315 / 4358 / 5133、退出 10/10、像素 36/0），三个大图套件均跑完。发现并修复 5 项（8 处）文案/常量与行为不符：① 局内商店「缝合书页」写「恢复 45 生命与 30 墨量」，实际 `_apply_reward` 是 35 生命 / 45 墨量 / 污染 −12——卡面改为实际值；② 档案馆买到第 10 级（demo 上限）后仍报「下次需要 X 碎片」——满级提示改报上限；③ 阿砚「神铸」固定报「锻造祝福 +1」且描述写「免费提升」，实际祝福 `FORGE_BONUS_TOTAL_CAP = 3.0` 封顶、代码硬编码 3.0——改共享常量并按实得 0/0.5/1 点如实报数、描述改为「基底直接提升 1 级…（上限 3）」；④ 咕噜货架描述只说「换词」，18 件货含 3 件遗物——补「与遗物」；⑤ 零污染遗物 `clean_ink_lantern` 的奖励卡印「污染 +0」——新增 `_relic_reward_text()` 仅在污染 > 0 时写该行。未改任何数值/存档/上限/成长设计/可达性。回归断言：单元 13451 → **13465/0**（+14）、菜单集成 433 → **445/0**（+12）、可玩性集成 894 → **899/0**（+5）；gamepad 207、run_save 613、ui_prompts 113 复跑 0 失败；收尾完整套件全绿。性能按第 68/69 程同口径实测（Hub 首次 `load` 977.0 ms / `_ready`+首帧 603.4 ms、`main.tscn` 2346.9 / 687.7 ms、首房 avg 8.25–8.33 ms / p95 8.61–8.62、门过渡完整 442.1/449.6 ms（到房间激活 121.8/221.7 ms，与第 68/69 程 226.6–274.8 ms 端点口径不同）、无持续掉帧），与基线同量级、只记录不优化；隐藏书库、结局余味、档案馆满级行、第 69 程三处文案抽查无回归。记录未修：设置页全屏切换不写 Profile（补键会改设置存档形状，任务单未要求），只记录、不新增待拍板项。下一程候选沿用第 ⑯ 条四项：① 闻烬/白榆可见性与个人事件——待拍板，未拍板前不设可见、不写事件；② 阿砚「叫出真名」完整分支与关键道具物品化——仍只记录缺口；③ 结局余味的配音/插画/独立场景；④ 第 60 程样图问题 1/3/5/6/7 仍未修，与第 13/15 项相关的部分拍板前不施工；第 11–16 项仍开放。本程未推送、未更新网页版。⑳ 第 72 程完成全游戏例行扫描（brief76，见「例行扫描（第 72 程）」专节）：第 71 程（brief75）开局即因 Magpie 网关中断夭折（`.supervisor/session75.log` 仅两行、零产出、无提交），本程为全新重跑。六个扫描面逐项核对，基线复核与第 70 程逐项一致（单元 13465/0、十一套集成 899 / 102 / 613 / 207 / 113 / 59 / 445 / 45 / 2315 / 4358 / 5133、退出 10/10、像素 36/0），三个大图套件均跑完。发现并修复 1 项 Hub 产品行为缺陷：跟阿砚打招呼时 `talk_to_npc` 的 `&"ayan"` 分支直接调用 `upgrade_sword_base()`，而它是真正扣碎片、提升断页剑基底的付费操作——探针复现碎片 100 → 90、基底 Lv.0 → Lv.1，碎片不足时每次问候还重复附「记忆碎片不足」；修复为问候只报当前基底等级并指向「言灵对话 → 锻造基底」，不写死价格、不改锻造数值/折扣/信任/存档；未改任何数值/存档/上限/成长设计/可达性。回归断言：单元 13465 → **13474/0**（+9，问候不扣碎片/不升级、提到锻造基底与当前 Lv.、关闭后解冻玩家、显式职能仍按 10 + Lv×10 扣费升级）；menus 445、run_save 613、gamepad 207、ui_prompts 113、playability 899 复跑 0 失败；收尾完整套件全绿。性能按第 68/69/70 程同口径实测（Hub `load` 753.1–905.1 ms / `_ready`+首帧 461.6–556.4 ms、`main.tscn` 2779.9–2921.8 ms、第 1 章逐房冷 3.84–37.39 / 热 3.77–23.06 ms、Boss avg 8.33–8.45 ms / peak 10.27–25.36、门过渡 225.26–225.66 ms），与基线同量级、只记录不优化；隐藏书库、结局余味、档案馆满级行、第 69/70 程文案抽查无回归。记录未修沿用第 70 程：设置页全屏切换不写 Profile；第 60 程问题 1/3/6 与第 13/15 项相关、拍板前不施工，5/7 非缺陷；第 11–16 项仍开放。下一程候选沿用第 ⑯ 条四项：① 闻烬/白榆可见性与个人事件——待拍板，未拍板前不设可见、不写事件；② 阿砚「叫出真名」完整分支与关键道具物品化——仍只记录缺口；③ 结局余味的配音/插画/独立场景；④ 第 60 程样图问题 1/3/5/6/7 仍未修，与第 13/15 项相关的部分拍板前不施工。本程未推送、未更新网页版。㉑ 第 73 程完成全游戏例行扫描（brief77，见「例行扫描（第 73 程）」专节）：基线复核与第 72 程逐项一致（单元 13474/0、十一套集成 899 / 102 / 613 / 207 / 113 / 59 / 445 / 45 / 2315 / 4358 / 5133、退出 10/10、像素 36/0），三个大图套件均跑完。发现并修复 2 项产品行为缺陷：① Hub 词服务无限碎片泵——`Profile.DEFAULT_OWNED` 首次开局即含全部 18 个第 1 章词，`Hub._unlock_random_word()` 兜底每次返 8 碎片，使咕噜「买一条传闻」（收 3）净 +5、陆沉「讲述档案」（收 6）净 +2 且可无限连点落盘；新增 `Hub.unlockable_word_pool()`，池空时拒绝并说明不收费，有词时仍按原价扣 3/6 并解锁，`_unlock_random_word()` 不再支付碎片；单元 13474 → **13490/0**（+16，`test_hub_final::_test_word_services`）。② 局内商店对已拥有的缓存货仍扣残页——货架首次打开时缓存，之后从奖励/宝箱/残碑拿到同一遗物/词再买该行时 `add_relic`/`add_word` 静默拒绝、残页已扣且行可重复点；探针复现残页 100 → 75、遗物数量不变；`game.gd::_shop_offer_owned()` + `RunShopUI.mark_owned()` 已拥有则禁用该行、标签「已拥有」、回话「不收残页」、不扣费；第 1 章 demo 集成 102 → **109/0**（+7）。未改数值/存档/可达性/结局格式；未修记录：暂停确认取消后的 one-shot 连接残留（当前不可见）、`NPC.interact()` 死代码、设置页全屏不持久、第 60 程样图问题 1/3/5/6/7 维持原结论；第 11–16 项仍开放、未碰。下一程候选沿用第 ⑯ 条四项：① 闻烬/白榆可见性与个人事件——待拍板，未拍板前不设可见、不写事件；② 阿砚「叫出真名」完整分支与关键道具物品化——仍只记录缺口；③ 结局余味的配音/插画/独立场景；④ 第 60 程样图问题 1/3/5/6/7 仍未修，与第 13/15 项相关的部分拍板前不施工。本程未推送、未更新网页版。㉒ 第 74 程完成 README 重写（见「README 重写（第 74 程）」专节）：只改仓库根 `README.md`，按「简介 → 当前可玩范围 → 已建成但未开放 → 核心系统 → 操作 → 运行 → 开发状态」重写；删除 0.11.0/0.10.0/0.7.0 三层旧日志、SAPI 旁白宣传、Android 触屏与「依次穿过四章」等与现状不符的说法；数字按仓库实测（词条 95、开局 18、demo 6 武器/6 遗物/6 敌人、内容库 12/9/14、13 法术形态、第一章 9 房间/清房目标 6、5 结局且 demo 可达 3、6 首配乐、155 个脚本 26,849 行、单元 13,490、十一套集成 14,296、第 2/3/4 章大图验收 2,315/4,358/5,133）；brief 中「可收集 50」无仓库依据，未采用；第 2–4 章如实写为已建成未开放。README-only，未改代码/场景/资源/测试；单元 13,490/0、十一套集成与基线一致全 0 失败、退出 10/10、像素 36/0；未推送、未更新网页版、未创建 Release、未宣布里程碑。下一程为 Windows 导出程（按 DECISIONS「再更正」排在 README 程之后、里程碑推送与 Release 之前）：用既有 `export_presets.cfg` Windows 预设从本程 HEAD 导出并打 zip，核验 exe + pck + 体积、记录导出日志与文件清单；Windows 实机首跑不在该程范围。下一程候选沿用第 ⑯ 条四项：① 闻烬/白榆可见性与个人事件——待拍板，未拍板前不设可见、不写事件；② 阿砚「叫出真名」完整分支与关键道具物品化——仍只记录缺口；③ 结局余味的配音/插画/独立场景；④ 第 60 程样图问题 1/3/5/6/7 仍未修，与第 13/15 项相关的部分拍板前不施工；第 11–16 项仍开放。㉓ 第 75 程完成 Windows 导出（见「Windows 导出（第 75 程）」专节）：按用户 2026-11-06 13:42 拍板，从 HEAD `7d11fc2` 用既有 `Windows Desktop` 预设（`embed_pck=true`，未改 `export_presets.cfg`）导出 release exe **132,104,632 bytes**（PE32+ GUI x86-64，SHA-256 `7d4811f4…4242`），内嵌 PCK **22,930,348 bytes** 与独立 `--export-pack` 产物逐字节一致、12 个关键路径齐全、`--main-pack` 无头启动退出 0；打 zip `artifacts/releases/v0.12.0/changzi-adventure-v0.12.0-windows.zip` **59,572,799 bytes**（1 文件、`unzip -t` OK、包内 exe 哈希一致，产物不提交）。基线单元 13,490/0、十一套集成 899…5,133 全 0、退出 10/10、像素 36/0。**Windows 实机首跑待验证**（Linux VM 未跑 exe、未用 wine/虚拟机）；Release tag/zip 为 v0.12.0，但包内 `config/version`/标题屏仍 0.11.0-demo（本程未改产品配置）。下一步由监工执行里程碑快照推送 + 网页更新，再由用户配合 passkey 创建 Release `v0.12.0`（pre-release，标题「v0.12.0 — 第一章 + T17 完整可玩 · 第 2–4 章内容入库（未开放）」）并上传本程 zip；Release notes 须含可玩范围、已建成未开放清单、网页版地址、测试数字与「Windows 实机首跑待验证」。本程未推送、未更新网页版、未创建 Release。
+4. **待用户确认**：第 1–10 项已拍板；第 11 项（`ch2_shortcut` 获取来源）、第 12 项（电梯作者速度 70 px/s 的节奏取舍）、第 13 项（大区底部相机取景/HUD 遮挡）、第 14 项（第 3 章视野压缩机制口径）、第 15 项（第 3 章大图海面母题）、第 16 项（第 3 章 `ch3_shortcut` 来源）仍开放，在拍板前不施工、不猜测；第 40 程未新增待拍板项，第 41 程未新增待拍板项，第 42 程未新增待拍板项，第 43 程未新增待拍板项，第 44 程未新增待拍板项，第 45 程未新增待拍板项，第 46 程未新增待拍板项，第 47/48 程未新增待拍板项，第 49 程未新增待拍板项（舱口标题越界属第 37 程「边上标题内收」决定的实现缺口，已在同一表现层修复，不涉及待确认口径）。第 50 程只做第 4 章大地图可行性核查，未新增待拍板项；第 4 章特有的开放问题候选只记在专节，是否新增「待用户确认」条目由监工在验收时定。第 51 程只做第 4 章计划与图骨架，未新增待拍板项；第 50 程专节 E 的舞台母题/`ch4_shortcut` 来源/事件区/Boss 4 机制范围/战斗密度/`mask_enemy`/`seat_husk` 独立数值仍未拍板、未施工、未猜测，第 11–16 项也未碰。第 52 程只做第 4 章真实大区世界结构层，未新增待拍板项；第 50 程专节 E 的开放问题候选仍只记录、不编号，第 11–16 项也未碰。第 53 程只做第 4 章内容数据层第 1 步（`Ch4EventData`/权柄池/Boss 文案，计划仍不路由、世界仍不被 `game.gd` 引用、未做波次接线/事件触发/Boss 4 机制/可达性），未新增待拍板项；第 50 程专节 E 的舞台母题/`ch4_shortcut` 来源/事件区/Boss 4 机制范围/战斗密度/`mask_enemy`/`seat_husk` 独立数值仍只记录、未拍板、未施工，第 11–16 项也未碰。第 54 程只做第 4 章波次接线（计划 `wave` + `content_pending` 清零；计划仍不路由、世界仍不被 `game.gd` 引用、未做事件触发/Boss 4 机制/可达性），未新增待拍板项；第 50 程专节 E 的开放问题候选仍只记录、不编号，第 11–16 项也未碰。第 56 程只做第 4 章事件区真实自动触发验证（沿用第 34/44 程通用分支、测试层驱动；计划仍不路由、世界仍不被 `game.gd` 引用、未做 Boss 4 机制/`boss_scene`、第 4 章大图验收与可达性），未新增待拍板项；第 50 程专节 E 的开放问题候选仍只记录、不编号，第 11–16 项也未碰。第 57 程只做第 4 章 Boss 4 机制与 `boss_scene` 路由（计划指向既有 `smiling_archivist.tscn`、既有机制与数值由测试锁定；计划仍不路由、世界仍不被 `game.gd` 引用，未改章节路由/章末流程，未做机制扩展/第 4 章大图验收/可达性），未新增待拍板项；第 50 程专节 E 的开放问题候选（含 Boss 4 机制扩展范围）仍只记录、不编号，第 11–16 项也未碰。第 58 程只做第 4 章章末收口（章末流程与测试层；计划仍不路由、世界仍不被 `game.gd` 引用，未改可达性/章节路由/Boss 4 机制/数值/波次/事件/章末文本，未新编剧情、未新设选项），未新增待拍板项；第 50 程专节 E 的开放问题候选（含 Boss 4 机制扩展范围）仍只记录、不编号，第 11–16 项也未碰。第 59 程只做第 4 章大地图系统验收（只跑/补验收脚本并记录，未改产品代码；计划仍不路由、世界仍不被 `game.gd` 引用，未改可达性/章节路由/门视觉/地图标题/敌人美术/战斗密度/电梯速度/相机/HUD，未新增 `ch4_shortcut` 授予），未新增待拍板项；第 50 程专节 E 的开放问题候选（含 Boss 4 机制扩展范围、舞台母题呈现层、`ch4_shortcut` 来源、战斗密度、`mask_enemy`/`seat_husk` 独立数值）仍只记录、不编号，第 11–16 项也未碰。第 35 程的两个歧义（Boss 数值、第 2 章末界面/结局记录）已按采用口径记录并用测试锁定，不是开放项。第 66 程只做结局文本加厚（只新增余味文本数据与结束屏/画廊展示读取；未改 5 个 id/标题/现有正文/`ending_for` 判定/`Profile.endings` 记录与存档格式/画廊解锁规则，未改可达性），未新增待拍板项；第 11–16 项仍未碰、未施工。第 68 程只做例行扫描与 1 项 Hub 档案馆满级提示修复（未改上限数值/价格曲线/存档格式/成长设计/可达性），未新增待拍板项；第 11–16 项仍未碰、未施工。第 69 程只做例行扫描与 2 项（3 处）Hub 文案改正（陆沉档案馆开启语按 demo 上限常量生成、闻烬契约/情报描述改为实际发放；未改数值/存档/上限/成长设计/可达性），未新增待拍板项；第 11–16 项仍未碰、未施工。第 70 程只做例行扫描与 5 项（8 处）文案/常量修正（局内商店缝合书页数值、档案馆满级提示、神铸祝福按实得报数、咕噜货架描述补遗物、零污染遗物卡去掉「污染 +0」；未改数值/存档/上限/成长设计/可达性），未新增待拍板项；第 11–16 项仍未碰、未施工。第 71 程开局即因 Magpie 网关中断夭折（零产出、无提交、无待拍板项）；第 72 程只做例行扫描与 1 项 Hub 阿砚问候扣碎片修复（问候改为非交易性说明并指向「言灵对话 → 锻造基底」；未改锻造数值/折扣/信任/存档/可达性），未新增待拍板项；第 11–16 项仍未碰、未施工。第 73 程只做例行扫描与 2 项产品行为缺陷修复（Hub 词服务无限碎片泵、局内商店对已拥有缓存货扣残页不发货；未改数值/存档/上限/可达性），未新增待拍板项；第 11–16 项仍未碰、未施工。第 74 程只重写 `README.md`（未改游戏代码/场景/资源/测试、未改章节可达性、未推送/未更新网页版/未创建 Release），未新增待拍板项；第 11–16 项仍未碰、未施工。后续若出现需要用户拍板的新问题，只记入「待用户确认」。
 5. **很久以后的发行阶段事项，现阶段不做**：Windows 实机验证、安装器编译/安装卸载实测、真实代码签名证书、1080p 实机截图。第 3 程的安装器脚本与签名文档原地保留，不扩展、不删除、不做编译验证。
-6. 后续内容方向按 DECISIONS.md：T17（吞噬/归档权柄、信任分层、结局画廊、Boss 2–4 机制）属完整版内容；第 2–4 章保留但 demo 不可达；封闭试玩与安卓/触屏不排期。
+6. 后续内容方向按 DECISIONS.md：T17（吞噬/归档权柄、信任分层、结局画廊）已完成；Boss 2 已完成（第 35 程），Boss 3 的独特机制与计划 `boss_scene` 路由已完成（第 45 程；数值为暂定口径），第 3 章章末收口已完成（第 46 程），第 3 章仍未接入 `game.gd`；Boss 4 的 `boss_scene` 路由与既有机制锁定已完成（第 57 程：计划指向 `smiling_archivist.tscn`，镜面弹幕/纸页波/墨雨/改写与数值由 `test_ch4_boss` + 可玩性集成锁定；入场/阶段文案第 53 程已编写；机制扩展仍待第 50 程专节 E 拍板）；第 4 章章末收口已完成（第 58 程：显式 `_chapter == 3` → `_finish(true)` 结束战役，Boss 4 → 权柄 → 第 4 章 outro → 章末选择 → 战役结束；机制扩展仍未做，第 4 章大图验收已完成（第 59 程：`tests/integration_ch4_bigmap.gd` 4869 断言 0 失败、连续两次，覆盖连通/门/边界/纵向/过渡/一次性/多遭遇/捷径/Boss/续玩/性能/叙事 + 第 4 章专属表现；未发现产品缺陷、未改产品代码；计划仍未接入 `game.gd`、第 4 章仍不可达））；第 2–4 章保留但 demo 不可达；封闭试玩与安卓/触屏不排期。
+
+7. 第 60 程完成第 2–4 章样图截图（只截图，见「样图截图（第 60 程）」专节）：新增 `tests/capture_bigmap_chapters.gd`（xvfb + OpenGL 离屏渲染；真实主场景 + 临时挂载计划/大区世界），产出 9 张 1280×720 PNG 存 `artifacts/screens/ch2|ch3|ch4/`（不提交）：`ch2_entry_panorama` / `ch2_well_shaft` / `ch2_boss_lung_bell`、`ch3_entry_panorama` / `ch3_well_shaft` / `ch3_boss_last_reader`、`ch4_entry_theater` / `ch4_well_backstage` / `ch4_boss_smiling_archivist`。9 张全部通过尺寸/非空/非黑非白核验；基线不变（单元 12657/0、十一套集成 894/102/613/207/113/59/391/45/2209/4235/4869 全 0 失败）。产品代码/场景/资源零改动，`CHAPTER_PLAN_PATHS` / `MDS_WORLD_FILES` / 章节路由/可达性未动，第 2/3/4 章仍不可达；截图发现的问题（底部 HUD 遮挡、背景纵向接缝、`boss_background` 被静态背景遮挡、入口休整文案、电梯贴边、Boss 脚部被 HUD 压住、第 2 章入口背景色调）只记录、本程未修，待确认第 11–16 项未碰、未新增条目。下一程仍由监工定排期：第 2 章可达性/演出、第 3 章可达性（不能早于第 2 章）、第 4 章可达性须单独拍板；第 11–16 项拍板前不施工。
 
 ### 2026-11-03 · 第 1 程
 

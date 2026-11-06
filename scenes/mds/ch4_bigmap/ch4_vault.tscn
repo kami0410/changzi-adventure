@@ -1,0 +1,26 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/mds_big_room.gd" id="1_room"]
+[ext_resource type="Resource" path="res://resources/rooms/ch4_bigmap/ch4_vault.tres" id="2_data"]
+[ext_resource type="Script" path="res://scripts/levels/treasure_chest.gd" id="4_chest"]
+[ext_resource type="PackedScene" path="res://scenes/levels/memory_stele.tscn" id="5_stele"]
+[ext_resource type="Script" path="res://scripts/levels/moving_platform.gd" id="9_lift"]
+
+[node name="Ch4BigmapVault" type="Node2D"]
+script = ExtResource("1_room")
+data = ExtResource("2_data")
+fall_margin = 240.0
+
+[node name="Chest1" type="Node2D" parent="."]
+position = Vector2(1800, 856)
+script = ExtResource("4_chest")
+
+[node name="Stele1" parent="." instance=ExtResource("5_stele")]
+position = Vector2(700, 1424)
+stele_id = &"ch4_vault_stele1"
+
+[node name="Lift" type="AnimatableBody2D" parent="."]
+position = Vector2(2000, 1424)
+script = ExtResource("9_lift")
+size = Vector2(160, 16)
+travel = Vector2(0, -1324)

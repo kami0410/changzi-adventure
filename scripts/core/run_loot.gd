@@ -184,7 +184,7 @@ static func chest_loot(run: RunState, profile: Profile, chapter: int = 0) -> Dic
 
 static func shop_offers(run: RunState, chapter: int, profile: Profile) -> Array[Dictionary]:
 	var offers: Array[Dictionary] = []
-	offers.append({"kind": &"rest", "title": "缝合书页", "description": "恢复 45 生命与 30 墨量，并净化 12 点污染。", "cost": 15})
+	offers.append({"kind": &"rest", "title": "缝合书页", "description": "恢复 35 生命与 45 墨量，并净化 12 点污染。", "cost": 15})
 	var relic: RelicData = null
 	var relic_pool: Array[RelicData] = []
 	for entry in _relic_pool(chapter):
@@ -226,8 +226,16 @@ static func elite_choices(run: RunState, room_number: int, profile: Profile, cha
 	else:
 		var relic := available[run.rng.randi_range(0, available.size() - 1)] as RelicData
 		result[0] = {"kind": &"relic", "resource": relic, "title": relic.display_name,
-			"description": RelicEffects.describe(relic.effect_id) + "\n污染 +%d" % relic.corruption}
+			"description": _relic_reward_text(relic)}
 	return result
+
+
+## A zero-corruption relic must not advertise "污染 +0" on its reward card.
+static func _relic_reward_text(relic: RelicData) -> String:
+	var text := RelicEffects.describe(relic.effect_id)
+	if relic.corruption > 0:
+		text += "\n污染 +%d" % relic.corruption
+	return text
 
 
 static func choices(run: RunState, room_number: int, profile: Profile, chapter: int = 0) -> Array[Dictionary]:
@@ -239,7 +247,7 @@ static func choices(run: RunState, room_number: int, profile: Profile, chapter: 
 	if not available_relics.is_empty():
 		var relic := available_relics[run.rng.randi_range(0, available_relics.size() - 1)] as RelicData
 		result.append({"kind": &"relic", "resource": relic, "title": relic.display_name,
-			"description": RelicEffects.describe(relic.effect_id) + "\n污染 +%d" % relic.corruption})
+			"description": _relic_reward_text(relic)})
 	else:
 		result.append({"kind": &"vitality", "title": "厚重书页", "description": "最大生命 +15，并恢复 15 生命。"})
 	var available_words: Array[Resource] = []

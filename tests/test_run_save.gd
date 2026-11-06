@@ -10,6 +10,7 @@ func run(t: Callable) -> void:
 	_cleanup()
 	_test_missing(t)
 	_test_roundtrip(t)
+	_test_room_progress_keys(t)
 	_test_corrupt(t)
 	_test_unknown_version(t)
 	_test_malformed_shape(t)
@@ -66,6 +67,66 @@ func _test_roundtrip(t: Callable) -> void:
 	t.call(String(mds.get("room", "")), "ch1_03", "run_save_mds_room")
 	RunSave.clear(PATH)
 	t.call(RunSave.has_save(PATH), false, "run_save_clear")
+
+
+func _test_room_progress_keys(t: Callable) -> void:
+	# New per-node ids and the legacy room-key lists are both optional and
+	# survive a round trip untouched.
+	_cleanup()
+	var data := _sample_data()
+	data["progress"]["cleared_encounters"] = ["ch2_01/Arena", "ch2_03/event"]
+	data["progress"]["cleared_rooms"] = ["ch1_01"]
+	data["world"]["claimed_stele_ids"] = ["ch2_03/Stele"]
+	data["world"]["opened_chest_ids"] = ["ch2_01/Chest", "ch2_01/Chest#2"]
+	data["world"]["claimed_steles"] = ["ch1_rest"]
+	data["world"]["opened_chests"] = ["ch1_03"]
+	check_roundtrip(t, data, "room_progress")
+
+	# A checkpoint from before per-node ids (only room keys, no new keys) must
+	# still be accepted: that is the legacy fallback path.
+	_cleanup()
+	var legacy := _sample_data()
+	legacy["progress"]["cleared_rooms"] = ["ch1_01", "ch1_02"]
+	legacy["world"]["claimed_steles"] = ["ch1_rest"]
+	legacy["world"]["opened_chests"] = ["ch1_03"]
+	check_roundtrip(t, legacy, "legacy_room_keys")
+
+	# New keys are containers too: a hand-edited string would break the game
+	# loops, so the whole checkpoint is rejected instead.
+	var cases := [
+		["progress", "cleared_encounters", "garbage"],
+		["world", "claimed_stele_ids", 7],
+		["world", "opened_chest_ids", {"id": true}],
+	]
+	for index in cases.size():
+		_cleanup()
+		var broken := _sample_data()
+		var section: String = cases[index][0]
+		broken[section][String(cases[index][1])] = cases[index][2]
+		RunSave.write(broken, PATH)
+		t.call(RunSave.read(PATH).is_empty(), true, "room_progress_malformed_rejected_%d" % index)
+		t.call(FileAccess.file_exists(PATH), false, "room_progress_malformed_removed_%d" % index)
+	_cleanup()
+
+
+func check_roundtrip(t: Callable, data: Dictionary, label: String) -> void:
+	RunSave.write(data, PATH)
+	var loaded := RunSave.read(PATH)
+	t.call(loaded.is_empty(), false, "run_save_%s_reads" % label)
+	if loaded.is_empty():
+		return
+	t.call(loaded.get("progress", {}).get("cleared_encounters", []),
+		data["progress"].get("cleared_encounters", []), "run_save_%s_encounters" % label)
+	t.call(loaded.get("progress", {}).get("cleared_rooms", []),
+		data["progress"].get("cleared_rooms", []), "run_save_%s_cleared_rooms" % label)
+	t.call(loaded.get("world", {}).get("claimed_stele_ids", []),
+		data["world"].get("claimed_stele_ids", []), "run_save_%s_stele_ids" % label)
+	t.call(loaded.get("world", {}).get("opened_chest_ids", []),
+		data["world"].get("opened_chest_ids", []), "run_save_%s_chest_ids" % label)
+	t.call(loaded.get("world", {}).get("claimed_steles", []),
+		data["world"].get("claimed_steles", []), "run_save_%s_legacy_steles" % label)
+	t.call(loaded.get("world", {}).get("opened_chests", []),
+		data["world"].get("opened_chests", []), "run_save_%s_legacy_chests" % label)
 
 
 func _test_corrupt(t: Callable) -> void:

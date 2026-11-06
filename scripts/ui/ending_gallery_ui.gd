@@ -54,7 +54,11 @@ func get_entry_text(index: int) -> String:
 	var row: Dictionary = _rows[index]
 	var title_label: Label = row["title"]
 	var body_label: Label = row["body"]
-	return title_label.text + "\n" + body_label.text
+	var text := title_label.text + "\n" + body_label.text
+	var echo_label := row.get("echo") as Label
+	if echo_label != null and not echo_label.text.is_empty():
+		text += "\n" + echo_label.text
+	return text
 
 
 func is_unlocked(index: int) -> bool:
@@ -87,12 +91,19 @@ func _refresh() -> void:
 		row["unlocked"] = unlocked
 		var title_label: Label = row["title"]
 		var body_label: Label = row["body"]
+		var echo_label: Label = row["echo"]
 		title_label.text = String(entry.get("title", "")) if unlocked else LOCKED_TITLE
 		title_label.add_theme_color_override("font_color",
 			UIPalette.BONE if unlocked else UIPalette.INK_FAINT)
 		body_label.text = String(entry.get("body", "")) if unlocked else LOCKED_BODY
 		body_label.add_theme_color_override("font_color",
 			UIPalette.BONE_DIM if unlocked else UIPalette.INK_FAINT)
+		# 未解锁结局只保留原有占位，不泄露余味与回收段。
+		var echo_text := ""
+		if unlocked:
+			echo_text = EndingEchoData.display_text(StringName(entry.get("id", &"")))
+		echo_label.text = echo_text
+		echo_label.visible = not echo_text.is_empty()
 	if _count_label != null:
 		_count_label.text = "已记录 %d / %d" % [unlocked_count, _rows.size()]
 
@@ -153,7 +164,13 @@ func _build() -> void:
 		body_label.add_theme_font_size_override("font_size", 12)
 		body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		card_column.add_child(body_label)
-		_rows.append({"title": title_label, "body": body_label, "unlocked": false})
+		var echo_label := Label.new()
+		echo_label.add_theme_font_size_override("font_size", 12)
+		echo_label.add_theme_color_override("font_color", UIPalette.BONE_DIM)
+		echo_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		echo_label.visible = false
+		card_column.add_child(echo_label)
+		_rows.append({"title": title_label, "body": body_label, "echo": echo_label, "unlocked": false})
 	_close_button = Button.new()
 	_close_button.name = "EndingGalleryClose"
 	_close_button.text = "合上画廊"

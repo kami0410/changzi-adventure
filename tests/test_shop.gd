@@ -19,6 +19,8 @@ func run(t: Callable) -> void:
 	t.call(offers.size(), 3, "shop_has_three_offers")
 	t.call(int(offers[0]["cost"]) > 0, true, "shop_offer_has_cost")
 	t.call(String(offers[0]["title"]) != "", true, "shop_offer_has_title")
+	t.call(String(offers[0]["description"]), "恢复 35 生命与 45 墨量，并净化 12 点污染。",
+		"shop_rest_offer_copy")
 
 	var tree := Engine.get_main_loop() as SceneTree
 	var ui := RunShopUI.new()

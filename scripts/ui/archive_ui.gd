@@ -1,8 +1,10 @@
 class_name ArchiveUI
 extends Control
 
-## The Archive altar: permanent, uncapped upgrades paid with memory fragments.
-## Opened from 陆沉's service list in the hub.
+## The Archive altar: permanent upgrades paid with memory fragments. Opened
+## from 陆沉's service list in the hub. Every track stops at
+## ArchiveData.MAX_LEVEL in the demo, so a maxed row must say so instead of
+## reporting a fragment shortage it can never spend.
 
 signal closed
 signal purchased(track_id: StringName)
@@ -91,7 +93,7 @@ func _build() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	outer.add_child(title)
 	var hint := Label.new()
-	hint.text = "用记忆碎片永久强化昌子。demo 每个方向上限 10 级，成本逐级上涨。"
+	hint.text = "用记忆碎片永久强化昌子。demo 每个方向上限 %d 级，成本逐级上涨。" % ArchiveData.MAX_LEVEL
 	hint.add_theme_font_size_override("font_size", 12)
 	hint.add_theme_color_override("font_color", UIPalette.INK_FAINT)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -170,16 +172,32 @@ func _buy(entry: Dictionary) -> void:
 		return
 	var track_id := StringName(entry.get(&"id", &""))
 	var level := profile.archive_level(track_id)
+	if level >= ArchiveData.MAX_LEVEL:
+		# The demo cap is a limit, not a price: never answer a maxed row with
+		# "记忆碎片不足：需要 X，你只有 Y" when Y is already larger than X.
+		_status.text = "「%s」已经修到 demo 上限 Lv.%d。" % [
+			String(entry.get(&"name", "档案")), ArchiveData.MAX_LEVEL,
+		]
+		_refresh()
+		return
 	var cost := ArchiveData.cost(track_id, level)
 	if not profile.buy_archive_level(track_id, cost):
 		_status.text = "记忆碎片不足：需要 %d，你只有 %d。" % [cost, profile.memory_fragments]
 		_refresh()
 		return
-	_status.text = "%s 升至 Lv.%d。下次需要 %d 碎片。" % [
-		String(entry.get(&"name", "档案")),
-		profile.archive_level(track_id),
-		ArchiveData.cost(track_id, profile.archive_level(track_id)),
-	]
+	var new_level := profile.archive_level(track_id)
+	if new_level >= ArchiveData.MAX_LEVEL:
+		# The row now reads 已达上限/已满级, so the status must not quote a
+		# "next" price the demo can never charge.
+		_status.text = "%s 升至 Lv.%d，已达 demo 上限。" % [
+			String(entry.get(&"name", "档案")), new_level,
+		]
+	else:
+		_status.text = "%s 升至 Lv.%d。下次需要 %d 碎片。" % [
+			String(entry.get(&"name", "档案")),
+			new_level,
+			ArchiveData.cost(track_id, new_level),
+		]
 	purchased.emit(track_id)
 	_refresh()
 
@@ -196,11 +214,14 @@ func _refresh() -> void:
 			continue
 		var level := profile.archive_level(track_id) if profile != null else 0
 		var cost := ArchiveData.cost(track_id, level)
+		var maxed := level >= ArchiveData.MAX_LEVEL
 		(row["level"] as Label).text = "Lv.%d" % level
-		(row["cost"] as Label).text = "%d 碎片" % cost
+		(row["cost"] as Label).text = "已达上限" if maxed else "%d 碎片" % cost
 		var button := row["button"] as Button
-		button.text = "升级"
-		button.disabled = profile == null or profile.memory_fragments < cost
+		button.text = "已满级" if maxed else "升级"
+		# A maxed row can never succeed, so it must not stay pressable (and a
+		# disabled row is skipped by _focus_first_pressable).
+		button.disabled = maxed or profile == null or profile.memory_fragments < cost
 	_keep_focus_pressable()
 
 

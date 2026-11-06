@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/mds_big_room.gd" id="1_room"]
+[ext_resource type="Resource" path="res://resources/rooms/ch2_bigmap/ch2_boss.tres" id="2_data"]
+[ext_resource type="PackedScene" path="res://scenes/levels/room.tscn" id="3_arena"]
+
+[node name="Ch2BigmapBoss" type="Node2D"]
+script = ExtResource("1_room")
+data = ExtResource("2_data")
+fall_margin = 240.0
+
+[node name="Arena" parent="." instance=ExtResource("3_arena")]
+position = Vector2(1920, 2144)

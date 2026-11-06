@@ -151,7 +151,7 @@ func _run() -> void:
 	check(not scene._mds_world.changing_room, "event_leave_transition_finishes")
 	check(not scene._story.is_open(), "event_leave_cancels_page")
 	check(not paused, "event_leave_does_not_pause")
-	check(not scene._mds_cleared_rooms.has("ch1_05"), "event_leave_does_not_clear_room")
+	check(not scene._cleared_encounters.has("ch1_05/event"), "event_leave_does_not_clear_room")
 	# Re-entering still schedules the page because the room is uncleared.
 	if not scene._mds_world.current_room.is_empty():
 		await scene._mds_world.load_room("ch1_05")
@@ -257,8 +257,8 @@ func _run() -> void:
 	check(scene.player.global_position.x > freed_x + 1.0, "event_choice_a_player_moves")
 	var picked_save := RunSave.read(RUN_PATH)
 	check(not picked_save.is_empty(), "event_choice_a_saves")
-	var picked_cleared: Array = picked_save.get("progress", {}).get("cleared_rooms", [])
-	check(picked_cleared.has("ch1_05"), "event_choice_a_save_marks_cleared")
+	var picked_cleared: Array = picked_save.get("progress", {}).get("cleared_encounters", [])
+	check(picked_cleared.has("ch1_05/event"), "event_choice_a_save_marks_cleared")
 
 	check(flow.profile.decoded_words.size() == decoded_before.size() + 1, "event_decodes_one_word")
 	var decoded_id: StringName = &""
@@ -290,14 +290,15 @@ func _run() -> void:
 	var expected_corruption := mini(
 		corruption_before + maxi(int(ceilf(8.0 * multiplier)), 1), 100)
 	check(scene.run_state.corruption == expected_corruption, "event_pays_eight_corruption")
-	check(scene._mds_cleared_rooms.has("ch1_05"), "event_marks_room_cleared")
+	check(scene._cleared_encounters.has("ch1_05/event"), "event_marks_room_cleared")
 
 	# Falling back to pages happens only when every fragment is readable.
 	var remaining := RunLoot.owned_undecoded_words(scene.run_state, flow.profile, 0)
 	for word in remaining:
 		RunLoot.decode_owned_word(scene.run_state, flow.profile, word)
 	var pages_before_fallback: int = scene.run_state.pages
-	check(scene._grant_event_word() == "", "event_fallback_reports_no_word")
+	check(scene._grant_event_word(Ch1EventData.FALLBACK_PAGES) == "",
+		"event_fallback_reports_no_word")
 	check(scene.run_state.pages == pages_before_fallback + 6, "event_fallback_pays_pages")
 
 	scene.queue_free()

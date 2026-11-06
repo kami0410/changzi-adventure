@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/MetroidvaniaDeveloperSystem/nodes/mds_world_game.gd" id="1_world"]
+
+[node name="Chapter4BigmapWorld" type="Node2D"]
+script = ExtResource("1_world")
+world_file = "res://scenes/mds/chapter_4_bigmap.mdsworld.json"
+starting_room = "ch4_entry"
+enforce_requirements = false
+seamless_rooms = false
+fade_time = 0.22
+gate_cooldown = 0.35
+keep_momentum = true
+remove_room_players = true
+room_darkness = false
+room_weather = true
+room_parallax = false
+room_background = true

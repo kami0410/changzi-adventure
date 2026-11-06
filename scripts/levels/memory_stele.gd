@@ -18,6 +18,10 @@ const EPITAPHS: Array[String] = [
 ]
 
 @export var stele_id: StringName = &""
+## Optional stable id for one-shot progress, independent of `stele_id` (which
+## picks the epitaph text and may repeat between rooms). Empty: game.gd derives
+## `room_id/NodeName`, or adds a suffix when a room holds several steles.
+@export var content_id: StringName = &""
 @export var prompt_text: String = "按 E 读取残碑"
 @export var reward_kind: StringName = &"relic"
 

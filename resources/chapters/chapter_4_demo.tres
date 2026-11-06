@@ -1,0 +1,200 @@
+[gd_resource type="Resource" script_class="ChapterPlanData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/chapter_plan_data.gd" id="1_plan"]
+[ext_resource type="Script" path="res://scripts/language/authority_data.gd" id="2_auth"]
+[ext_resource type="Resource" path="res://resources/authorities/revive.tres" id="3_revive"]
+[ext_resource type="Resource" path="res://resources/authorities/rewrite.tres" id="4_rewrite"]
+[ext_resource type="PackedScene" path="res://scenes/bosses/smiling_archivist.tscn" id="5_smiling"]
+
+[resource]
+script = ExtResource("1_plan")
+chapter_id = &"smiling_theater"
+big_map = true
+start_room = "ch4_entry"
+content_pending = false
+rooms = Array[Dictionary]([{
+"id": "ch4_entry",
+"type": "entrance",
+"size": [2560, 1440],
+"encounters": [],
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"note": "plan + graph skeleton only: the stage motif still lives in TheaterBackdrop (spotlights, floor light, motes) plus smiling_theater.png; whether the big-map pipeline gets a theater layer is pending (pass-50 audit section E) and is not modeled here",
+"fall_below_bounds": 240
+}, {
+"id": "ch4_branch_a",
+"type": "branch",
+"size": [2560, 1440],
+"encounters": ["ch4_branch_a/Arena", "ch4_branch_a/Arena2"],
+"wave": {
+"ch4_branch_a/Arena": [&"mask_enemy", &"seat_husk"],
+"ch4_branch_a/Arena2": [&"choir_summoner", &"page_swarm"]
+},
+"chests": ["ch4_branch_a/Chest1"],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch4_branch_b",
+"type": "branch",
+"size": [2560, 1440],
+"encounters": ["ch4_branch_b/Arena"],
+"wave": {
+"ch4_branch_b/Arena": [&"seat_husk", &"mirror_sniper"]
+},
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch4_hub",
+"type": "hub",
+"size": [2560, 1440],
+"encounters": [],
+"chests": [],
+"steles": ["ch4_hub/Stele1"],
+"shortcuts": ["hub_shortcut_entry"],
+"shop": "ch4_hub_shop",
+"rest": true,
+"fall_below_bounds": 240
+}, {
+"id": "ch4_well",
+"type": "well",
+"size": [2560, 2160],
+"encounters": ["ch4_well/Arena", "ch4_well/Arena2"],
+"wave": {
+"ch4_well/Arena": [&"mask_enemy", &"typo_beast"],
+"ch4_well/Arena2": [&"ink_bomber", &"mask_enemy"]
+},
+"chests": ["ch4_well/Chest1"],
+"steles": [],
+"shortcuts": [],
+"vertical": true,
+"fall_below_bounds": 240
+}, {
+"id": "ch4_vault",
+"type": "vault",
+"size": [2560, 1440],
+"encounters": [],
+"chests": ["ch4_vault/Chest1"],
+"steles": ["ch4_vault/Stele1"],
+"shortcuts": [],
+"hidden": true,
+"fall_below_bounds": 240
+}, {
+"id": "ch4_event",
+"type": "event",
+"size": [2560, 1440],
+"encounters": ["ch4_event/event"],
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"note": "event copy and effects are authored in Ch4EventData; the region stays dormant until the plan is wired and owns no wave",
+"fall_below_bounds": 240
+}, {
+"id": "ch4_elite",
+"type": "elite",
+"size": [3840, 2160],
+"encounters": ["ch4_elite/Arena"],
+"wave": {
+"ch4_elite/Arena": [&"mirror_sniper", &"page_swarm"]
+},
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch4_boss",
+"type": "boss",
+"size": [3840, 2160],
+"encounters": [],
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"note": "boss_scene routes to scenes/bosses/smiling_archivist.tscn; entrance/phase copy is authored (BossEntranceData/BossPhaseData); the legacy boss_script == smiling branch stays as the fallback. Dedicated mechanic extensions (delete-word / copy-weapon / stage traps) are pending pass-50 section E, and the old ch4_boss/left1 return door stays untouched. This big-map boss door is one-way per the Chapter 2/3 precedent.",
+"fall_below_bounds": 240
+}])
+doors = Array[Dictionary]([{
+"id": "entry_branch_a",
+"from": "ch4_entry",
+"to": "ch4_branch_a",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "entry_branch_b",
+"from": "ch4_entry",
+"to": "ch4_branch_b",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "branch_a_hub",
+"from": "ch4_branch_a",
+"to": "ch4_hub",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "branch_b_hub",
+"from": "ch4_branch_b",
+"to": "ch4_hub",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "hub_well",
+"from": "ch4_hub",
+"to": "ch4_well",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "hub_event",
+"from": "ch4_hub",
+"to": "ch4_event",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "branch_b_vault",
+"from": "ch4_branch_b",
+"to": "ch4_vault",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "well_elite",
+"from": "ch4_well",
+"to": "ch4_elite",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "event_elite",
+"from": "ch4_event",
+"to": "ch4_elite",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "elite_boss",
+"from": "ch4_elite",
+"to": "ch4_boss",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": true,
+"note": "the old linear world lets ch4_boss/left1 return to ch4_rest; the big-map boss door follows the Chapter 2/3 one-way precedent"
+}, {
+"id": "hub_shortcut_entry",
+"from": "ch4_hub",
+"to": "ch4_entry",
+"from_gate": "shortcut",
+"to_gate": "shortcut_arrival",
+"one_way": true,
+"requires": ["ch4_shortcut"],
+"note": "granting source pending (pass-50 audit section E): the barrier stays closed until a later pass authors one"
+}])
+authority_pool = Array[ExtResource("2_auth")]([ExtResource("3_revive"), ExtResource("4_rewrite")])
+boss_scene = ExtResource("5_smiling")

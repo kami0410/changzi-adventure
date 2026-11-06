@@ -10,6 +10,9 @@ const DOORS_NODE: String = "Doors"
 const ENEMIES_NODE: String = "Enemies"
 
 @export var room_id: StringName = &""
+## Optional stable id for the encounter's one-shot clear record. Empty: game.gd
+## derives `room_id/NodeName`, so a room can hold several named arenas.
+@export var encounter_id: StringName = &""
 @export var entry_half_width: float = 530.0
 
 

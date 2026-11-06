@@ -1,9 +1,11 @@
 class_name ArchiveData
 extends RefCounted
 
-## The Archive altar's permanent, uncapped upgrade tracks. Costs grow
-## geometrically; values are deliberately small per level so a long-lived
-## archive grows without flattening a fresh run.
+## The Archive altar's permanent upgrade tracks. Costs grow geometrically;
+## values are deliberately small per level so a long-lived archive grows
+## without flattening a fresh run. The long-term design is uncapped, but the
+## demo build stops every track at MAX_LEVEL so the page can say so honestly.
+const MAX_LEVEL := 10
 const TRACKS: Array[Dictionary] = [
 	{
 		&"id": &"vitality", &"name": "生命上限",

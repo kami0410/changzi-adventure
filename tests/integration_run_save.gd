@@ -146,10 +146,10 @@ func _run() -> void:
 	check(relic != null, "run_save_relic_exists")
 	if relic != null:
 		scene.run_state.inventory.add_relic(relic)
-	scene._mds_cleared_rooms["ch1_01"] = true
+	scene._cleared_encounters["ch1_01/Arena"] = true
 	if not scene._chests.is_empty():
 		scene._open_chest(scene._chests[0])
-	check(scene._opened_chests.has("ch1_03"), "run_save_chest_marked")
+	check(scene._opened_chests.has("ch1_03/Chest"), "run_save_chest_marked")
 	scene.player.max_health = 135
 	scene.player.health = 84
 	scene.run_state.pages = 27
@@ -181,7 +181,7 @@ func _run() -> void:
 	check(resumed.run_state.corruption == 41, "run_save_resume_corruption")
 	check(resumed.run_state.inventory.has_word(&"xue"), "run_save_resume_words")
 	check(resumed.run_state.inventory.has_relic(&"time_shard"), "run_save_resume_relics")
-	check(resumed._mds_cleared_rooms.has("ch1_01"), "run_save_resume_cleared_rooms")
+	check(resumed._cleared_encounters.has("ch1_01/Arena"), "run_save_resume_cleared_rooms")
 	# Falling continues where the checkpoint left off; horizontal placement is
 	# exact and the vertical drift is only gravity settling.
 	var restored_position: Vector2 = resumed.player.global_position
@@ -218,8 +218,8 @@ func _run() -> void:
 	check(long_weapon != null, "run_save_long_weapon_exists")
 	if long_weapon != null:
 		resumed._acquire_weapon(long_weapon)
-	resumed._mds_cleared_rooms["ch1_04"] = true
-	resumed._mds_cleared_rooms["ch1_06"] = true
+	resumed._cleared_encounters["ch1_04/Arena"] = true
+	resumed._cleared_encounters["ch1_06/Arena"] = true
 	var saved_phrase := ""
 	if not resumed.run_state.inventory.phrases.is_empty():
 		saved_phrase = resumed.run_state.inventory.phrases[0].signature
@@ -284,9 +284,9 @@ func _run() -> void:
 	check(not after_cycles.run_state.inventory.phrases.is_empty()
 		and after_cycles.run_state.inventory.phrases[0].signature == saved_phrase,
 		"run_save_round_trip_phrase")
-	check(after_cycles._mds_cleared_rooms.has("ch1_01")
-		and after_cycles._mds_cleared_rooms.has("ch1_04")
-		and after_cycles._mds_cleared_rooms.has("ch1_06"),
+	check(after_cycles._cleared_encounters.has("ch1_01/Arena")
+		and after_cycles._cleared_encounters.has("ch1_04/Arena")
+		and after_cycles._cleared_encounters.has("ch1_06/Arena"),
 		"run_save_round_trip_cleared_rooms")
 	check(absf(after_cycles.player.global_position.x - long_position.x) < 8.0,
 		"run_save_round_trip_position_x")
@@ -347,8 +347,8 @@ func _run() -> void:
 		if weapon != null and weapon.id == &"ink_axe":
 			restored_weapon = true
 	check(restored_weapon, "run_save_backup_resume_long_weapon")
-	check(from_backup._mds_cleared_rooms.has("ch1_04"), "run_save_backup_resume_cleared_ch1_04")
-	check(from_backup._mds_cleared_rooms.has("ch1_06"), "run_save_backup_resume_cleared_ch1_06")
+	check(from_backup._cleared_encounters.has("ch1_04/Arena"), "run_save_backup_resume_cleared_ch1_04")
+	check(from_backup._cleared_encounters.has("ch1_06/Arena"), "run_save_backup_resume_cleared_ch1_06")
 	check(not from_backup.run_state.inventory.phrases.is_empty()
 		and from_backup.run_state.inventory.phrases[0].signature == saved_phrase,
 		"run_save_backup_resume_phrase")
@@ -683,8 +683,8 @@ func _run() -> void:
 			await create_timer(0.15).timeout
 			vault_run._claim_nearest_stele()
 			await process_frame
-		check(vault_run._opened_chests.has("ch1_vault"), "run_save_vault_chest_marked")
-		check(vault_run._claimed_steles.has("ch1_vault"), "run_save_vault_stele_marked")
+		check(vault_run._opened_chests.has("ch1_vault/Chest"), "run_save_vault_chest_marked")
+		check(vault_run._claimed_steles.has("ch1_vault/Stele"), "run_save_vault_stele_marked")
 		vault_run.player.max_health = 140
 		vault_run.player.health = 77
 		vault_run.run_state.max_ink = 110
@@ -698,11 +698,11 @@ func _run() -> void:
 		check(String(vault_file.get("run", {}).get("room", "")) == "ch1_vault",
 			"run_save_vault_file_room")
 		var vault_found: Array = vault_file.get("progress", {}).get("vaults", [])
-		var vault_chests: Array = vault_file.get("world", {}).get("opened_chests", [])
-		var vault_steles: Array = vault_file.get("world", {}).get("claimed_steles", [])
+		var vault_chests: Array = vault_file.get("world", {}).get("opened_chest_ids", [])
+		var vault_steles: Array = vault_file.get("world", {}).get("claimed_stele_ids", [])
 		check(vault_found.has("ch1_vault"), "run_save_vault_file_discovery")
-		check(vault_chests.has("ch1_vault"), "run_save_vault_file_chest")
-		check(vault_steles.has("ch1_vault"), "run_save_vault_file_stele")
+		check(vault_chests.has("ch1_vault/Chest"), "run_save_vault_file_chest")
+		check(vault_steles.has("ch1_vault/Stele"), "run_save_vault_file_stele")
 		await _free_scene(vault_run)
 
 		flow.resume_requested = true
@@ -751,6 +751,77 @@ func _run() -> void:
 				"run_save_vault_resume_returns_to_path")
 		await _free_scene(vault_resume)
 
+	# --- Legacy checkpoint compatibility: a save written before per-node ids
+	# only carries room keys. It must still load (not be treated as corrupt),
+	# keep suppressing its one-shot content, and carry the old keys forward.
+	RunSave.clear(RUN_PATH)
+	flow.resume_requested = false
+	var legacy_seed = load("res://scenes/main.tscn").instantiate()
+	root.add_child(legacy_seed)
+	current_scene = legacy_seed
+	await create_timer(0.4).timeout
+	_close_story(legacy_seed)
+	check(await _wait_mds(legacy_seed), "run_save_legacy_boots")
+	await legacy_seed._mds_world.load_room("ch1_03")
+	await create_timer(0.3).timeout
+	check(legacy_seed._mds_world.current_room == "ch1_03", "run_save_legacy_seeded_room")
+	legacy_seed.player.global_position = legacy_seed._last_checkpoint + Vector2(40, 0)
+	legacy_seed.player.velocity = Vector2.ZERO
+	await create_timer(0.2).timeout
+	check(legacy_seed.save_run_now(), "run_save_legacy_seed_write")
+	var old_save := RunSave.read(RUN_PATH)
+	check(not old_save.is_empty(), "run_save_legacy_seed_reads")
+	old_save["progress"].erase("cleared_encounters")
+	old_save["progress"]["cleared_rooms"] = ["ch1_01"]
+	old_save["progress"]["cleared_in_chapter"] = 1
+	old_save["world"].erase("claimed_stele_ids")
+	old_save["world"].erase("opened_chest_ids")
+	old_save["world"]["opened_chests"] = ["ch1_03"]
+	old_save["world"]["claimed_steles"] = ["ch1_rest"]
+	check(RunSave.write(old_save, RUN_PATH), "run_save_legacy_rewritten")
+	await _free_scene(legacy_seed)
+
+	flow.resume_requested = true
+	var legacy_resume = load("res://scenes/main.tscn").instantiate()
+	root.add_child(legacy_resume)
+	current_scene = legacy_resume
+	await create_timer(0.4).timeout
+	_close_story(legacy_resume)
+	check(await _wait_mds(legacy_resume), "run_save_legacy_resume_boots")
+	check(legacy_resume._mds_world.current_room == "ch1_03",
+		"run_save_legacy_resume_room")
+	check(legacy_resume._legacy_cleared_rooms.has("ch1_01"),
+		"run_save_legacy_cleared_record_read")
+	check(legacy_resume._cleared_encounters.is_empty(),
+		"run_save_legacy_has_no_new_encounter_keys")
+	check(legacy_resume._legacy_opened_chests.has("ch1_03"),
+		"run_save_legacy_chest_record_read")
+	check(legacy_resume._legacy_claimed_steles.has("ch1_rest"),
+		"run_save_legacy_stele_record_read")
+	var legacy_chest_open := false
+	for chest in legacy_resume._chests:
+		if chest.is_open:
+			legacy_chest_open = true
+	check(legacy_chest_open, "run_save_legacy_chest_stays_open")
+	await legacy_resume._mds_world.load_room("ch1_01")
+	await create_timer(0.2).timeout
+	check(legacy_resume._rooms.is_empty(), "run_save_legacy_room_not_respawned")
+	await legacy_resume._mds_world.load_room("ch1_rest")
+	await create_timer(0.2).timeout
+	check(legacy_resume._steles.is_empty(), "run_save_legacy_stele_suppressed")
+	check(legacy_resume.save_run_now(), "run_save_legacy_carry_write")
+	var carried := RunSave.read(RUN_PATH)
+	check(not carried.is_empty(), "run_save_legacy_carry_reads")
+	check((carried.get("progress", {}).get("cleared_rooms", []) as Array).has("ch1_01"),
+		"run_save_legacy_cleared_carried")
+	check((carried.get("world", {}).get("opened_chests", []) as Array).has("ch1_03"),
+		"run_save_legacy_chest_carried")
+	check((carried.get("world", {}).get("claimed_steles", []) as Array).has("ch1_rest"),
+		"run_save_legacy_stele_carried")
+	check(not (carried.get("progress", {}).get("cleared_encounters", []) as Array).has("ch1_01/Arena"),
+		"run_save_legacy_no_fabricated_ids")
+	await _free_scene(legacy_resume)
+
 	# --- Quit while a modal page is open. The window-close path calls
 	# save_run_on_exit(), not a manual checkpoint; resuming must drop the page,
 	# keep the pre-page state, and never skip content that was not yet claimed.
@@ -767,14 +838,14 @@ func _run() -> void:
 	await create_timer(1.2).timeout
 	check(modal_run._story.is_open() and modal_run._story._choice_mode,
 		"run_save_modal_event_open")
-	check(not modal_run._mds_cleared_rooms.has("ch1_05"),
+	check(not modal_run._cleared_encounters.has("ch1_05/event"),
 		"run_save_modal_event_not_cleared")
 	var modal_pages: int = modal_run.run_state.pages
 	modal_run.save_run_on_exit()
 	var modal_file := RunSave.read(RUN_PATH)
 	check(String(modal_file.get("run", {}).get("room", "")) == "ch1_05",
 		"run_save_modal_event_file_room")
-	check(not (modal_file.get("progress", {}).get("cleared_rooms", []) as Array).has("ch1_05"),
+	check(not (modal_file.get("progress", {}).get("cleared_encounters", []) as Array).has("ch1_05/event"),
 		"run_save_modal_event_file_not_cleared")
 	await _free_scene(modal_run)
 
@@ -793,7 +864,7 @@ func _run() -> void:
 	if modal_resume._story.is_open():
 		modal_resume._story.choose(1)
 	await create_timer(0.2).timeout
-	check(modal_resume._mds_cleared_rooms.has("ch1_05"),
+	check(modal_resume._cleared_encounters.has("ch1_05/event"),
 		"run_save_modal_event_clears_after_choice")
 	check(modal_resume.run_state.pages > modal_pages,
 		"run_save_modal_event_pays_pages")
@@ -882,7 +953,7 @@ func _run() -> void:
 	check(not reward_run.save_run_now(), "run_save_modal_reward_blocked")
 	reward_run.save_run_on_exit()
 	var reward_file := RunSave.read(RUN_PATH)
-	check(not (reward_file.get("progress", {}).get("cleared_rooms", []) as Array).has("ch1_02"),
+	check(not (reward_file.get("progress", {}).get("cleared_encounters", []) as Array).has("ch1_02/Arena"),
 		"run_save_modal_reward_file_not_cleared")
 	await _free_scene(reward_run)
 
@@ -895,7 +966,7 @@ func _run() -> void:
 	check(await _wait_mds(reward_resume), "run_save_modal_reward_resume_boots")
 	check(reward_resume._mds_world.current_room == "ch1_02",
 		"run_save_modal_reward_resume_room")
-	check(not reward_resume._mds_cleared_rooms.has("ch1_02"),
+	check(not reward_resume._cleared_encounters.has("ch1_02/Arena"),
 		"run_save_modal_reward_replays")
 	check(not reward_resume._reward_ui.visible, "run_save_modal_reward_resume_closed")
 	await _free_scene(reward_resume)
@@ -2015,6 +2086,232 @@ func _run() -> void:
 	check(flow.profile.archived_item.is_empty(), "run_save_archive_relic_consumed")
 	await _free_scene(archive_third)
 	flow.profile.archived_item.clear()
+
+	# --- Chapter 2 step 3: bench checkpoint and collapsing platform through the
+	# real game scene (fall guard, run save, resume). The props are injected
+	# into a Chapter 1 room at test time; no demo scene or save key changes.
+	RunSave.clear(RUN_PATH)
+	flow.resume_requested = false
+	var props = load("res://scenes/main.tscn").instantiate()
+	root.add_child(props)
+	current_scene = props
+	await create_timer(0.4).timeout
+	_close_story(props)
+	check(await _wait_mds(props), "run_save_bench_boots")
+	check(props._mds_world.current_room == "ch1_01", "run_save_bench_room")
+	check(get_nodes_in_group(BenchCheckpoint.GROUP).is_empty(),
+		"run_save_ch1_has_no_benches")
+	check(props._fall_limit_local == ChapterPlanData.DEFAULT_FALL_Y,
+		"run_save_bench_default_fall_plane")
+	# Keep the room's enemies alive but inert: queue_free would count as a
+	# clear and open the reward page under the test.
+	for enemy in get_nodes_in_group(&"enemies"):
+		enemy.process_mode = Node.PROCESS_MODE_DISABLED
+	for hazard in get_nodes_in_group(&"hostile_hazards"):
+		hazard.queue_free()
+	props.player.health = props.player.max_health
+	props.player._invulnerable_left = 0.0
+	# Chapter 1 ground is tile collision and must keep treating down+jump as a
+	# plain jump; only one-way platforms may swallow it.
+	var ground_feet: float = props.player.global_position.y + Player.FOOT_Y
+	Input.action_press("move_down")
+	Input.action_press("jump")
+	var ground_peak := ground_feet
+	for _frame in 24:
+		await physics_frame
+		ground_peak = minf(ground_peak, props.player.global_position.y + Player.FOOT_Y)
+	Input.action_release("jump")
+	Input.action_release("move_down")
+	check(ground_peak < ground_feet - 8.0, "run_save_ch1_down_jump_unchanged")
+	for _frame in 120:
+		await physics_frame
+		if props.player.is_on_floor() \
+				and absf(props.player.global_position.y + Player.FOOT_Y - ground_feet) <= 2.0:
+			break
+	var room_node: Node2D = props._mds_world.room_node
+	check(room_node != null, "run_save_bench_room_node")
+	var bench := BenchCheckpoint.new()
+	bench.name = "TestBench"
+	room_node.add_child(bench)
+	# Bench anchors sit on the floor line; the respawn offset puts the player's
+	# feet back on the same floor.
+	var player_local := room_node.to_local(props.player.global_position)
+	bench.global_position = room_node.to_global(
+		Vector2(player_local.x + 40.0, MDSChapterRoom.FLOOR_Y))
+	await physics_frame
+	check(bench.is_in_group(BenchCheckpoint.GROUP), "run_save_bench_group")
+	var bench_respawn := bench.respawn_position()
+	Input.action_press("interact")
+	await process_frame
+	await process_frame
+	Input.action_release("interact")
+	check(bench.use_count == 1, "run_save_bench_interact_uses")
+	check(props._last_checkpoint.distance_to(bench_respawn) < 1.0,
+		"run_save_bench_updates_checkpoint")
+	check(FileAccess.file_exists(RUN_PATH), "run_save_bench_writes_run_save")
+	var bench_saved := RunSave.read(RUN_PATH)
+	check(int(bench_saved.get("version", 0)) == RunSave.SAVE_VERSION,
+		"run_save_bench_keeps_version")
+	check(String(bench_saved.get("run", {}).get("room", "")) == "ch1_01",
+		"run_save_bench_saved_room")
+	var bench_saved_pos: Array = bench_saved.get("mds", {}).get("position", [])
+	check(bench_saved_pos.size() == 2, "run_save_bench_saved_position")
+	if bench_saved_pos.size() == 2:
+		check(absf(float(bench_saved_pos[0]) - props.player.global_position.x) < 8.0,
+			"run_save_bench_saved_player_x")
+	check(props._fall_limit_local == ChapterPlanData.DEFAULT_FALL_Y,
+		"run_save_bench_fall_plane_unchanged")
+
+	# Collapsing platform: warning, fall to the floor and a restore, all without
+	# the fall guard or the fall-plane resolver firing.
+	# Left of the arena entry band: stepping into it would (correctly) refresh
+	# the combat checkpoint and defeat the point of this bench test.
+	var collapse := CollapsingPlatform.new()
+	collapse.name = "TestCollapse"
+	collapse.position = Vector2(16, 480)
+	collapse.size = Vector2(80, 16)
+	collapse.warn_time = 0.2
+	collapse.fall_time = 0.2
+	collapse.respawn_time = 5.0
+	room_node.add_child(collapse)
+	await physics_frame
+	var collapse_hp: int = props.player.health
+	props.player.global_position = room_node.to_global(Vector2(56, 480 - Player.FOOT_Y))
+	props.player.velocity = Vector2.ZERO
+	await physics_frame
+	var collapse_fell := false
+	for _frame in 180:
+		await physics_frame
+		if collapse.has_collapsed():
+			collapse_fell = true
+			break
+	check(collapse_fell, "run_save_collapse_falls")
+	check(not collapse.is_solid(), "run_save_collapse_collision_off")
+	var floor_y := room_node.to_global(Vector2(0, 560))
+	var landed := false
+	for _frame in 180:
+		await physics_frame
+		if props.player.is_on_floor() \
+				and absf(props.player.global_position.y + Player.FOOT_Y - floor_y.y) <= 2.0:
+			landed = true
+			break
+	check(landed, "run_save_collapse_player_lands_on_floor")
+	check(props.player.health == collapse_hp, "run_save_collapse_no_fall_guard_damage")
+	check(props._fall_limit_local == ChapterPlanData.DEFAULT_FALL_Y,
+		"run_save_collapse_fall_plane_unchanged")
+
+	# Force a real fall while the platform is gone: the guard returns the player
+	# to the bench and restores every collapsing platform first.
+	props.player.global_position = room_node.to_global(Vector2(600, 900))
+	props.player.velocity = Vector2.ZERO
+	await process_frame
+	await process_frame
+	check(props.player.global_position.distance_to(bench_respawn) < 12.0,
+		"run_save_bench_fall_returns_to_bench")
+	check(collapse.is_solid() and collapse.state == CollapsingPlatform.State.IDLE,
+		"run_save_fall_resets_collapsing_platforms")
+	check(props.player.health == collapse_hp - 15, "run_save_bench_fall_damage")
+	await _free_scene(props)
+
+	# Resume: the bench's checkpoint brings the player back to the same room and
+	# spot, with the normal save format.
+	flow.resume_requested = true
+	var bench_resumed = load("res://scenes/main.tscn").instantiate()
+	root.add_child(bench_resumed)
+	current_scene = bench_resumed
+	await create_timer(0.4).timeout
+	_close_story(bench_resumed)
+	check(await _wait_mds(bench_resumed), "run_save_bench_resume_boots")
+	check(bench_resumed._mds_world.current_room == "ch1_01", "run_save_bench_resume_room")
+	check(bench_resumed.player.global_position.distance_to(bench_respawn) < 64.0,
+		"run_save_bench_resume_position")
+	check(bench_resumed._last_checkpoint.distance_to(bench_respawn) < 64.0,
+		"run_save_bench_resume_checkpoint")
+	await _free_scene(bench_resumed)
+
+	# --- Chapter 2 boundary (test-only start; the campaign still stops after
+	# Chapter 1). The checkpoint holds boss_defeated and the granted authority.
+	# Resuming must not spawn a second boss or pay the kill reward again, and the
+	# chapter end must stop at Chapter 2 instead of entering Chapter 3.
+	RunSave.clear(RUN_PATH)
+	flow.resume_requested = false
+	var ch2_run = load("res://scenes/main.tscn").instantiate()
+	root.add_child(ch2_run)
+	current_scene = ch2_run
+	await create_timer(0.4).timeout
+	_close_story(ch2_run)
+	check(await _wait_mds(ch2_run), "run_save_ch2_boots")
+	ch2_run._finished = false
+	ch2_run._ending_pending = false
+	ch2_run.ending_screen.visible = false
+	paused = false
+	ch2_run._start_chapter(1)
+	await create_timer(0.3).timeout
+	check(ch2_run._story.is_open(), "run_save_ch2_intro")
+	_close_story(ch2_run)
+	await process_frame
+	check(await _wait_mds(ch2_run), "run_save_ch2_region_world")
+	await ch2_run._mds_world.load_room("ch2_boss")
+	check(await _wait_room(ch2_run, "ch2_boss"), "run_save_ch2_boss_room")
+	check(ch2_run._boss is LungBellGuardian, "run_save_ch2_boss_scene")
+	ch2_run._boss_defeated = true
+	if ch2_run._boss != null and is_instance_valid(ch2_run._boss):
+		ch2_run._boss.queue_free()
+		ch2_run._boss = null
+	ch2_run.run_state.authority = null
+	ch2_run._grant_chapter_authority.call_deferred()
+	await create_timer(1.6).timeout
+	check(ch2_run._authority_choice.is_open(), "run_save_ch2_authority_opens")
+	if ch2_run._authority_choice.is_open():
+		ch2_run._authority_choice._choose(0)
+	await create_timer(0.3).timeout
+	check(ch2_run.run_state.authority != null, "run_save_ch2_authority_granted")
+	var ch2_authority: StringName = ch2_run.run_state.authority.id
+	var ch2_pool_ids: Array[StringName] = []
+	for entry in ch2_run._chapter_plan.authority_pool:
+		ch2_pool_ids.append(entry.id)
+	check(ch2_pool_ids.has(ch2_authority), "run_save_ch2_authority_from_plan_pool")
+	var ch2_pages: int = ch2_run.run_state.pages
+	var ch2_kills: int = ch2_run._kills
+	check(ch2_run.save_run_now(), "run_save_ch2_checkpoint")
+	var ch2_saved := RunSave.read(RUN_PATH)
+	check(int(ch2_saved.get("run", {}).get("chapter", -1)) == 1,
+		"run_save_ch2_saved_chapter")
+	check(bool(ch2_saved.get("world", {}).get("boss_defeated", false)),
+		"run_save_ch2_saved_boss")
+	check(String(ch2_saved.get("authority", {}).get("id", "")) == String(ch2_authority),
+		"run_save_ch2_saved_authority")
+	await _free_scene(ch2_run)
+
+	flow.resume_requested = true
+	var ch2_resume = load("res://scenes/main.tscn").instantiate()
+	root.add_child(ch2_resume)
+	current_scene = ch2_resume
+	check(await _wait_mds(ch2_resume), "run_save_ch2_resume_boots")
+	check(ch2_resume._chapter == 1, "run_save_ch2_resume_chapter")
+	check(ch2_resume._mds_world.current_room == "ch2_boss",
+		"run_save_ch2_resume_room")
+	check(ch2_resume._boss == null, "run_save_ch2_resume_no_second_boss")
+	check(ch2_resume._boss_defeated, "run_save_ch2_resume_boss_flag")
+	check(ch2_resume.run_state.authority != null
+		and ch2_resume.run_state.authority.id == ch2_authority,
+		"run_save_ch2_resume_authority")
+	check(ch2_resume.run_state.pages == ch2_pages,
+		"run_save_ch2_resume_pages_no_duplicate")
+	check(ch2_resume._kills == ch2_kills, "run_save_ch2_resume_kills_no_duplicate")
+	await create_timer(0.6).timeout
+	check(ch2_resume._story.is_open(), "run_save_ch2_resume_outro")
+	_close_story(ch2_resume)
+	await create_timer(0.5).timeout
+	check(ch2_resume._story.is_open() and ch2_resume._story._choice_mode,
+		"run_save_ch2_resume_choice")
+	if ch2_resume._story.is_open() and ch2_resume._story._choice_mode:
+		ch2_resume._story.choose(0)
+	await create_timer(1.2).timeout
+	check(ch2_resume._chapter == 1, "run_save_ch2_resume_stops_at_chapter_2")
+	check(ch2_resume._finished, "run_save_ch2_resume_finishes")
+	check(not FileAccess.file_exists(RUN_PATH), "run_save_ch2_resume_clears_checkpoint")
+	await _free_scene(ch2_resume)
 
 	_cleanup_files()
 	print("RUN SAVE INTEGRATION: %d checks, %d failures" % [assertions, failures])

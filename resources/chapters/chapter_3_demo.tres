@@ -1,0 +1,199 @@
+[gd_resource type="Resource" script_class="ChapterPlanData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/chapter_plan_data.gd" id="1_plan"]
+[ext_resource type="Script" path="res://scripts/language/authority_data.gd" id="2_auth"]
+[ext_resource type="Resource" path="res://resources/authorities/revive.tres" id="3_revive"]
+[ext_resource type="Resource" path="res://resources/authorities/rewrite.tres" id="4_rewrite"]
+[ext_resource type="PackedScene" path="res://scenes/bosses/last_reader.tscn" id="5_reader"]
+
+[resource]
+script = ExtResource("1_plan")
+chapter_id = &"lightless_sea"
+big_map = true
+start_room = "ch3_entry"
+content_pending = false
+rooms = Array[Dictionary]([{
+"id": "ch3_entry",
+"type": "entrance",
+"size": [2560, 1440],
+"encounters": [],
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"note": "plan + graph skeleton only: vision compression (status #14) and the big-map sea motif (status #15) are pending decisions and are not modeled here",
+"fall_below_bounds": 240
+}, {
+"id": "ch3_branch_a",
+"type": "branch",
+"size": [2560, 1440],
+"encounters": ["ch3_branch_a/Arena", "ch3_branch_a/Arena2"],
+"wave": {
+"ch3_branch_a/Arena": [&"mirror_sniper", &"hanging_scribe"],
+"ch3_branch_a/Arena2": [&"rust_whisperer", &"lung_moth"]
+},
+"chests": ["ch3_branch_a/Chest1"],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch3_branch_b",
+"type": "branch",
+"size": [2560, 1440],
+"encounters": ["ch3_branch_b/Arena"],
+"wave": {
+"ch3_branch_b/Arena": [&"echo_enemy", &"collapse_husk"]
+},
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch3_hub",
+"type": "hub",
+"size": [2560, 1440],
+"encounters": [],
+"chests": [],
+"steles": ["ch3_hub/Stele1"],
+"shortcuts": ["hub_shortcut_entry"],
+"shop": "ch3_hub_shop",
+"rest": true,
+"fall_below_bounds": 240
+}, {
+"id": "ch3_well",
+"type": "well",
+"size": [2560, 2160],
+"encounters": ["ch3_well/Arena", "ch3_well/Arena2"],
+"wave": {
+"ch3_well/Arena": [&"mirror_sniper", &"typo_beast"],
+"ch3_well/Arena2": [&"hanging_scribe", &"page_swarm"]
+},
+"chests": ["ch3_well/Chest1"],
+"steles": [],
+"shortcuts": [],
+"vertical": true,
+"fall_below_bounds": 240
+}, {
+"id": "ch3_vault",
+"type": "vault",
+"size": [2560, 1440],
+"encounters": [],
+"chests": ["ch3_vault/Chest1"],
+"steles": ["ch3_vault/Stele1"],
+"shortcuts": [],
+"hidden": true,
+"fall_below_bounds": 240
+}, {
+"id": "ch3_event",
+"type": "event",
+"size": [2560, 1440],
+"encounters": ["ch3_event/event"],
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"note": "event copy and effects are authored in Ch3EventData; the region stays dormant until the plan is wired",
+"fall_below_bounds": 240
+}, {
+"id": "ch3_elite",
+"type": "elite",
+"size": [3840, 2160],
+"encounters": ["ch3_elite/Arena"],
+"wave": {
+"ch3_elite/Arena": [&"echo_enemy", &"mirror_sniper"]
+},
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"fall_below_bounds": 240
+}, {
+"id": "ch3_boss",
+"type": "boss",
+"size": [3840, 2160],
+"encounters": [],
+"chests": [],
+"steles": [],
+"shortcuts": [],
+"note": "boss_scene routes to scenes/bosses/last_reader.tscn; entrance/phase copy is authored (BossEntranceData/BossPhaseData); the old boss_script == reader branch stays as the legacy fallback",
+"fall_below_bounds": 240
+}])
+boss_scene = ExtResource("5_reader")
+doors = Array[Dictionary]([{
+"id": "entry_branch_a",
+"from": "ch3_entry",
+"to": "ch3_branch_a",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "entry_branch_b",
+"from": "ch3_entry",
+"to": "ch3_branch_b",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "branch_a_hub",
+"from": "ch3_branch_a",
+"to": "ch3_hub",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "branch_b_hub",
+"from": "ch3_branch_b",
+"to": "ch3_hub",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "hub_well",
+"from": "ch3_hub",
+"to": "ch3_well",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "hub_event",
+"from": "ch3_hub",
+"to": "ch3_event",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "branch_b_vault",
+"from": "ch3_branch_b",
+"to": "ch3_vault",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "well_elite",
+"from": "ch3_well",
+"to": "ch3_elite",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": false
+}, {
+"id": "event_elite",
+"from": "ch3_event",
+"to": "ch3_elite",
+"from_gate": "bot1",
+"to_gate": "top1",
+"one_way": false
+}, {
+"id": "elite_boss",
+"from": "ch3_elite",
+"to": "ch3_boss",
+"from_gate": "right1",
+"to_gate": "left1",
+"one_way": true
+}, {
+"id": "hub_shortcut_entry",
+"from": "ch3_hub",
+"to": "ch3_entry",
+"from_gate": "shortcut",
+"to_gate": "shortcut_arrival",
+"one_way": true,
+"requires": ["ch3_shortcut"],
+"note": "granting source pending (status #16): the barrier stays closed until a later pass authors one"
+}])
+authority_pool = Array[ExtResource("2_auth")]([ExtResource("3_revive"), ExtResource("4_rewrite")])

@@ -24,15 +24,24 @@ const READER_SCENE = preload("res://scenes/bosses/last_reader.tscn")
 const PICKUP_SCENE = preload("res://scenes/combat/pickup.tscn")
 const MDS_CHAPTER_SCENES: Array[PackedScene] = [
 	preload("res://scenes/mds/chapter_1_world.tscn"),
-	preload("res://scenes/mds/chapter_2_world.tscn"),
+	preload("res://scenes/mds/chapter_2_bigmap_world.tscn"),
 	preload("res://scenes/mds/chapter_3_world.tscn"),
 	preload("res://scenes/mds/chapter_4_world.tscn"),
 ]
 const MDS_WORLD_FILES: Array[String] = [
 	"res://scenes/mds/chapter_1.mdsworld.json",
-	"res://scenes/mds/chapter_2.mdsworld.json",
+	"res://scenes/mds/chapter_2_bigmap.mdsworld.json",
 	"res://scenes/mds/chapter_3.mdsworld.json",
 	"res://scenes/mds/chapter_4.mdsworld.json",
+]
+## Chapter plans are data-only for now: Chapter 1 drives its linear rooms and
+## Chapter 2 drives the big-map regions. Empty entries keep the legacy defaults
+## (CampaignData.rooms + ROOM_WAVES) for chapters 3–4.
+const CHAPTER_PLAN_PATHS: Array[String] = [
+	"res://resources/chapters/chapter_1_demo.tres",
+	"res://resources/chapters/chapter_2_demo.tres",
+	"",
+	"",
 ]
 ## A weapon never vanishes: equipping swaps with the held one and drops it.
 const WEAPON_DROP_CHANCE := 0.04
@@ -52,6 +61,9 @@ const ENEMY_ART: Dictionary = {
 	&"page_swarm": preload("res://assets/sprites/enemies/page_swarm.png"),
 }
 const ENEMY_ART_FALLBACK: Dictionary = {&"breath_hound": &"ink_hound", &"lung_moth": &"hanging_scribe", &"rust_whisperer": &"scribe_bug", &"collapse_husk": &"blank_man"}
+## Tint applied only to Chapter 1 art reused by an enemy without its own
+## sprite. Enemies wired into ENEMY_ART render at Color.WHITE.
+const ENEMY_FALLBACK_TINT := Color("c8e1cd")
 const ENEMY_ANIM_STYLE: Dictionary = {
 	&"ink_hound": &"beast", &"breath_hound": &"beast", &"scribe_bug": &"beast",
 	&"lung_moth": &"flyer", &"hanging_scribe": &"flyer", &"page_swarm": &"flyer",
@@ -142,15 +154,25 @@ var _frenzy_cap := 0
 var _mds_active := false
 var _mds_world: MDSWorldGame
 var _mds_boss_arena: ArenaRoom
-var _mds_cleared_rooms: Dictionary = {}
+## Room-local y of the current room's fall plane. Authored per room/area from
+## the chapter plan (or room metadata); the legacy 850 px rule when unspecified.
+var _fall_limit_local := ChapterPlanData.DEFAULT_FALL_Y
+## Cleared encounters, keyed by encounter id (`room/Arena`, `room/event`, or an
+## authored id), so a big-map room can hold several encounters. The legacy
+## dictionaries keep room-key checkpoints written before per-node ids readable.
+var _cleared_encounters: Dictionary = {}
+var _legacy_cleared_rooms: Dictionary = {}
 var _discovered_vaults: Dictionary = {}
 ## Rest-room arrival flavour is display-only; one greeting per room per launch
 ## keeps backtracking from replaying the same toast.
 var _rest_greeted: Dictionary = {}
-## One-shot world pickups are remembered per room so resume cannot duplicate
-## a stele reward or reopen a chest.
+## One-shot world pickups are remembered per chest/stele id so resume cannot
+## duplicate a reward or reopen a chest, even with several in one room.
+## `_legacy_*` holds room-key entries from checkpoints written before ids.
 var _claimed_steles: Dictionary = {}
+var _legacy_claimed_steles: Dictionary = {}
 var _opened_chests: Dictionary = {}
+var _legacy_opened_chests: Dictionary = {}
 var _boss_defeated := false
 var _boss_aftermath_started := false
 ## Validated checkpoint consumed by this launch; empty on a fresh run.
@@ -192,7 +214,7 @@ func _ready() -> void:
 	_apply_corruption_penalties()
 	_update_hud()
 	hud.set_region("墨雨档案馆")
-	hud.set_progress(0, 7)
+	hud.set_progress(0, _chapter_progress_total())
 	hud.set_objective("找回失踪名册的第一页")
 	inventory_ui.bind(run_state.inventory, run_state.run_seed)
 	var persistent_phrases: Array[String] = []
@@ -315,19 +337,30 @@ func _restore_run_save(data: Dictionary) -> bool:
 func _restore_room_progress(data: Dictionary) -> void:
 	var progress: Dictionary = data.get("progress", {})
 	_cleared_in_chapter = maxi(0, int(progress.get("cleared_in_chapter", 0)))
-	_mds_cleared_rooms.clear()
+	_cleared_encounters.clear()
+	for id in progress.get("cleared_encounters", []):
+		_cleared_encounters[String(id)] = true
+	# Older checkpoints only recorded the room id; keep them readable as a
+	# room-wide fallback instead of dropping progress or rejecting the file.
+	_legacy_cleared_rooms.clear()
 	for room_id in progress.get("cleared_rooms", []):
-		_mds_cleared_rooms[String(room_id)] = true
+		_legacy_cleared_rooms[String(room_id)] = true
 	_discovered_vaults.clear()
 	for room_id in progress.get("vaults", []):
 		_discovered_vaults[String(room_id)] = true
 	var world: Dictionary = data.get("world", {})
 	_claimed_steles.clear()
+	for id in world.get("claimed_stele_ids", []):
+		_claimed_steles[String(id)] = true
+	_legacy_claimed_steles.clear()
 	for room_id in world.get("claimed_steles", []):
-		_claimed_steles[String(room_id)] = true
+		_legacy_claimed_steles[String(room_id)] = true
 	_opened_chests.clear()
+	for id in world.get("opened_chest_ids", []):
+		_opened_chests[String(id)] = true
+	_legacy_opened_chests.clear()
 	for room_id in world.get("opened_chests", []):
-		_opened_chests[String(room_id)] = true
+		_legacy_opened_chests[String(room_id)] = true
 	_boss_defeated = bool(world.get("boss_defeated", false))
 	_boss_aftermath_started = false
 
@@ -507,7 +540,11 @@ func _build_run_save() -> Dictionary:
 		},
 		"progress": {
 			"cleared_in_chapter": _cleared_in_chapter,
-			"cleared_rooms": _mds_cleared_rooms.keys(),
+			"cleared_encounters": _cleared_encounters.keys(),
+			# Legacy room-key view: only carried over from older checkpoints,
+			# never derived from partial per-node progress (that would make a
+			# resumed multi-content room treat every prop as consumed).
+			"cleared_rooms": _legacy_cleared_rooms.keys(),
 			"vaults": _discovered_vaults.keys(),
 		},
 		"inventory": {
@@ -518,8 +555,10 @@ func _build_run_save() -> Dictionary:
 		},
 		"authority": authority,
 		"world": {
-			"claimed_steles": _claimed_steles.keys(),
-			"opened_chests": _opened_chests.keys(),
+			"claimed_stele_ids": _claimed_steles.keys(),
+			"claimed_steles": _legacy_claimed_steles.keys(),
+			"opened_chest_ids": _opened_chests.keys(),
+			"opened_chests": _legacy_opened_chests.keys(),
 			"boss_defeated": _boss_defeated,
 			"shops": _serialize_shop_cache(),
 			"frenzy": {
@@ -588,7 +627,8 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("cast_2"):
 		_try_cast(1)
 	if Input.is_action_just_pressed("interact"):
-		if not _try_open_shop() and not _try_open_chest() and not _try_pickup_nearest():
+		if not _try_open_shop() and not _try_open_chest() and not _try_pickup_nearest() \
+				and not _try_use_bench():
 			_claim_nearest_stele()
 	if not _mds_active:
 		var left := _chapter_level().position.x
@@ -596,13 +636,18 @@ func _process(delta: float) -> void:
 	# MDS rooms sit at absolute world coordinates (the hidden vault is one room
 	# below the main path), so the fall guard has to compare the room-local Y:
 	# checking the world Y would pin the player to the vault door and damage them
-	# every invulnerability window.
+	# every invulnerability window. The limit itself is per room/area so a
+	# multi-screen room can be taller than the legacy 850 px without killing the
+	# player in its lower half.
 	var fall_y := player.position.y
 	if _mds_active and _mds_world != null and not _mds_world.current_room.is_empty():
 		fall_y = player.global_position.y - _mds_world.world.get_origin(_mds_world.current_room).y
-	if fall_y > 850.0:
+	if fall_y > _fall_limit_local:
 		player.position = _last_checkpoint
 		player.velocity = Vector2.ZERO
+		# A checkpoint may sit on a collapsing platform; restore every platform
+		# in the group before the player lands back on it.
+		_reset_collapsing_platforms()
 		player.take_damage(15)
 
 func _input(event: InputEvent) -> void:
@@ -1049,16 +1094,26 @@ func _populate_room(room: ArenaRoom, ids: Array, wave_ids: Array = []) -> void:
 		room.queue_wave(func(): _spawn_group(room, wave_ids, -110.0))
 
 
+## Legacy linear arenas sit 250 px above their ground and keep the historical
+## spawn offset. Big-map arenas are anchored on the walkable surface, so their
+## enemies spawn just above the arena origin instead of 250 px underground.
+func _enemy_spawn_y() -> float:
+	if _chapter_plan != null and _chapter_plan.big_map:
+		return -ENEMY_FOOT_Y - 2.0
+	return 250.0
+
+
 func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float) -> void:
 	var offset := start_offset
+	var spawn_y := _enemy_spawn_y()
 	for id in ids:
 		if not ENEMY_SCENES.has(id):
 			continue
-		var enemy := room.spawn_enemy(ENEMY_SCENES[id], Vector2(offset, 250)) as Enemy
+		var enemy := room.spawn_enemy(ENEMY_SCENES[id], Vector2(offset, spawn_y)) as Enemy
 		if enemy == null:
 			continue
 		var art_id: StringName = ENEMY_ART_FALLBACK.get(id, id)
-		var tint := Color("c8e1cd") if ENEMY_ART_FALLBACK.has(id) else Color.WHITE
+		var tint := ENEMY_FALLBACK_TINT if ENEMY_ART_FALLBACK.has(id) else Color.WHITE
 		_apply_art(enemy, ENEMY_ART[art_id], float(ENEMY_ART_SCALE.get(id, 1.0)), tint)
 		var health_scale := Difficulty.enemy_health(Flow.difficulty)
 		if not is_equal_approx(health_scale, 1.0):
@@ -1083,7 +1138,7 @@ func _spawn_boss(room: ArenaRoom, chapter: Dictionary, chapter_index: int) -> In
 		scene = SMILING_SCENE
 	elif chapter["boss_script"] == &"reader":
 		scene = READER_SCENE
-	var boss := room.spawn_enemy(scene, Vector2(110, 250)) as InkArchivist
+	var boss := room.spawn_enemy(scene, Vector2(110, _enemy_spawn_y())) as InkArchivist
 	if boss == null:
 		return null
 	var stats := BOSS_DATA.duplicate() as EnemyData
@@ -1134,6 +1189,29 @@ func _start_chapter(index: int) -> void:
 	await _start_mds_chapter(_chapter)
 
 
+## Chapter plan resource, or null for chapters that still use the legacy
+## CampaignData room list. Chapter 1 keeps its linear plan; Chapter 2 uses the
+## big-map region plan.
+func _load_chapter_plan(chapter_index: int) -> ChapterPlanData:
+	if chapter_index < 0 or chapter_index >= CHAPTER_PLAN_PATHS.size():
+		return null
+	var path := CHAPTER_PLAN_PATHS[chapter_index]
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	return load(path) as ChapterPlanData
+
+
+## First room of a fresh chapter: the plan's authored entrance (big-map
+## chapters) or the legacy `ch<N>_01` naming. Chapter 1 has no start region and
+## therefore keeps `ch1_01` byte-for-byte.
+func _chapter_start_room(chapter_index: int) -> String:
+	if _chapter_plan != null:
+		var region := _chapter_plan.start_region()
+		if not region.is_empty():
+			return region
+	return "ch%d_01" % (chapter_index + 1)
+
+
 func _start_mds_chapter(index: int) -> void:
 	var chapter_index := clampi(index, 0, CampaignData.chapter_count() - 1)
 	# A checkpoint belongs to exactly one chapter; resuming in it must keep the
@@ -1142,19 +1220,20 @@ func _start_mds_chapter(index: int) -> void:
 	_teardown_mds(not resume)
 	_chapter = chapter_index
 	var chapter := CampaignData.chapter(chapter_index)
-	_chapter_plan = null
+	_chapter_plan = _load_chapter_plan(chapter_index)
 	_event_room_id = ""
-	if chapter_index == 0:
-		_chapter_plan = load("res://resources/chapters/chapter_1_demo.tres") as ChapterPlanData
 	_mds_active = true
 	_rooms.clear()
 	_boss = null
 	_mds_boss_arena = null
 	if not resume:
-		_mds_cleared_rooms.clear()
+		_cleared_encounters.clear()
+		_legacy_cleared_rooms.clear()
 		_discovered_vaults.clear()
 		_claimed_steles.clear()
+		_legacy_claimed_steles.clear()
 		_opened_chests.clear()
+		_legacy_opened_chests.clear()
 		_shop_cache.clear()
 		_cleared_in_chapter = 0
 		_boss_defeated = false
@@ -1167,7 +1246,7 @@ func _start_mds_chapter(index: int) -> void:
 	for hazard in get_tree().get_nodes_in_group("hostile_hazards"):
 		hazard.queue_free()
 	hud.set_region("%s · %s" % [chapter["region"], Difficulty.display_name(Flow.difficulty)])
-	hud.set_progress(_cleared_in_chapter if resume else 0, 7)
+	hud.set_progress(_cleared_in_chapter if resume else 0, _chapter_progress_total())
 	hud.set_objective(chapter["objective"])
 	hud.hide_boss()
 	Audio.play_music(chapter["music"], 1.2)
@@ -1188,8 +1267,9 @@ func _start_mds_chapter(index: int) -> void:
 	if resume:
 		world.set_save_data(_resume_data.get("mds", {}))
 	else:
-		world.starting_room = "ch%d_01" % (chapter_index + 1)
+		world.starting_room = _chapter_start_room(chapter_index)
 	if _map_overlay != null:
+		_map_overlay.set_chapter(chapter_index)
 		_map_overlay.set_world(MDS_WORLD_FILES[chapter_index])
 		world.map_view = _map_overlay.map_view
 	world.room_loaded.connect(_on_mds_room_loaded)
@@ -1206,8 +1286,10 @@ func _teardown_mds(clear_progress := true) -> void:
 	_mds_world = null
 	_mds_active = false
 	_mds_boss_arena = null
+	_fall_limit_local = ChapterPlanData.DEFAULT_FALL_Y
 	if clear_progress:
-		_mds_cleared_rooms.clear()
+		_cleared_encounters.clear()
+		_legacy_cleared_rooms.clear()
 		_discovered_vaults.clear()
 	_rooms.clear()
 
@@ -1226,68 +1308,59 @@ func _on_mds_room_loaded(room_id: String) -> void:
 	_steles.clear()
 	_shops.clear()
 	_chests.clear()
+	var has_bench := false
 	for node in room_node.find_children("*", "", true, false):
 		if node is MemoryStele:
 			_steles.append(node)
 		elif node is MemoryShop:
 			_shops.append(node)
+		elif node is BenchCheckpoint:
+			has_bench = true
 		elif node is TreasureChest:
 			_chests.append(node)
-	# One-shot pickups already taken in this room stay taken after resume.
-	if _claimed_steles.has(room_id):
-		for stele in _steles:
-			if is_instance_valid(stele):
-				stele.is_claimed = true
-				stele.queue_free()
-		_steles.clear()
-	if _opened_chests.has(room_id):
-		for chest in _chests:
-			if is_instance_valid(chest):
-				chest.open()
+	# Progress is recorded per prop/encounter, not per room, so several chests,
+	# steles or arenas in one big-map room settle independently. A room-key
+	# checkpoint written before ids existed still suppresses its (single)
+	# content through the legacy fallback.
+	var used_ids: Dictionary = {}
+	for stele in _steles:
+		_assign_content_id(stele, room_id, used_ids)
+	for chest in _chests:
+		_assign_content_id(chest, room_id, used_ids)
+	var kept_steles: Array[MemoryStele] = []
+	for stele in _steles:
+		var stele_content := String(stele.get_meta(&"content_id", ""))
+		if is_instance_valid(stele) and RoomProgress.is_recorded(
+				_claimed_steles, _legacy_claimed_steles, stele_content, room_id):
+			stele.is_claimed = true
+			stele.queue_free()
+		else:
+			kept_steles.append(stele)
+	_steles = kept_steles
+	for chest in _chests:
+		var chest_content := String(chest.get_meta(&"content_id", ""))
+		if is_instance_valid(chest) and RoomProgress.is_recorded(
+				_opened_chests, _legacy_opened_chests, chest_content, room_id):
+			chest.open()
 	_boss_bar_visible = false
 	_boss_entrance_started = false
 	var chapter := CampaignData.chapter(_chapter)
-	var arena := room_node.get_node_or_null("Arena") as ArenaRoom
+	var primary_arena := room_node.get_node_or_null("Arena") as ArenaRoom
+	var arenas := _room_arenas(room_node, primary_arena)
 	var room_index := _mds_room_index(room_id)
 	var plan_room := _plan_room(room_id)
 	var room_type := String(plan_room.get("type", ""))
-	if arena != null:
-		arena.cleared.connect(_on_room_cleared.bind(arena, _chapter))
-		arena.get_node("Enemies").process_mode = Node.PROCESS_MODE_DISABLED
-		if room_type == "event":
-			if _mds_cleared_rooms.has(room_id):
-				hud.set_objective("事件已经读过")
-			else:
-				hud.set_objective("事件 · 读或不读")
-				# room_loaded fires before the camera fade finishes; opening a
-				# paused modal inside that await would stall the transition.
-				_open_ch1_event_after_transition.call_deferred(room_id)
-		elif room_index == 7 or room_type == "boss":
-			_mds_boss_arena = arena
-			_rooms.append(arena)
-			if _boss_defeated:
-				# Quit during the authority/outro sequence: finish it instead of
-				# spawning a second boss and re-paying the kill reward.
-				hud.set_objective("墨骸史官已经倒下")
-				_resume_boss_aftermath.call_deferred()
-			else:
-				_boss = _spawn_boss(arena, chapter, _chapter)
-				hud.set_objective("击败 %s" % chapter["boss_name"])
-		elif room_index >= 0 and room_index < 6 and not _mds_cleared_rooms.has(room_id):
-			_rooms.append(arena)
-			if _chapter_plan != null:
-				var wave: Array = plan_room.get("wave", [])
-				var first_count := mini(2, wave.size())
-				_populate_room(arena, wave.slice(0, first_count), wave.slice(first_count))
-			else:
-				# Chapters 2–4 keep the authored first group + ROOM_WAVES wave.
-				_populate_room(arena, chapter["rooms"][room_index], ROOM_WAVES[_chapter][room_index])
-			hud.set_objective("肃清此房间 · 敌人 %d" % arena.enemy_count())
-		else:
-			hud.set_objective("此房间已肃清")
-	else:
+	var big_map := _chapter_plan != null and _chapter_plan.big_map
+	if arenas.is_empty():
 		var is_vault := room_id.ends_with("_vault")
-		hud.set_objective("搜查隐藏书库" if is_vault else "休整，或继续前进")
+		# Big-map entrance regions have neither combat nor rest facilities, so
+		# they must not borrow the shop/bench arrival copy (the chapter 3 entry
+		# used to greet the player with a chapter 4-flavoured rest line). Only
+		# rooms that actually author a shop or a checkpoint bench keep the rest
+		# branch; Chapter 1 keeps its authored rest room via `not big_map`.
+		var rests_here := not big_map or has_bench or not _shops.is_empty()
+		hud.set_objective("搜查隐藏书库" if is_vault
+			else ("休整，或继续前进" if rests_here else "继续前进"))
 		if is_vault and not _discovered_vaults.has(room_id):
 			_discovered_vaults[room_id] = true
 			hud.show_message(VaultRoomData.pick(run_state.run_seed, room_id))
@@ -1295,15 +1368,166 @@ func _on_mds_room_loaded(room_id: String) -> void:
 			var audio := get_node_or_null("/root/Audio")
 			if audio != null:
 				audio.call("play_sfx", &"pickup")
-		elif not is_vault and not _rest_greeted.has(room_id):
+		elif not is_vault and rests_here and not _rest_greeted.has(room_id):
 			_rest_greeted[room_id] = true
 			var rest_line := RestRoomData.pick(run_state.run_seed, room_id)
 			if rest_line != "":
 				hud.show_message(rest_line)
+	else:
+		# A big-map room can hold several encounters. Every arena is wired and
+		# keyed by its own node id; `Arena` stays the primary node that owns the
+		# authored event/boss branch and the room-level objective, while big-map
+		# waves are looked up per encounter id (never per region).
+		for arena in arenas:
+			var is_primary := arena == primary_arena
+			var encounter_id := _assign_encounter_id(arena, room_id, used_ids)
+			var encounter_cleared := RoomProgress.is_recorded(
+				_cleared_encounters, _legacy_cleared_rooms, encounter_id, room_id)
+			var cleared_handler := _on_room_cleared.bind(arena, _chapter)
+			if not arena.cleared.is_connected(cleared_handler):
+				arena.cleared.connect(cleared_handler)
+			var enemies_root := arena.get_node_or_null(ArenaRoom.ENEMIES_NODE)
+			if enemies_root != null:
+				enemies_root.process_mode = Node.PROCESS_MODE_DISABLED
+			# Event pages are routed per chapter by `_event_data`. Chapter 1 keeps
+			# its original primary-arena trigger; big-map event regions are
+			# handled at region level after this loop.
+			if is_primary and _chapter == 0 and room_type == "event":
+				var event_id := RoomProgress.event_encounter_id(room_id)
+				if RoomProgress.is_recorded(_cleared_encounters, _legacy_cleared_rooms, event_id, room_id):
+					hud.set_objective("事件已经读过")
+				else:
+					hud.set_objective("事件 · 读或不读")
+					# room_loaded fires before the camera fade finishes; opening a
+					# paused modal inside that await would stall the transition.
+					_open_event_after_transition.call_deferred(room_id)
+			elif is_primary and (room_index == 7 or room_type == "boss"):
+				_mds_boss_arena = arena
+				_rooms.append(arena)
+				if _boss_defeated:
+					# Quit during the authority/outro sequence: finish it instead of
+					# spawning a second boss and re-paying the kill reward.
+					hud.set_objective("墨骸史官已经倒下")
+					_resume_boss_aftermath.call_deferred()
+				else:
+					_boss = _spawn_boss(arena, chapter, _chapter)
+					hud.set_objective("击败 %s" % chapter["boss_name"])
+			elif big_map:
+				# Each listed combat encounter spawns from its own plan wave and
+				# settles under its own node id. Event and boss regions never
+				# consume an ordinary wave.
+				var wave := _plan_wave(room_id, encounter_id)
+				var combat := room_type != "event" and room_type != "boss" \
+					and not wave.is_empty()
+				if combat and not encounter_cleared:
+					_rooms.append(arena)
+					var first_count := mini(2, wave.size())
+					_populate_room(arena, wave.slice(0, first_count), wave.slice(first_count))
+					if is_primary:
+						hud.set_objective("肃清此房间 · 敌人 %d" % arena.enemy_count())
+				elif is_primary:
+					hud.set_objective("此房间已肃清")
+			elif is_primary and room_index >= 0 and room_index < 6 and not encounter_cleared:
+				_rooms.append(arena)
+				if _chapter_plan != null:
+					var wave: Array = plan_room.get("wave", [])
+					var first_count := mini(2, wave.size())
+					_populate_room(arena, wave.slice(0, first_count), wave.slice(first_count))
+				else:
+					# Chapters 2–4 keep the authored first group + ROOM_WAVES wave.
+					_populate_room(arena, chapter["rooms"][room_index], ROOM_WAVES[_chapter][room_index])
+				hud.set_objective("肃清此房间 · 敌人 %d" % arena.enemy_count())
+			elif not is_primary and room_index >= 0 and room_index < 6 \
+					and room_type != "event" and room_type != "boss" and not encounter_cleared:
+				# Extra encounters keep their authored content; the primary
+				# arena above still owns the plan wave and the objective text.
+				_rooms.append(arena)
+			elif is_primary:
+				hud.set_objective("此房间已肃清")
+	# Big-map event regions author an `Event` arena instead of a primary `Arena`,
+	# so the chapter-gated branch above never sees them. The page belongs to the
+	# region: it opens once on entry, keyed by the plan's event node id, and a
+	# settled node stays settled across reloads. The branch is chapter-agnostic:
+	# any big-map chapter with authored event copy gets it (Chapters 2–4), while
+	# the chapter still decides reachability through its plan slot.
+	if big_map and room_type == "event" and not _event_data(room_id).is_empty():
+		var event_id := RoomProgress.event_encounter_id(room_id)
+		if RoomProgress.is_recorded(_cleared_encounters, _legacy_cleared_rooms, event_id, room_id):
+			hud.set_objective("事件已经读过")
+		else:
+			hud.set_objective("事件 · 读或不读")
+			_open_event_after_transition.call_deferred(room_id)
+	_fall_limit_local = _resolve_fall_limit(room_id)
 	_last_checkpoint = player.global_position
-	hud.set_progress(_cleared_in_chapter, 7)
+	hud.set_progress(_cleared_in_chapter, _chapter_progress_total())
 	hud.hide_boss()
 	save_run_now()
+
+
+## All encounters in a loaded room. The editor-authored `Arena` is first when
+## present; further direct-child arenas are additional big-map encounters and
+## settle under their own node ids.
+func _room_arenas(room_node: Node, primary: ArenaRoom) -> Array[ArenaRoom]:
+	var arenas: Array[ArenaRoom] = []
+	if primary != null:
+		arenas.append(primary)
+	for child in room_node.get_children():
+		if child is ArenaRoom and child != primary:
+			arenas.append(child)
+	return arenas
+
+
+func _assign_content_id(node: Node, room_id: String, used_ids: Dictionary) -> String:
+	var authored := ""
+	var value: Variant = node.get(&"content_id")
+	if value is String or value is StringName:
+		authored = String(value)
+	var id := RoomProgress.unique_id(
+		RoomProgress.content_id(room_id, String(node.name), authored), used_ids)
+	node.set_meta(&"content_id", id)
+	return id
+
+
+func _assign_encounter_id(arena: ArenaRoom, room_id: String, used_ids: Dictionary) -> String:
+	var id := RoomProgress.unique_id(
+		RoomProgress.encounter_id(room_id, String(arena.name), String(arena.encounter_id)),
+		used_ids)
+	arena.set_meta(&"encounter_id", id)
+	return id
+
+
+func _encounter_id_for(arena: ArenaRoom, room_id: String) -> String:
+	if arena == null:
+		return ""
+	var assigned := String(arena.get_meta(&"encounter_id", ""))
+	if not assigned.is_empty():
+		return assigned
+	return RoomProgress.encounter_id(room_id, String(arena.name), String(arena.encounter_id))
+
+
+func _content_id_for(node: Node, room_id: String) -> String:
+	if node == null:
+		return room_id
+	var assigned := String(node.get_meta(&"content_id", ""))
+	if not assigned.is_empty():
+		return assigned
+	var authored := ""
+	var value: Variant = node.get(&"content_id")
+	if value is String or value is StringName:
+		authored = String(value)
+	return RoomProgress.content_id(room_id, String(node.name), authored)
+
+
+## Records one encounter/event clear. Returns false when the id was already
+## settled, so re-entering or reloading a room cannot count twice.
+func _mark_encounter_cleared(room_id: String, encounter_id: String) -> bool:
+	if RoomProgress.is_recorded(
+			_cleared_encounters, _legacy_cleared_rooms, encounter_id, room_id):
+		return false
+	_cleared_encounters[encounter_id] = true
+	_cleared_in_chapter += 1
+	hud.set_progress(_cleared_in_chapter, _chapter_progress_total())
+	return true
 
 
 func _resume_boss_aftermath() -> void:
@@ -1322,7 +1546,67 @@ func _plan_room(room_id: String) -> Dictionary:
 	return _chapter_plan.room(room_id)
 
 
-func _open_ch1_event_after_transition(room_id: String) -> void:
+## Enemy wave authored for one encounter node. Big-map plans key `wave` by
+## encounter id (`region/Node`), so two arenas in one region never share a
+## wave; Chapter 1 keeps its room-level plan array.
+func _plan_wave(room_id: String, encounter_id: String) -> Array:
+	if _chapter_plan == null:
+		return []
+	return _chapter_plan.wave_for(room_id, encounter_id)
+
+
+## Clears required to finish the chapter. Plans own the number (derived from
+## their room types by default); chapters without a plan keep the legacy six.
+func _chapter_clear_target() -> int:
+	if _chapter_plan != null:
+		var target := _chapter_plan.clear_target()
+		if target > 0:
+			return target
+	return 6
+
+
+## HUD denominator: the clear target plus the boss room.
+func _chapter_progress_total() -> int:
+	return _chapter_clear_target() + 1
+
+
+## Room-local fall plane for [param room_id]. The chapter plan overrides first
+## (it drives the big-map rooms), then scene metadata on the loaded room, then
+## the legacy 850 px rule. Chapter 1 configures neither, so it keeps 850.
+func _resolve_fall_limit(room_id: String) -> float:
+	var local_height := _room_local_height(room_id)
+	var plan_room := _plan_room(room_id)
+	var from_plan := _fall_limit_from(plan_room, local_height)
+	if not is_nan(from_plan):
+		return from_plan
+	if _mds_world != null and is_instance_valid(_mds_world.room_node) \
+			and _mds_world.current_room == room_id:
+		var room_node := _mds_world.room_node
+		if room_node.has_meta(&"fall_y"):
+			var meta_y: Variant = room_node.get_meta(&"fall_y")
+			if meta_y is float or meta_y is int:
+				return float(meta_y)
+		if room_node.has_meta(&"fall_below_bounds"):
+			var meta_below: Variant = room_node.get_meta(&"fall_below_bounds")
+			if meta_below is float or meta_below is int:
+				return local_height + float(meta_below)
+	return ChapterPlanData.DEFAULT_FALL_Y
+
+
+func _fall_limit_from(entry: Dictionary, local_height: float) -> float:
+	return ChapterPlanData.fall_limit_from_entry(entry, local_height, NAN)
+
+
+func _room_local_height(room_id: String) -> float:
+	if _mds_world == null or not is_instance_valid(_mds_world) or not _mds_world.world:
+		return 720.0
+	var bounds := _mds_world.world.get_room_bounds(room_id)
+	if bounds.size.y <= 0.0:
+		return 720.0
+	return bounds.end.y - _mds_world.world.get_origin(room_id).y
+
+
+func _open_event_after_transition(room_id: String) -> void:
 	await get_tree().create_timer(0.8).timeout
 	if not is_inside_tree() or _finished or _ending_pending:
 		return
@@ -1332,22 +1616,30 @@ func _open_ch1_event_after_transition(room_id: String) -> void:
 	# the room schedules it again because it is still uncleared.
 	if not _mds_active or _mds_world == null or _mds_world.current_room != room_id:
 		return
-	_open_ch1_event(room_id)
+	_open_chapter_event(room_id)
 
 
-## Chapter 1 event room: no forced fight; reading the forbidden page grants a
-## word at a corruption cost, taking the pages is the safe economic choice.
-func _open_ch1_event(room_id: String) -> void:
+## Event page for the active chapter: no forced fight; reading grants a word at
+## a corruption cost, taking the pages is the safe economic choice. Chapter 1
+## keeps Ch1EventData byte-for-byte; Chapters 2–4 read Ch2/Ch3/Ch4EventData keyed
+## by the plan's event node id. All reuse the same fixed two-choice mechanics.
+func _open_chapter_event(room_id: String) -> void:
 	if _event_room_id == room_id or _finished or _ending_pending:
 		return
+	var data := _event_data(room_id)
+	if data.is_empty():
+		return
 	_event_room_id = room_id
-	var event := Ch1EventData.pick(run_state.run_seed, room_id)
+	var event: Dictionary = data["event"]
+	var corruption_cost: int = data["corruption_cost"]
+	var pages_reward: int = data["pages_reward"]
+	var fallback_pages: int = data["fallback_pages"]
 	var decode_pool := RunLoot.owned_undecoded_words(run_state, Flow.profile, _chapter)
-	var read_note := "解明一个残页词，污染 +%d" % Ch1EventData.CORRUPTION_COST
+	var read_note := "解明一个残页词，污染 +%d" % corruption_cost
 	if decode_pool.is_empty():
-		read_note = "残页 +%d，污染 +%d" % [Ch1EventData.FALLBACK_PAGES, Ch1EventData.CORRUPTION_COST]
+		read_note = "残页 +%d，污染 +%d" % [fallback_pages, corruption_cost]
 	elif decode_pool.size() > 1:
-		read_note = "从 %d 个残页词中解明一个，污染 +%d" % [decode_pool.size(), Ch1EventData.CORRUPTION_COST]
+		read_note = "从 %d 个残页词中解明一个，污染 +%d" % [decode_pool.size(), corruption_cost]
 	_story.open_choice(
 		String(event.get("eyebrow", "事件 · 禁文")),
 		String(event.get("title", "一页禁文在墨雨中发光。")),
@@ -1355,37 +1647,75 @@ func _open_ch1_event(room_id: String) -> void:
 		[
 			{"label": String(event.get("read_label", "读禁文")), "note": read_note},
 			{"label": String(event.get("take_label", "拿残页")),
-				"note": "残页 +%d" % Ch1EventData.PAGES_REWARD},
+				"note": "残页 +%d" % pages_reward},
 		])
 	var picked: int = await _story.choice_made
 	if picked == 0:
-		run_state.add_corruption(Ch1EventData.CORRUPTION_COST)
-		var decoded_name := _grant_event_word()
+		run_state.add_corruption(corruption_cost)
+		var decoded_name := _grant_event_word(fallback_pages)
 		if decoded_name.is_empty():
 			hud.show_message(String(event["read_pages_message"]) % [
-				Ch1EventData.FALLBACK_PAGES, Ch1EventData.CORRUPTION_COST])
+				fallback_pages, corruption_cost])
 		else:
 			hud.show_message(String(event["read_word_message"]) % [
-				decoded_name, Ch1EventData.CORRUPTION_COST])
+				decoded_name, corruption_cost])
 	else:
-		run_state.add_pages(Ch1EventData.PAGES_REWARD)
-		hud.show_message(String(event["take_message"]) % Ch1EventData.PAGES_REWARD)
-	_mds_cleared_rooms[room_id] = true
-	_cleared_in_chapter += 1
-	hud.set_progress(_cleared_in_chapter, 7)
+		run_state.add_pages(pages_reward)
+		hud.show_message(String(event["take_message"]) % pages_reward)
+	_mark_encounter_cleared(room_id, RoomProgress.event_encounter_id(room_id))
 	save_run_now()
+
+
+## Event copy + tuning resolved through one per-chapter table. Chapter 1 keeps
+## its exact legacy key (room id) and numbers, so its page is unchanged; the
+## Chapter 2–4 pages key on the plan's event node id. Chapters without authored
+## event content return {} and show no page.
+func _event_data(room_id: String) -> Dictionary:
+	match _chapter:
+		0:
+			return {
+				"event": Ch1EventData.pick(run_state.run_seed, room_id),
+				"corruption_cost": Ch1EventData.CORRUPTION_COST,
+				"pages_reward": Ch1EventData.PAGES_REWARD,
+				"fallback_pages": Ch1EventData.FALLBACK_PAGES,
+			}
+		1:
+			return {
+				"event": Ch2EventData.pick(
+					run_state.run_seed, RoomProgress.event_encounter_id(room_id)),
+				"corruption_cost": Ch2EventData.CORRUPTION_COST,
+				"pages_reward": Ch2EventData.PAGES_REWARD,
+				"fallback_pages": Ch2EventData.FALLBACK_PAGES,
+			}
+		2:
+			return {
+				"event": Ch3EventData.pick(
+					run_state.run_seed, RoomProgress.event_encounter_id(room_id)),
+				"corruption_cost": Ch3EventData.CORRUPTION_COST,
+				"pages_reward": Ch3EventData.PAGES_REWARD,
+				"fallback_pages": Ch3EventData.FALLBACK_PAGES,
+			}
+		3:
+			return {
+				"event": Ch4EventData.pick(
+					run_state.run_seed, RoomProgress.event_encounter_id(room_id)),
+				"corruption_cost": Ch4EventData.CORRUPTION_COST,
+				"pages_reward": Ch4EventData.PAGES_REWARD,
+				"fallback_pages": Ch4EventData.FALLBACK_PAGES,
+			}
+	return {}
 
 
 ## Returns the decoded word's display label, or "" when every fragment was
 ## already readable and the event pays pages instead.
-func _grant_event_word() -> String:
+func _grant_event_word(fallback_pages: int) -> String:
 	var pool := RunLoot.owned_undecoded_words(run_state, Flow.profile, _chapter)
 	if pool.is_empty():
-		run_state.add_pages(Ch1EventData.FALLBACK_PAGES)
+		run_state.add_pages(fallback_pages)
 		return ""
 	var picked := pool[run_state.rng.randi_range(0, pool.size() - 1)]
 	if not RunLoot.decode_owned_word(run_state, Flow.profile, picked):
-		run_state.add_pages(Ch1EventData.FALLBACK_PAGES)
+		run_state.add_pages(fallback_pages)
 		return ""
 	# Decoding is cross-run Profile progress; persist it before the next room so
 	# quitting mid-run cannot lose the fragment the player just read.
@@ -1433,10 +1763,12 @@ func _update_room_locks() -> void:
 		if room.is_locked() or room.is_cleared():
 			continue
 		if room.contains_entry(player.global_position):
-			room.get_node("Enemies").process_mode = Node.PROCESS_MODE_PAUSABLE
-			for enemy in room.get_node("Enemies").get_children():
-				if enemy is Enemy:
-					enemy.set_target(player)
+			var enemies_root := room.get_node_or_null(ArenaRoom.ENEMIES_NODE)
+			if enemies_root != null:
+				enemies_root.process_mode = Node.PROCESS_MODE_PAUSABLE
+				for enemy in enemies_root.get_children():
+					if enemy is Enemy:
+						enemy.set_target(player)
 			room.lock_until_cleared()
 			var chapter := CampaignData.chapter(_chapter)
 			hud.set_objective("击败 %s" % chapter["boss_name"] if _is_boss_room(room) else "肃清此房间 · 敌人 %d" % room.enemy_count())
@@ -1468,20 +1800,34 @@ func _on_room_cleared(room: ArenaRoom, chapter_index: int) -> void:
 		return
 	for hazard in get_tree().get_nodes_in_group("hostile_hazards"):
 		hazard.queue_free()
-	_cleared_in_chapter += 1
+	var room_id := ""
+	var encounter_id := ""
 	if _mds_active and _mds_world != null:
-		_mds_cleared_rooms[_mds_world.current_room] = true
+		room_id = _mds_world.current_room
+		encounter_id = _encounter_id_for(room, room_id)
+		# A room can hold several encounters; each one settles exactly once even
+		# if a cleared signal is re-emitted after a reload.
+		if RoomProgress.is_recorded(
+				_cleared_encounters, _legacy_cleared_rooms, encounter_id, room_id):
+			return
+	_cleared_in_chapter += 1
+	if not encounter_id.is_empty():
+		_cleared_encounters[encounter_id] = true
 	run_state.add_pages(maxi(1, int(round((4 + Flow.difficulty * 2) * Difficulty.reward_multiplier(Flow.difficulty)))))
-	hud.set_progress(_cleared_in_chapter, 7)
+	hud.set_progress(_cleared_in_chapter, _chapter_progress_total())
 	relic_effects.on_room_cleared()
-	if _cleared_in_chapter >= 6:
+	if _cleared_in_chapter >= _chapter_clear_target():
 		hud.set_objective("前往章节尽头 · 击败 " + String(CampaignData.chapter(_chapter)["boss_name"]))
 	_update_hud()
 	_reward_room = room
+	# Spread the reward roll seed by the chapter's own clear target so a longer
+	# big-map chapter cannot collide with the next chapter's sequence.
+	var chapter_target := _chapter_clear_target()
+	var chapter_seed := _chapter * chapter_target + _cleared_in_chapter
 	if String(_current_plan_room().get("type", "")) == "elite":
-		_reward_options = RunLoot.elite_choices(run_state, _chapter * 6 + _cleared_in_chapter, Flow.profile, _chapter)
+		_reward_options = RunLoot.elite_choices(run_state, chapter_seed, Flow.profile, _chapter)
 	else:
-		_reward_options = RunLoot.choices(run_state, _chapter * 6 + _cleared_in_chapter, Flow.profile, _chapter)
+		_reward_options = RunLoot.choices(run_state, chapter_seed, Flow.profile, _chapter)
 	_open_reward.call_deferred()
 
 func _current_plan_room() -> Dictionary:
@@ -1566,7 +1912,7 @@ func _discover_phrase(phrase: ResolvedPhrase) -> void:
 func _on_boss_phase(chapter: Dictionary, phase: int) -> void:
 	# Keep the mechanical phase banner; only the trailing flavor rotates.
 	var phase_text := "%s · 第 %d 阶段" % [chapter["boss_name"], phase]
-	var flavor := BossPhaseData.pick(run_state.run_seed, phase)
+	var flavor := BossPhaseData.pick(run_state.run_seed, phase, _chapter)
 	if not flavor.is_empty():
 		phase_text += "：" + flavor
 	hud.show_message(phase_text)
@@ -1741,7 +2087,8 @@ func _on_boss_died(_enemy: Node, chapter_index: int) -> void:
 	if chapter_index != _chapter or _ended():
 		return
 	_boss_defeated = true
-	hud.set_progress(7, 7)
+	var progress_total := _chapter_progress_total()
+	hud.set_progress(progress_total, progress_total)
 	run_state.add_pages(maxi(1, int(round((8 + Flow.difficulty * 4) * Difficulty.reward_multiplier(Flow.difficulty)))))
 	_screen_fx.flash(Color(1.0, 0.9, 0.8, 0.3), 0.4)
 	_hit_stop.freeze(0.1, 0.1)
@@ -1752,8 +2099,11 @@ func _on_boss_died(_enemy: Node, chapter_index: int) -> void:
 	_complete_chapter()
 
 
+## Boss reward for any chapter whose plan authors an authority pool. Chapter 1
+## keeps its authored revive/rewrite base; Chapters 2–4 author the same base, and
+## all of them get the conditional devour/archive additions through build_pool.
 func _grant_chapter_authority() -> void:
-	if _chapter != 0 or _chapter_plan == null or _chapter_plan.authority_pool.is_empty():
+	if _chapter_plan == null or _chapter_plan.authority_pool.is_empty():
 		return
 	await get_tree().create_timer(1.2).timeout
 	if not is_inside_tree() or _ended():
@@ -1780,7 +2130,7 @@ func _on_rewrite_requested() -> void:
 		return
 	var authority_name := run_state.authority.display_name if run_state.authority != null else "改写"
 	hud.set_authority(authority_name, _authority.can_use())
-	var room_number := _chapter * 6 + _cleared_in_chapter + 1
+	var room_number := _chapter * _chapter_clear_target() + _cleared_in_chapter + 1
 	if String(_current_plan_room().get("type", "")) == "elite":
 		_reward_options = RunLoot.elite_choices(run_state, room_number, Flow.profile, _chapter)
 	else:
@@ -1812,6 +2162,21 @@ func _complete_chapter() -> void:
 	if _chapter == 0:
 		if Flow.profile != null:
 			Flow.profile.demo_cleared = true
+		_finish(true)
+		return
+	# Chapter 2 is the last authored chapter for now: stop at its boundary
+	# instead of loading the unimplemented Chapter 3.
+	if _chapter == 1:
+		_finish(true)
+		return
+	# Chapter 3 is authored but still unreachable: stop at its boundary too
+	# instead of auto-entering Chapter 4.
+	if _chapter == 2:
+		_finish(true)
+		return
+	# Chapter 4 is the final authored chapter: the campaign ends here instead of
+	# looking for a fifth chapter.
+	if _chapter == 3:
 		_finish(true)
 		return
 	if _chapter + 1 < CampaignData.chapter_count():
@@ -1883,6 +2248,11 @@ func _update_stele_prompts() -> void:
 	for chest in _chests:
 		if is_instance_valid(chest):
 			chest.set_player_near(not chest.is_open and player.global_position.distance_to(chest.global_position) < 92.0)
+	if is_inside_tree():
+		for node in get_tree().get_nodes_in_group(BenchCheckpoint.GROUP):
+			var bench := node as BenchCheckpoint
+			if bench != null and is_instance_valid(bench):
+				bench.set_player_near(bench.can_use(player.global_position))
 
 
 func _try_pickup_nearest() -> bool:
@@ -1933,7 +2303,7 @@ func _open_chest(chest: TreasureChest) -> void:
 		CombatFX.spawn(get_parent(), chest.global_position + Vector2(0, -22), &"cast", Color("f0c36c"), 1.0, 52)
 		CombatFX.spawn(get_parent(), chest.global_position + Vector2(0, -16), &"ring", Color("f0c36c"), 1.0, 46)
 	if _mds_active and _mds_world != null:
-		_opened_chests[_mds_world.current_room] = true
+		_opened_chests[_content_id_for(chest, _mds_world.current_room)] = true
 	save_run_now()
 
 
@@ -1957,6 +2327,19 @@ func _open_shop(shop: MemoryShop) -> void:
 	get_tree().paused = true
 
 
+## True when the cached shop row is a relic/word the player already carries.
+## Other row kinds (rest, vitality, weapon swap) always have something to give.
+func _shop_offer_owned(offer: Dictionary) -> bool:
+	match StringName(offer.get("kind", &"")):
+		&"relic":
+			var relic := offer.get("resource", null) as RelicData
+			return relic != null and run_state.inventory.has_relic(relic.id)
+		&"word":
+			var word := offer.get("resource", null) as WordData
+			return word != null and run_state.inventory.has_word(word.id)
+	return false
+
+
 func _on_shop_buy(index: int) -> void:
 	if _active_shop == null:
 		return
@@ -1965,6 +2348,14 @@ func _on_shop_buy(index: int) -> void:
 		return
 	var offer := offers[index]
 	if bool(offer.get("bought", false)):
+		return
+	# The stock is rolled once per stall and cached. A relic/word from that
+	# list can be picked up elsewhere afterwards (reward, chest, stele); buying
+	# it then would spend pages on a duplicate the inventory silently refuses.
+	# Disable the row and keep the pages.
+	if _shop_offer_owned(offer):
+		_shop_ui.mark_owned(index, run_state.pages, "这件你已经有了，摊主不收残页。")
+		save_run_now()
 		return
 	if not run_state.spend_pages(int(offer["cost"])):
 		_shop_ui.show_error("残页不足。继续战斗，纸人会记得。")
@@ -1980,6 +2371,37 @@ func _on_shop_closed() -> void:
 	_active_shop = null
 	get_tree().paused = false
 	save_run_now()
+
+## Big-map bench checkpoint. Chapter 1 rooms have no benches, so this is a
+## no-op there and the demo's room-entry checkpoint stays exactly as it was.
+## The run save keeps its existing shape: the bench writes the same checkpoint
+## (current room + player position) every other checkpoint writes.
+func _try_use_bench() -> bool:
+	if not is_inside_tree() or player == null:
+		return false
+	for node in get_tree().get_nodes_in_group(BenchCheckpoint.GROUP):
+		var bench := node as BenchCheckpoint
+		if bench == null or not is_instance_valid(bench):
+			continue
+		if not bench.can_use(player.global_position):
+			continue
+		_last_checkpoint = bench.respawn_position()
+		player.velocity = Vector2.ZERO
+		bench.activate()
+		hud.show_message(BenchCheckpoint.MESSAGE)
+		save_run_now()
+		return true
+	return false
+
+
+## Restores every collapsing platform in the loaded room. Called when the fall
+## guard or a death sends the player back to a checkpoint, so the recovered
+## position is never over a hole the platform left behind.
+func _reset_collapsing_platforms() -> void:
+	if not is_inside_tree():
+		return
+	get_tree().call_group(CollapsingPlatform.GROUP, &"reset_now")
+
 
 func _claim_nearest_stele() -> void:
 	for stele in _steles:
@@ -2003,7 +2425,7 @@ func _claim_nearest_stele() -> void:
 				_apply_reward(reward)
 				hud.show_message("记录 +1 · " + String(reward.get("title", "残碑")))
 			if _mds_active and _mds_world != null:
-				_claimed_steles[_mds_world.current_room] = true
+				_claimed_steles[_content_id_for(stele, _mds_world.current_room)] = true
 			save_run_now()
 			return
 
@@ -2013,6 +2435,8 @@ func _on_player_health_changed(current: int, maximum: int) -> void:
 	run_state.health_changed.emit(current, maximum)
 
 func _on_player_died() -> void:
+	# Revive-in-place must not leave the player above a platform that fell.
+	_reset_collapsing_platforms()
 	if _authority.consume_revive():
 		player.revive(50)
 		var authority_name := run_state.authority.display_name if run_state.authority != null else "续命"

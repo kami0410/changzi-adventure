@@ -56,6 +56,8 @@ var master_volume: float = 1.0
 var npc_blessings: Dictionary = {}
 ## 每个 NPC 对昌子的信任；用于 AI 对话口吻和隐藏回应。
 var npc_trust: Dictionary = {}
+## 已看过的 Hub 个人事件 id。只记事件本身，不给背包物品。
+var npc_events: Array[String] = []
 ## 玩家自定义键位：action -> physical keycode。
 var keybinds: Dictionary = {}
 ## 玩家自定义手柄键：action -> JoyButton。
@@ -110,7 +112,7 @@ func archive_level(track_id: StringName) -> int:
 func buy_archive_level(track_id: StringName, cost: int) -> bool:
 	if track_id == &"" or ArchiveData.track(track_id).is_empty() or cost <= 0 or memory_fragments < cost:
 		return false
-	if archive_level(track_id) >= 10:
+	if archive_level(track_id) >= ArchiveData.MAX_LEVEL:
 		return false
 	memory_fragments -= cost
 	var key := String(track_id)
@@ -291,6 +293,18 @@ func npc_trust_value(npc_id: StringName) -> float:
 	return float(npc_trust.get(String(npc_id), 0.0))
 
 
+func has_npc_event(event_id: String) -> bool:
+	return npc_events.has(event_id)
+
+
+## Returns true only the first time, so a caller can tell whether to persist.
+func record_npc_event(event_id: String) -> bool:
+	if event_id.is_empty() or npc_events.has(event_id):
+		return false
+	npc_events.append(event_id)
+	return true
+
+
 func save_profile(path: String = "user://profile.cfg") -> void:
 	var config := ConfigFile.new()
 	config.set_value("meta", "version", SAVE_VERSION)
@@ -317,6 +331,7 @@ func save_profile(path: String = "user://profile.cfg") -> void:
 	config.set_value("settings", "master_volume", master_volume)
 	config.set_value("npc", "blessings", npc_blessings)
 	config.set_value("npc", "trust", npc_trust)
+	config.set_value("npc", "events", npc_events)
 	config.set_value("input", "keybinds", keybinds)
 	config.set_value("input", "joybinds", joybinds)
 
@@ -458,6 +473,12 @@ func load_profile(path: String = "user://profile.cfg") -> bool:
 		var amount := _as_float(trust[npc_key], NAN)
 		if not npc_name.is_empty() and is_finite(amount):
 			npc_trust[npc_name] = amount
+	# Older saves have no events key: an empty list keeps them compatible.
+	npc_events.clear()
+	for value in _as_array(config.get_value("npc", "events", [])):
+		var event_id := _as_string(value)
+		if not event_id.is_empty() and not npc_events.has(event_id):
+			npc_events.append(event_id)
 
 	keybinds = {}
 	var saved_keys := _as_dictionary(config.get_value("input", "keybinds", {}))

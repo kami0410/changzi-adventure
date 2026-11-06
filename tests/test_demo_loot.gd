@@ -33,6 +33,7 @@ func run(t: Callable) -> void:
 	_test_demo_drops(t)
 	_test_enemy_drop_pool(t)
 	_test_word_reward_hint(t)
+	_test_relic_corruption_copy(t)
 	_test_projectile_pierce(t)
 
 
@@ -155,6 +156,35 @@ func _test_word_reward_hint(t: Callable) -> void:
 			t.call(description.contains("语言图鉴"), true, "demo_word_reward_hint_names_codex")
 	t.call(found, true, "demo_word_reward_found")
 	# RunState is RefCounted; only the Profile node needs an explicit free.
+	profile.free()
+
+
+## A relic with zero corruption must not print a "污染 +0" line; relics that
+## do add corruption must still state it.
+func _test_relic_corruption_copy(t: Callable) -> void:
+	var profile := Profile.new()
+	var clean_run := RunState.new()
+	clean_run.reset_for_new_run(11)
+	for resource in ContentLibrary.DEMO_RELICS:
+		var relic := resource as RelicData
+		if relic.id != &"clean_ink_lantern":
+			clean_run.inventory.add_relic(relic)
+	var clean_choice: Dictionary = RunLoot.choices(clean_run, 1, profile, 0)[0]
+	t.call(clean_choice.get("resource"), ContentLibrary.relic_by_id(&"clean_ink_lantern"),
+		"zero_corruption_relic_forced")
+	t.call(String(clean_choice.get("description", "")).contains("污染 +0"), false,
+		"zero_corruption_relic_has_no_corruption_line")
+	var ink_run := RunState.new()
+	ink_run.reset_for_new_run(11)
+	for resource in ContentLibrary.DEMO_RELICS:
+		var relic := resource as RelicData
+		if relic.id != &"ink_heart":
+			ink_run.inventory.add_relic(relic)
+	var ink_choice: Dictionary = RunLoot.choices(ink_run, 1, profile, 0)[0]
+	t.call(ink_choice.get("resource"), ContentLibrary.relic_by_id(&"ink_heart"),
+		"corrupting_relic_forced")
+	t.call(String(ink_choice.get("description", "")).contains("污染 +1"), true,
+		"corrupting_relic_states_corruption")
 	profile.free()
 
 

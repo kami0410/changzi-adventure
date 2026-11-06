@@ -35,6 +35,22 @@ func _test_archive(t: Callable) -> void:
 	profile.memory_fragments = 0
 	t.call(profile.buy_archive_level(&"ink", 1), false, "archive_rejects_empty_purse")
 	profile.free()
+	# The demo stops every track at MAX_LEVEL; a maxed track must reject the
+	# purchase without charging, so the UI can report the cap instead of a
+	# phantom fragment shortage.
+	t.call(ArchiveData.MAX_LEVEL, 10, "archive_demo_cap_is_ten")
+	var capped := Profile.new()
+	capped.memory_fragments = 1000000
+	for _step in ArchiveData.MAX_LEVEL:
+		capped.buy_archive_level(&"vitality",
+			ArchiveData.cost(&"vitality", capped.archive_level(&"vitality")))
+	t.call(capped.archive_level(&"vitality"), ArchiveData.MAX_LEVEL, "archive_reaches_demo_cap")
+	var capped_purse := int(capped.memory_fragments)
+	var cap_cost := ArchiveData.cost(&"vitality", ArchiveData.MAX_LEVEL)
+	t.call(capped.buy_archive_level(&"vitality", cap_cost), false, "archive_rejects_beyond_demo_cap")
+	t.call(capped.archive_level(&"vitality"), ArchiveData.MAX_LEVEL, "archive_cap_holds_level")
+	t.call(int(capped.memory_fragments), capped_purse, "archive_cap_does_not_charge")
+	capped.free()
 
 
 func _test_word_mastery(t: Callable) -> void:

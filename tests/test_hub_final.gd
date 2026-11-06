@@ -16,8 +16,10 @@ func run(t: Callable) -> void:
 	_test_scene(t, hub)
 	_test_npcs(t, hub)
 	_test_npc_dialogue_content(t, hub)
+	_test_function_copy_matches_effects(t, hub)
 	_test_dialogue(t, tree)
 	_test_luchen(t, hub)
+	_test_word_services(t, hub)
 	_test_ayan(t, hub)
 	_test_shop(t, hub)
 	_test_shop_ui(t, tree, hub)
@@ -81,6 +83,88 @@ func _test_npc_dialogue_content(t: Callable, hub: Hub) -> void:
 		t.call(blanks, 0, "hub_npc_dialogue_no_blank_lines_" + suffix)
 		t.call(placeholders, 0, "hub_npc_dialogue_no_placeholders_" + suffix)
 		t.call(seen.size(), data.lines.size(), "hub_npc_dialogue_lines_unique_" + suffix)
+
+
+## The service list is the only place a player sees what a function costs and
+## grants, so its copy must match the effect the Hub applies. The contract
+## used to promise "1 次奖励重选" while the Hub granted 10 pages instead.
+func _test_function_copy_matches_effects(t: Callable, hub: Hub) -> void:
+	for npc_id in NPCProfiles.all_ids():
+		for entry in NPCProfiles.get_profile(npc_id).get("functions", []):
+			var cost := int(entry.get("cost", 0))
+			if cost <= 0:
+				continue
+			var desc := String(entry.get("desc", ""))
+			t.call(desc.contains("%d 记忆碎片" % cost), true,
+				"npc_function_desc_states_cost_%s_%s" % [
+					String(npc_id), String(entry.get("id", &"")),
+				])
+	var contract_desc := ""
+	for entry in NPCProfiles.get_profile(&"wenjin").get("functions", []):
+		if StringName(entry.get("id", &"")) == &"contract":
+			contract_desc = String(entry.get("desc", ""))
+	t.call(contract_desc.contains("10 残页"), true, "contract_desc_states_pages")
+	t.call(contract_desc.contains("污染 +6"), true, "contract_desc_states_corruption")
+	t.call(not contract_desc.contains("重选"), true, "contract_desc_no_phantom_reroll")
+	hub.profile.memory_fragments = 1000
+	hub.profile.pending_run_bonuses.clear()
+	hub.perform_npc_function(&"wenjin", &"contract")
+	t.call(hub.profile.pending_run_bonuses.get("start_pages", 0.0), 10.0,
+		"contract_grants_ten_pages")
+	t.call(hub.profile.pending_run_bonuses.get("start_corruption", 0.0), 6.0,
+		"contract_grants_six_corruption")
+	hub.profile.pending_run_bonuses.clear()
+	# The intel used to promise a first-strike bonus while the Hub grants a
+	# permanent +2 to every weapon.
+	var intel_desc := ""
+	for entry in NPCProfiles.get_profile(&"wenjin").get("functions", []):
+		if StringName(entry.get("id", &"")) == &"intel":
+			intel_desc = String(entry.get("desc", ""))
+	t.call(intel_desc.contains("永久 +2"), true, "intel_desc_states_permanent_damage")
+	t.call(not intel_desc.contains("首次攻击"), true, "intel_desc_no_phantom_first_hit")
+	var intel_message: String = hub.perform_npc_function(&"wenjin", &"intel")
+	t.call(intel_message.contains("永久 +2"), true, "intel_message_states_permanent_damage")
+	t.call(not intel_message.contains("第一击"), true, "intel_message_no_phantom_first_hit")
+	t.call(hub.profile.npc_blessing(&"wenjin", "damage", 0.0), 2.0,
+		"intel_grants_two_damage")
+	# 咕噜's shelf sells three relics as well as words; the copy must not tell
+	# the player to expect words only (pass 70).
+	var guru_shop_desc := ""
+	for entry in NPCProfiles.get_profile(&"guru").get("functions", []):
+		if StringName(entry.get("id", &"")) == &"shop":
+			guru_shop_desc = String(entry.get("desc", ""))
+	t.call(guru_shop_desc.contains("遗物"), true, "shop_desc_states_relics")
+	var relic_stock := 0
+	for entry in hub.shop.stock:
+		if StringName(entry.get("kind", &"word")) == &"relic":
+			relic_stock += 1
+	t.call(relic_stock > 0, true, "shop_stock_has_relics_matching_desc")
+	# 神铸 charges 25 fragments, so its copy must not call the service "free",
+	# and a blessing already at the cap must not be reported as +1 (pass 70).
+	var forge_god_desc := ""
+	for entry in NPCProfiles.get_profile(&"ayan").get("functions", []):
+		if StringName(entry.get("id", &"")) == &"forge_god":
+			forge_god_desc = String(entry.get("desc", ""))
+	t.call(not forge_god_desc.contains("免费"), true, "forge_god_desc_no_free_claim")
+	t.call(forge_god_desc.contains("上限 3"), true, "forge_god_desc_states_blessing_cap")
+	var god_fragments_snapshot: int = int(hub.profile.memory_fragments)
+	var god_blessings_snapshot: Dictionary = hub.profile.npc_blessings.duplicate(true)
+	var god_base_snapshot: Dictionary = hub.profile.weapon_base_levels.duplicate(true)
+	hub.profile.memory_fragments = 1000
+	hub.profile.npc_blessings["ayan"] = {"forge_bonus": NPCProfiles.FORGE_BONUS_TOTAL_CAP}
+	var god_base_before: int = hub.profile.weapon_base_level(SWORD_ID)
+	var god_message: String = hub.perform_npc_function(&"ayan", &"forge_god")
+	t.call(hub.profile.weapon_base_level(SWORD_ID), god_base_before + 1,
+		"forge_god_capped_raises_base")
+	t.call(hub.profile.npc_blessing(&"ayan", "forge_bonus", 0.0),
+		NPCProfiles.FORGE_BONUS_TOTAL_CAP, "forge_god_capped_keeps_blessing")
+	t.call(god_message.contains("上限"), true, "forge_god_capped_message_states_cap")
+	t.call(god_message.contains("锻造祝福 +1"), false,
+		"forge_god_capped_message_no_phantom_bonus")
+	t.call(int(hub.profile.memory_fragments), 975, "forge_god_capped_costs_25")
+	hub.profile.memory_fragments = god_fragments_snapshot
+	hub.profile.npc_blessings = god_blessings_snapshot
+	hub.profile.weapon_base_levels = god_base_snapshot
 
 
 func _test_dialogue(t: Callable, tree: SceneTree) -> void:
@@ -169,6 +253,44 @@ func _test_luchen(t: Callable, hub: Hub) -> void:
 	t.call(hub.player.is_physics_processing(), true, "hub_unfreezes_player_after_dialogue")
 
 
+## 陆沉's 讲述档案 (6) and 咕噜's 买一条传闻 (3) promise a word. The demo owns
+## every chapter-1 word from the first run, so there is nothing to hand out —
+## they must say so instead of paying out more fragments than they charged
+## (they used to refund 8 each, a repeatable +5 / +2 fragment pump).
+func _test_word_services(t: Callable, hub: Hub) -> void:
+	hub.profile.memory_fragments = 100
+	t.call(hub.unlockable_word_pool().size(), 0, "word_services_pool_empty_in_demo")
+
+	var rumor_message: String = hub.perform_npc_function(&"guru", &"rumor")
+	t.call(hub.profile.memory_fragments, 100, "rumor_full_library_costs_nothing")
+	t.call(rumor_message.contains("不收钱"), true, "rumor_full_library_says_no_charge")
+	t.call(rumor_message.contains("+8"), false, "rumor_full_library_no_fragment_refund")
+	var lore_message: String = hub.perform_npc_function(&"luchen", &"lore")
+	t.call(hub.profile.memory_fragments, 100, "lore_full_library_costs_nothing")
+	t.call(lore_message.contains("没要你的碎片"), true, "lore_full_library_says_no_charge")
+	t.call(lore_message.contains("+8"), false, "lore_full_library_no_fragment_refund")
+
+	# Ten presses in a row must not move the counter at all.
+	for index in 10:
+		hub.perform_npc_function(&"guru", &"rumor")
+	t.call(hub.profile.memory_fragments, 100, "rumor_cannot_be_farmed")
+
+	# With a word actually missing the service still charges its authored price
+	# and unlocks that word.
+	hub.profile.unlocked_words.erase(&"xue")
+	t.call(hub.unlockable_word_pool().size(), 1, "word_services_pool_sees_missing_word")
+	var paid_message: String = hub.perform_npc_function(&"guru", &"rumor")
+	t.call(hub.profile.memory_fragments, 97, "rumor_charges_three_when_word_available")
+	t.call(hub.profile.is_word_unlocked(&"xue"), true, "rumor_unlocks_missing_word")
+	t.call(paid_message.contains("你得到"), true, "rumor_reports_granted_word")
+	hub.profile.unlocked_words.erase(&"dongjie")
+	var lore_paid: String = hub.perform_npc_function(&"luchen", &"lore")
+	t.call(hub.profile.memory_fragments, 91, "lore_charges_six_when_word_available")
+	t.call(hub.profile.is_word_unlocked(&"dongjie"), true, "lore_unlocks_missing_word")
+	t.call(lore_paid.contains("你从纸缝里捡回一个词"), true, "lore_reports_granted_word")
+	t.call(hub.unlockable_word_pool().size(), 0, "word_services_pool_empty_again")
+
+
 func _test_ayan(t: Callable, hub: Hub) -> void:
 	hub.profile.memory_fragments = 100
 	var level_before := hub.profile.weapon_base_level(SWORD_ID)
@@ -184,6 +306,35 @@ func _test_ayan(t: Callable, hub: Hub) -> void:
 	t.call(bool(failed.get("success", true)), false, "ayan_upgrade_fails")
 	t.call(String(failed.get("message", "")).contains("不足"), true, "ayan_failure_message")
 	t.call(hub.profile.memory_fragments, 0, "ayan_failure_no_charge")
+
+	# Greeting is not a purchase: the paid forge is the 「锻造基底」 service on
+	# the 言灵 panel. Before this regression test the greeting itself called
+	# upgrade_sword_base(), so saying hello silently spent fragments.
+	hub.profile.memory_fragments = 100
+	var level_before_greeting := hub.profile.weapon_base_level(SWORD_ID)
+	hub.talk_to_npc(hub.get_npc(&"ayan"))
+	t.call(hub.dialogue_ui.is_open(), true, "ayan_dialogue_opens")
+	t.call(hub.profile.memory_fragments, 100, "ayan_greeting_keeps_fragments")
+	t.call(hub.profile.weapon_base_level(SWORD_ID), level_before_greeting,
+		"ayan_greeting_keeps_base_level")
+	var forge_line := ""
+	for line in hub.dialogue_ui._lines:
+		if String(line).contains("锻造基底"):
+			forge_line = String(line)
+			break
+	t.call(not forge_line.is_empty(), true, "ayan_greeting_points_to_forge_service")
+	t.call(forge_line.contains("Lv.%d" % level_before_greeting), true,
+		"ayan_greeting_states_base_level")
+	hub.dialogue_ui.close()
+	t.call(hub.player.is_physics_processing(), true, "hub_unfreezes_player_after_ayan_dialogue")
+
+	# The explicit service still upgrades and charges the same amount.
+	var service_message := hub.perform_npc_function(&"ayan", &"forge")
+	t.call(hub.profile.weapon_base_level(SWORD_ID), level_before_greeting + 1,
+		"ayan_forge_service_levels")
+	t.call(hub.profile.memory_fragments, 100 - (10 + level_before_greeting * 10),
+		"ayan_forge_service_charges")
+	t.call(service_message.contains("Lv."), true, "ayan_forge_service_message")
 
 
 func _test_shop(t: Callable, hub: Hub) -> void:

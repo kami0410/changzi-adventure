@@ -8,12 +8,18 @@ signal closed
 
 const THEME = preload("res://resources/ui/theme.tres")
 const WORLD_FILE := "res://scenes/mds/chapter_1.mdsworld.json"
+## Chapter 1 keeps this exact label. Later chapters name their map after the
+## chapter's authored region (Chapter 2: "呼吸废墟地图").
+const DEFAULT_TITLE := "档案馆地图"
 
 var map_view: MDSWorldMapView
 var _root: Control
+var _title: Label
 var _hint: Label
 var _close_button: Button
 var _open := false
+## Selected chapter, kept so set_chapter() also works before _build() runs.
+var _chapter_index := 0
 
 
 func _ready() -> void:
@@ -47,11 +53,11 @@ func _build() -> void:
 	var outer := VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 12)
 	margin.add_child(outer)
-	var title := Label.new()
-	title.text = "档案馆地图"
-	title.add_theme_font_size_override("font_size", 48)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	outer.add_child(title)
+	_title = Label.new()
+	_title.text = map_title(_chapter_index)
+	_title.add_theme_font_size_override("font_size", 48)
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	outer.add_child(_title)
 	_hint = Label.new()
 	_hint.text = "已探索的房间会亮起。按 M 或 Esc 关闭。"
 	_hint.add_theme_font_size_override("font_size", 12)
@@ -93,6 +99,29 @@ func set_world(path: String) -> void:
 	if map_view.world_file != path:
 		map_view.world_file = path
 	map_view.set_save_data({})
+
+
+## Map title for a campaign chapter. Chapter 1 is pinned to its historical
+## label; later chapters derive it from the authored region name instead of
+## inheriting that label. Unknown/empty regions fall back to [constant
+## DEFAULT_TITLE] rather than inventing a name.
+static func map_title(chapter_index: int) -> String:
+	if chapter_index <= 0:
+		return DEFAULT_TITLE
+	var region := String(CampaignData.chapter(chapter_index).get("region", ""))
+	if region.is_empty():
+		return DEFAULT_TITLE
+	return "%s地图" % region
+
+
+func set_chapter(chapter_index: int) -> void:
+	_chapter_index = chapter_index
+	if _title != null:
+		_title.text = map_title(_chapter_index)
+
+
+func title_text() -> String:
+	return _title.text if _title != null else map_title(_chapter_index)
 
 
 func open() -> void:

@@ -90,6 +90,11 @@ var _haste := 1.0
 var _idle_texture: Texture2D
 var _frame_clock := 0.0
 var _frame_anim: StringName = &""
+## One-way platforms open for this long after down+jump, so the player clears
+## the top face before the collision exception is released.
+const DROP_THROUGH_TIME := 0.3
+var _drop_left := 0.0
+var _drop_body: PhysicsBody2D
 
 func grant_shield(amount: int, duration: float) -> void:
 	shield = maxi(shield, amount)
@@ -145,6 +150,7 @@ func _physics_process(delta: float) -> void:
 	_combo_window_left = maxf(_combo_window_left - delta, 0.0)
 	_attack_lunge_left = maxf(_attack_lunge_left - delta, 0.0)
 	_step_timer = maxf(_step_timer - delta, 0.0)
+	_update_drop_through(delta)
 	if _combo_window_left <= 0.0:
 		_combo_index = 0
 	if _shield_left <= 0:
@@ -165,7 +171,17 @@ func _physics_process(delta: float) -> void:
 		facing = Vector2(signf(direction), 0.0)
 		if body_visual != null:
 			body_visual.scale.x = facing.x
-	if Input.is_action_just_pressed("jump"):
+	# Down + jump drops through a one-way platform. This uses the two actions
+	# the player already has (no new button) and leaves a normal jump on solid
+	# ground untouched, so Chapter 1 keeps its current feel.
+	var jump_pressed := Input.is_action_just_pressed("jump")
+	var drop_platform: PhysicsBody2D = null
+	if jump_pressed and grounded and _drop_left <= 0.0 \
+			and Input.is_action_pressed("move_down"):
+		drop_platform = _one_way_platform_below()
+	if jump_pressed and drop_platform != null and not is_dodging:
+		_begin_drop_through(drop_platform)
+	elif jump_pressed:
 		_jump_buffer_left = jump_buffer
 		if _motion != null and grounded:
 			_motion.play(&"windup", 0.08)
@@ -452,6 +468,60 @@ func _update_camera(delta: float) -> void:
 	if flow != null:
 		shake_scale = flow.shake_scale
 	_camera.offset = _look_ahead + Vector2(sin(_shake_time * 1.7), cos(_shake_time * 2.3)) * _shake * _shake * 9.0 * shake_scale
+
+## Chapters 2–4 one-way platforms live in this group and let the player drop
+## through with down+jump. Chapter 1 has none, so the branch never fires there.
+static func is_one_way_platform(body: Object) -> bool:
+	return body is Node and (body as Node).is_in_group(&"one_way_platforms")
+
+
+func _update_drop_through(delta: float) -> void:
+	if _drop_left <= 0.0:
+		return
+	_drop_left = maxf(_drop_left - delta, 0.0)
+	if _drop_left <= 0.0:
+		_release_drop_through()
+
+
+## One-way platform directly under the player's feet, if any.
+func _one_way_platform_below() -> PhysicsBody2D:
+	if not is_inside_tree():
+		return null
+	var query := PhysicsShapeQueryParameters2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(24.0, 6.0)
+	query.shape = shape
+	# A thin band just below the feet: only a platform the player is standing
+	# on can be hit.
+	query.transform = Transform2D(0.0, global_position + Vector2(0.0, FOOT_Y + 3.0))
+	query.collision_mask = 1
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	query.exclude = [get_rid()]
+	for hit in get_world_2d().direct_space_state.intersect_shape(query, 4):
+		var body: Variant = hit.get("collider")
+		if body is PhysicsBody2D and is_one_way_platform(body) \
+				and (body as Object).has_method(&"allows_drop_through") \
+				and bool((body as Object).call(&"allows_drop_through")):
+			return body as PhysicsBody2D
+	return null
+
+
+func _begin_drop_through(platform: PhysicsBody2D) -> void:
+	_drop_body = platform
+	_drop_left = DROP_THROUGH_TIME
+	add_collision_exception_with(platform)
+	# Consume the jump so the normal jump branch cannot fire on the same press.
+	_jump_buffer_left = 0.0
+	_coyote_left = 0.0
+	velocity.y = maxf(velocity.y, 40.0)
+
+
+func _release_drop_through() -> void:
+	if is_instance_valid(_drop_body):
+		remove_collision_exception_with(_drop_body)
+	_drop_body = null
+
 
 func disable_phrase_slot(slot: int, duration: float = 3.0) -> bool:
 	if slot < 0 or slot >= disabled_phrase_slots.size():

@@ -228,7 +228,7 @@ func _run() -> void:
 		var rest_records: int = scene._records
 		await _tap_action(&"interact")
 		await create_timer(0.3).timeout
-		check(scene._claimed_steles.has("ch1_rest"), "demo_rest_stele_claimed")
+		check(scene._claimed_steles.has("ch1_rest/Stele"), "demo_rest_stele_claimed")
 		# The roll can land on a relic/word the run already owns; that authored
 		# branch heals instead of counting a record. Accept either outcome and
 		# require the message that matches it, so the check is not seed-flaky.
@@ -276,6 +276,36 @@ func _run() -> void:
 			scene._on_shop_buy(0)
 			check(scene._shop_ui._error_label.text == expected_sale, "demo_shop_sale_line_matches")
 			check(scene._shop_ui._error_label.text != "成交。", "demo_shop_sale_line_is_authored")
+			# A cached row can go stale: the same relic can be picked up from a
+			# reward, chest or stele after the stall rolled its stock. Buying it
+			# then must not spend pages on a duplicate the inventory refuses.
+			var relic_index := -1
+			for index in offers.size():
+				if StringName(offers[index].get("kind", &"")) == &"relic":
+					relic_index = index
+					break
+			check(relic_index > 0, "demo_shop_relic_row_present")
+			if relic_index > 0:
+				var stale_relic := offers[relic_index]["resource"] as RelicData
+				check(stale_relic != null, "demo_shop_relic_row_has_resource")
+				if stale_relic != null:
+					scene.run_state.inventory.add_relic(stale_relic)
+					var relic_count: int = scene.run_state.inventory.relics.size()
+					var pages_before: int = scene.run_state.pages
+					scene._on_shop_buy(relic_index)
+					check(scene.run_state.pages == pages_before,
+						"demo_shop_owned_relic_not_charged")
+					check(scene.run_state.inventory.relics.size() == relic_count,
+						"demo_shop_owned_relic_no_duplicate")
+					check(scene._shop_ui._buttons[relic_index].disabled,
+						"demo_shop_owned_relic_row_disabled")
+					check(scene._shop_ui._buttons[relic_index].text.begins_with("已拥有"),
+						"demo_shop_owned_relic_row_label")
+					var owned_note: String = scene._shop_ui._error_label.text
+					check(owned_note.contains("不收残页"), "demo_shop_owned_relic_message")
+					# Leave the run exactly as it was for the rest of the suite.
+					scene.run_state.inventory.relics.erase(stale_relic)
+					scene.run_state.inventory.changed.emit()
 		scene._shop_ui.close_shop()
 
 	# Boss entrance flavour is copy-only and stable for this run's seed.
@@ -286,8 +316,10 @@ func _run() -> void:
 	await process_frame
 	check(scene.hud.get_message_text() == entrance_line,
 		"demo_boss_entrance_matches_seed")
-	check(BossEntranceData.variants(1).is_empty(),
-		"demo_boss_entrance_other_chapters_silent")
+	check(not BossEntranceData.variants(1).is_empty(),
+		"demo_boss_entrance_chapter_2_has_copy")
+	check(not BossEntranceData.variants(2).is_empty() and not BossEntranceData.variants(3).is_empty(),
+		"demo_boss_entrance_chapter_3_and_4_authored")
 
 	# Boss phase banners keep the mechanical "第 N 阶段" prefix and append the
 	# seed-stable flavor line for that phase.
@@ -381,6 +413,83 @@ func _run() -> void:
 			and scene.run_state.authority.id == &"archive",
 			"demo_authority_conditional_pick_applies")
 		check(scene._authority.can_use(), "demo_archive_hud_available")
+
+	# --- Big-map decoupling: several chests/steles in one room settle on their
+	# own ids; a reload only suppresses the ones already recorded. ---
+	var extra_stele := MemoryStele.new()
+	extra_stele.name = "Stele2"
+	extra_stele.position = Vector2(420, 520)
+	scene._mds_world.room_node.add_child(extra_stele)
+	var extra_chest := TreasureChest.new()
+	extra_chest.name = "Chest"
+	extra_chest.position = Vector2(520, 552)
+	scene._mds_world.room_node.add_child(extra_chest)
+	var second_chest := TreasureChest.new()
+	second_chest.name = "Chest2"
+	second_chest.position = Vector2(620, 552)
+	scene._mds_world.room_node.add_child(second_chest)
+	await process_frame
+	scene._on_mds_room_loaded("ch1_rest")
+	check(scene._steles.size() == 1, "multi_content_one_unclaimed_stele")
+	check(scene._chests.size() == 2, "multi_content_two_chests")
+	var extra_stele_id := ""
+	if not scene._steles.is_empty():
+		extra_stele_id = String(scene._steles[0].get_meta(&"content_id", ""))
+	check(extra_stele_id == "ch1_rest/Stele2", "multi_content_stele_id")
+	var multi_records: int = scene._records
+	var claimed_before: Dictionary = scene._claimed_steles.duplicate()
+	scene.player.global_position = extra_stele.global_position
+	await create_timer(0.1).timeout
+	scene._claim_nearest_stele()
+	check(scene._claimed_steles.has("ch1_rest/Stele2"), "multi_content_stele_claimed_once")
+	var newly_claimed: Array = []
+	for claimed_id in scene._claimed_steles:
+		if not claimed_before.has(claimed_id):
+			newly_claimed.append(claimed_id)
+	check(newly_claimed.size() == 1 and newly_claimed[0] == "ch1_rest/Stele2",
+		"multi_content_claimed_ids_are_separate")
+	scene._claim_nearest_stele()
+	check(scene._records == multi_records + 1 or scene._records == multi_records,
+		"multi_content_stele_single_settlement")
+	var chest_pages: int = scene.run_state.pages
+	scene._open_chest(extra_chest)
+	check(scene._opened_chests.has("ch1_rest/Chest"), "multi_content_chest_id")
+	check(not scene._opened_chests.has("ch1_rest/Chest2"), "multi_content_other_chest_untouched")
+	scene._open_chest(extra_chest)
+	check(scene.run_state.pages >= chest_pages, "multi_content_chest_reopen_safe")
+	scene._on_mds_room_loaded("ch1_rest")
+	check(scene._steles.is_empty(), "multi_content_reload_suppresses_claimed_stele")
+	check(extra_chest.is_open and not second_chest.is_open,
+		"multi_content_reload_opens_only_recorded_chest")
+	var multi_save: Dictionary = scene._build_run_save()
+	var multi_world: Dictionary = multi_save.get("world", {})
+	var multi_progress: Dictionary = multi_save.get("progress", {})
+	check((multi_world.get("opened_chest_ids", []) as Array).has("ch1_rest/Chest"),
+		"multi_content_save_chest_id")
+	check((multi_world.get("claimed_stele_ids", []) as Array).has("ch1_rest/Stele2"),
+		"multi_content_save_stele_id")
+	check(not (multi_world.get("opened_chests", []) as Array).has("ch1_rest"),
+		"multi_content_legacy_list_not_polluted")
+	# Encounters settle once even if a cleared signal is re-emitted.
+	var cleared_before: int = scene._cleared_in_chapter
+	check(scene._mark_encounter_cleared("ch1_rest", "ch1_rest/test_arena"), "encounter_settles")
+	check(not scene._mark_encounter_cleared("ch1_rest", "ch1_rest/test_arena"),
+		"encounter_not_double_counted")
+	check(scene._cleared_in_chapter == cleared_before + 1, "encounter_counts_once")
+	check((scene._build_run_save().get("progress", {}).get("cleared_encounters", []) as Array)
+		.has("ch1_rest/test_arena"), "encounter_saved_by_id")
+	# A legacy room-key record still suppresses content written before ids.
+	var legacy_stele := MemoryStele.new()
+	legacy_stele.name = "Stele3"
+	legacy_stele.position = Vector2(300, 520)
+	scene._mds_world.room_node.add_child(legacy_stele)
+	await process_frame
+	scene._legacy_claimed_steles["ch1_rest"] = true
+	scene._on_mds_room_loaded("ch1_rest")
+	check(scene._steles.is_empty(), "legacy_room_key_suppresses_stele")
+	check(not is_instance_valid(legacy_stele) or legacy_stele.is_queued_for_deletion()
+		or legacy_stele.is_claimed, "legacy_room_key_marks_stele")
+	scene._legacy_claimed_steles.clear()
 
 	print("CH1 DEMO INTEGRATION: %d checks, %d failures" % [assertions, failures])
 	quit(1 if failures > 0 else 0)

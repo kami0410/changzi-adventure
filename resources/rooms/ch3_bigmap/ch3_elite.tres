@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="BigRoomData" format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/big_room_data.gd" id="1_data"]
+[ext_resource type="TileSet" path="res://resources/tiles/ch1_tiles.tres" id="2_tiles"]
+
+[resource]
+script = ExtResource("1_data")
+size = Vector2i(3840, 2160)
+ground = Array[Dictionary]([{
+"x": 0, "y": 2144, "width": 3840, "height": 16
+}])
+platforms = Array[Dictionary]([{
+"x": 200, "y": 2064, "width": 320
+}, {
+"x": 560, "y": 1984, "width": 320
+}, {
+"x": 920, "y": 1904, "width": 320
+}, {
+"x": 1280, "y": 1824, "width": 320
+}, {
+"x": 1480, "y": 1744, "width": 320
+}, {
+"x": 2200, "y": 2064, "width": 320
+}, {
+"x": 2520, "y": 1984, "width": 320
+}, {
+"x": 2840, "y": 1904, "width": 320
+}, {
+"x": 3160, "y": 1824, "width": 320
+}, {
+"x": 3480, "y": 1744, "width": 320
+}])
+tile_set = ExtResource("2_tiles")
+backdrop_path = "res://assets/backgrounds/lightless_sea.png"
+backdrop_pixel_art = false
+backdrop_modulate = Color(0.95, 0.85, 0.95, 1)
+ambient_kind = &"motes"
+ambient_density = 0.5

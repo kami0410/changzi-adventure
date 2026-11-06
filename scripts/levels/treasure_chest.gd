@@ -7,6 +7,10 @@ extends Node2D
 
 signal opened(chest: TreasureChest)
 
+## Optional stable id for one-shot progress. Empty: game.gd derives
+## `room_id/NodeName`, or adds a suffix when a room holds several chests.
+@export var content_id: StringName = &""
+
 const FONT = preload("res://assets/fonts/fusion-pixel-12px-monospaced-zh_hans.ttf.woff2")
 const TEXTURE := preload("res://assets/sprites/props/chest.png")
 

@@ -1,0 +1,45 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/mds_big_room.gd" id="1_room"]
+[ext_resource type="Resource" path="res://resources/rooms/ch2_bigmap/ch2_well.tres" id="2_data"]
+[ext_resource type="PackedScene" path="res://scenes/levels/room.tscn" id="3_arena"]
+[ext_resource type="Script" path="res://scripts/levels/treasure_chest.gd" id="4_chest"]
+[ext_resource type="Script" path="res://scripts/levels/one_way_platform.gd" id="8_oneway"]
+[ext_resource type="Script" path="res://scripts/levels/moving_platform.gd" id="9_lift"]
+
+[node name="Ch2BigmapWell" type="Node2D"]
+script = ExtResource("1_room")
+data = ExtResource("2_data")
+fall_margin = 240.0
+
+[node name="Arena" parent="." instance=ExtResource("3_arena")]
+position = Vector2(800, 2144)
+
+[node name="Arena2" parent="." instance=ExtResource("3_arena")]
+position = Vector2(1900, 1504)
+
+[node name="Chest1" type="Node2D" parent="."]
+position = Vector2(1600, 2136)
+script = ExtResource("4_chest")
+
+[node name="OneWay1" type="StaticBody2D" parent="."]
+position = Vector2(320, 400)
+script = ExtResource("8_oneway")
+size = Vector2(320, 16)
+
+[node name="OneWay2" type="StaticBody2D" parent="."]
+position = Vector2(320, 800)
+script = ExtResource("8_oneway")
+size = Vector2(320, 16)
+
+[node name="OneWay3" type="StaticBody2D" parent="."]
+position = Vector2(320, 1200)
+script = ExtResource("8_oneway")
+size = Vector2(320, 16)
+
+[node name="Lift" type="AnimatableBody2D" parent="."]
+position = Vector2(0, 2144)
+script = ExtResource("9_lift")
+size = Vector2(160, 16)
+travel = Vector2(0, -2044)
+speed = 70.0
