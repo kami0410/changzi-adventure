@@ -1,6 +1,6 @@
 extends RefCounted
 
-## Chapter 2/3/4 enemy art audit (passes 38, 49 and 62). Only enemies with a
+## Chapter 2/3/4 enemy art audit (passes 38, 49, 62 and 78). Only enemies with a
 ## dedicated sprite in the repo may be wired into ENEMY_ART; the rest keep the
 ## Chapter 1 fallback until art exists. This file locks the audit result so
 ## adding a sprite without wiring it — or wiring a Chapter 1 painting under a
@@ -15,28 +15,26 @@ const CH2_ENEMIES: Array[StringName] = [
 	&"breath_hound", &"lung_moth", &"rust_whisperer", &"choir_summoner",
 	&"collapse_husk",
 ]
-## Audited 2026-11-05: only the choir summoner has a dedicated sprite in the
-## repo. The other four have no source art, so they intentionally keep the
-## fallback; the missing list is recorded in SUPERVISOR_STATUS.md.
-const CH2_WIRED: Array[StringName] = [&"choir_summoner"]
-const CH2_MISSING: Array[StringName] = [
-	&"breath_hound", &"lung_moth", &"rust_whisperer", &"collapse_husk",
+## Pass 78 wired the last four Chapter 2 enemies after the user supplied the
+## paintings (breath_hound in one file, the other three in a triptych). Every
+## Chapter 2 enemy now owns its PNG, so the missing list is empty.
+const CH2_WIRED: Array[StringName] = [
+	&"breath_hound", &"lung_moth", &"rust_whisperer", &"choir_summoner",
+	&"collapse_husk",
 ]
-## Chapter 3 audit (pass 49): the six waves of ROOM_WAVES[2] reference these
-## eight enemies, taken from the waves that really spawn (not the plan file).
-## Five own a dedicated sprite; three still borrow Chapter 1 art, and that
-## missing list is recorded in SUPERVISOR_STATUS.md.
+const CH2_MISSING: Array[StringName] = []
+## Chapter 3 audit (pass 49, gap closed in pass 78): the six waves of
+## ROOM_WAVES[2] reference these eight enemies, taken from the waves that
+## really spawn (not the plan file). All eight own a dedicated sprite now.
 const CH3_ENEMIES: Array[StringName] = [
 	&"mirror_sniper", &"hanging_scribe", &"echo_enemy", &"typo_beast",
 	&"page_swarm", &"rust_whisperer", &"lung_moth", &"collapse_husk",
 ]
 const CH3_WIRED: Array[StringName] = [
 	&"mirror_sniper", &"hanging_scribe", &"echo_enemy", &"typo_beast",
-	&"page_swarm",
+	&"page_swarm", &"rust_whisperer", &"lung_moth", &"collapse_husk",
 ]
-const CH3_MISSING: Array[StringName] = [
-	&"rust_whisperer", &"lung_moth", &"collapse_husk",
-]
+const CH3_MISSING: Array[StringName] = []
 ## `echo_enemy` is the spawn/scene id; its data resource keeps the older
 ## `amnesiac_echo` name. Every other enemy uses `<id>.tres`.
 const CH3_DATA_ALIASES: Dictionary = {&"echo_enemy": &"amnesiac_echo"}
@@ -73,7 +71,10 @@ func run(t: Callable) -> void:
 	var scenes: Dictionary = constants.get("ENEMY_SCENES", {})
 	var tint: Color = constants.get("ENEMY_FALLBACK_TINT", Color.WHITE)
 	t.call(not art.is_empty(), true, "enemy_art_table_present")
-	t.call(not fallback.is_empty(), true, "enemy_art_fallback_table_present")
+	t.call(constants.has("ENEMY_ART_FALLBACK"), true, "enemy_art_fallback_table_present")
+	# Pass 78 closed the last art gap: every enemy that spawns in Chapters 1–4
+	# owns its painting, so nothing may sit on the fallback path.
+	t.call(fallback.is_empty(), true, "enemy_art_no_fallback_gaps")
 	t.call(tint != Color.WHITE, true, "enemy_fallback_tint_marks_reused_art")
 
 	# Chapter 1 art stays exactly where it was: every original enemy owns its
@@ -113,6 +114,9 @@ func run(t: Callable) -> void:
 		# CH2_MISSING.
 		t.call(FileAccess.file_exists("res://assets/sprites/enemies/%s.png" % id), false,
 			"ch2_enemy_%s_has_no_dedicated_sprite_yet" % id)
+	# The Chapter 2 art gap is closed (pass 78); keep the list empty so a future
+	# gap has to be declared and audited instead of silently reappearing.
+	t.call(CH2_MISSING.is_empty(), true, "ch2_no_missing_enemy_art")
 
 	# --- Chapter 3: same audit against the waves that really spawn.
 	for id in CH3_ENEMIES:
@@ -145,6 +149,8 @@ func run(t: Callable) -> void:
 		# CH3_MISSING (no silent half-wiring).
 		t.call(FileAccess.file_exists("res://assets/sprites/enemies/%s.png" % id), false,
 			"ch3_enemy_%s_has_no_dedicated_sprite_yet" % id)
+	# The three Chapter 3 borrows were wired in pass 78 along with Chapter 2.
+	t.call(CH3_MISSING.is_empty(), true, "ch3_no_missing_enemy_art")
 
 	# The audit set is derived from ROOM_WAVES[2] (chapter 3's six real waves),
 	# so a wave edit that introduces an unaudited enemy fails here.
@@ -229,3 +235,9 @@ func _assert_own_sprite(t: Callable, art: Dictionary, id: StringName, prefix: St
 		"%s_enemy_%s_uses_own_sprite" % [prefix, id])
 	t.call(FileAccess.file_exists(texture.resource_path), true,
 		"%s_enemy_%s_sprite_file_exists" % [prefix, id])
+	# Every enemy painting ships on the same 96x96 canvas (art spec §规格).
+	t.call(texture.get_size(), Vector2(96.0, 96.0),
+		"%s_enemy_%s_sprite_is_96x96" % [prefix, id])
+	var image := texture.get_image()
+	t.call(image != null and image.get_width() > 0 and image.get_height() > 0, true,
+		"%s_enemy_%s_sprite_is_valid_png" % [prefix, id])

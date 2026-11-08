@@ -22,7 +22,7 @@ func run(t: Callable) -> void:
 				t.call(String(line).contains("恢复 50 生命"), true,
 					"death_hint_authority_keeps_mechanics")
 			else:
-				t.call(String(line).contains("不灭档案"), true,
+				t.call(String(line).contains("不朽档案"), true,
 					"death_hint_relic_keeps_relic")
 				t.call(String(line).contains("翻回上一页"), true,
 					"death_hint_relic_keeps_action")
@@ -41,6 +41,18 @@ func run(t: Callable) -> void:
 	t.call(DeathHintData.variants(&"unknown").is_empty(), true,
 		"death_hint_unknown_kind_empty")
 	t.call(DeathHintData.pick(4242, &"unknown"), "", "death_hint_unknown_pick_empty")
+
+	# The banner must name the relic the way the inventory, reward card and
+	# 咕噜's shelf name it. The copy said 不灭档案 while the RelicData is
+	# 不朽档案, so a player who never saw that name anywhere else was told a
+	# different item had saved them.
+	var relic := ContentLibrary.relic_by_id(&"immortal_archive")
+	t.call(relic != null, true, "death_hint_relic_exists")
+	if relic != null:
+		t.call(relic.display_name, "不朽档案", "death_hint_relic_name_matches_resource")
+		for line in DeathHintData.variants(&"relic"):
+			t.call(String(line).contains(relic.display_name), true,
+				"death_hint_relic_uses_resource_name")
 
 	var run := RunState.new()
 	run.reset_for_new_run(123)

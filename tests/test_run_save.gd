@@ -11,6 +11,7 @@ func run(t: Callable) -> void:
 	_test_missing(t)
 	_test_roundtrip(t)
 	_test_room_progress_keys(t)
+	_test_relic_revive_flag(t)
 	_test_corrupt(t)
 	_test_unknown_version(t)
 	_test_malformed_shape(t)
@@ -106,6 +107,49 @@ func _test_room_progress_keys(t: Callable) -> void:
 		RunSave.write(broken, PATH)
 		t.call(RunSave.read(PATH).is_empty(), true, "room_progress_malformed_rejected_%d" % index)
 		t.call(FileAccess.file_exists(PATH), false, "room_progress_malformed_removed_%d" % index)
+	_cleanup()
+
+
+func _test_relic_revive_flag(t: Callable) -> void:
+	# 不朽档案's revive is once per run. The spent flag lives on RelicEffects,
+	# so the checkpoint has to carry it: without the key a resume re-armed the
+	# relic and it saved the player a second time in the same run.
+	_cleanup()
+	var used := _sample_data()
+	used["world"]["relic_revive_used"] = true
+	RunSave.write(used, PATH)
+	var used_loaded := RunSave.read(PATH)
+	t.call(used_loaded.is_empty(), false, "run_save_revive_used_reads")
+	t.call(bool(used_loaded.get("world", {}).get("relic_revive_used", false)), true,
+		"run_save_revive_used_roundtrip")
+
+	_cleanup()
+	var unspent := _sample_data()
+	unspent["world"]["relic_revive_used"] = false
+	RunSave.write(unspent, PATH)
+	var unspent_loaded := RunSave.read(PATH)
+	t.call(unspent_loaded.is_empty(), false, "run_save_revive_unspent_reads")
+	t.call(bool(unspent_loaded.get("world", {}).get("relic_revive_used", true)), false,
+		"run_save_revive_unspent_roundtrip")
+
+	# A checkpoint written before the key existed must still load; the game
+	# defaults it to false, which is the old (re-armed) behaviour.
+	_cleanup()
+	var legacy := _sample_data()
+	RunSave.write(legacy, PATH)
+	var legacy_loaded := RunSave.read(PATH)
+	t.call(legacy_loaded.is_empty(), false, "run_save_revive_legacy_accepted")
+	t.call(bool(legacy_loaded.get("world", {}).get("relic_revive_used", false)), false,
+		"run_save_revive_legacy_defaults_false")
+
+	# Same policy as boss_defeated: a hand-edited non-bool is rejected outright
+	# rather than read as truthy.
+	_cleanup()
+	var broken := _sample_data()
+	broken["world"]["relic_revive_used"] = "yes"
+	RunSave.write(broken, PATH)
+	t.call(RunSave.read(PATH).is_empty(), true, "run_save_revive_malformed_rejected")
+	t.call(FileAccess.file_exists(PATH), false, "run_save_revive_malformed_removed")
 	_cleanup()
 
 

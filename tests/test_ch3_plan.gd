@@ -1,18 +1,20 @@
 extends RefCounted
 
 ## Chapter 3 big-map data layer: the authored region plan and the graph fixture.
-## Nothing here is routed into the game — the fixture has no room scenes, the
-## real region world from step 2 lives in scenes/mds/chapter_3_bigmap.mdsworld.json
-## (see test_ch3_world.gd), and game.gd does not load the plan (slot 2 stays
-## empty). The assertions pin the plan shape, per-node content ids, fall planes,
-## the wired wave table, remaining pending-content markers and the plan ↔
-## graph-fixture agreement, and keep Chapters 1–2 untouched.
+## The fixture has no room scenes; the real region world lives in
+## scenes/mds/chapter_3_bigmap.mdsworld.json (see test_ch3_world.gd), and
+## game.gd loads the plan from slot 2 (wired in pass 80). The assertions pin the
+## plan shape, per-node content ids, fall planes, the wired wave table, the
+## routing tables and the plan ↔ graph-fixture agreement, and keep Chapters 1–2
+## untouched.
 
 const PLAN_PATH := "res://resources/chapters/chapter_3_demo.tres"
 const GRAPH_PATH := "res://tests/fixtures/big_room/ch3_graph.mdsworld.json"
 const CH1_PLAN_PATH := "res://resources/chapters/chapter_1_demo.tres"
 const CH2_PLAN_PATH := "res://resources/chapters/chapter_2_demo.tres"
 const GAME_SCRIPT_PATH := "res://scripts/game.gd"
+const BIGMAP_WORLD_PATH := "res://scenes/mds/chapter_3_bigmap.mdsworld.json"
+const BIGMAP_SCENE_PATH := "res://scenes/mds/chapter_3_bigmap_world.tscn"
 const OLD_CH3_WORLD_PATH := "res://scenes/mds/chapter_3.mdsworld.json"
 const OLD_CH3_SCENE_PATH := "res://scenes/mds/chapter_3_world.tscn"
 const REGION_DIR := "res://resources/rooms/ch3_bigmap"
@@ -305,8 +307,8 @@ func _test_wave_wiring(t: Callable) -> void:
 	t.call(game_source.contains("ch3_shortcut"), false,
 		"ch3_game_grants_no_shortcut_yet")
 
-	# Data only: the plan is not routed, the real region world does not exist,
-	# and the old linear Chapter 3 world stays in place.
+	# Pass 80 routes the plan and the real region world into the campaign while
+	# the old linear Chapter 3 world stays on disk.
 	var game_script := load(GAME_SCRIPT_PATH) as GDScript
 	t.call(game_script != null, true, "ch3_pending_game_script_loads")
 	if game_script != null:
@@ -314,18 +316,18 @@ func _test_wave_wiring(t: Callable) -> void:
 		var plan_paths: Array = game_constants.get("CHAPTER_PLAN_PATHS", [])
 		t.call(plan_paths.size(), 4, "ch3_game_has_four_plan_slots")
 		if plan_paths.size() == 4:
-			t.call(plan_paths[2], "", "ch3_game_plan_slot_stays_empty")
+			t.call(plan_paths[2], PLAN_PATH, "ch3_game_plan_slot_wired")
 		var world_files: Array = game_constants.get("MDS_WORLD_FILES", [])
 		t.call(world_files.size(), 4, "ch3_game_has_four_world_files")
 		if world_files.size() == 4:
-			t.call(world_files[2], OLD_CH3_WORLD_PATH,
-				"ch3_game_still_uses_the_old_world")
+			t.call(world_files[2], BIGMAP_WORLD_PATH,
+				"ch3_game_uses_the_big_map_world")
 		var chapter_scenes: Array = game_constants.get("MDS_CHAPTER_SCENES", [])
 		t.call(chapter_scenes.size(), 4, "ch3_game_has_four_world_scenes")
 		if chapter_scenes.size() == 4:
-			t.call((chapter_scenes[2] as PackedScene).resource_path, OLD_CH3_SCENE_PATH,
-				"ch3_game_still_uses_the_old_world_scene")
-	# Step 2 landed the real region world; the plan itself stays unwired.
+			t.call((chapter_scenes[2] as PackedScene).resource_path, BIGMAP_SCENE_PATH,
+				"ch3_game_uses_the_big_map_world_scene")
+	# Step 2 landed the real region world; pass 80 wired it into the campaign.
 	t.call(DirAccess.dir_exists_absolute(REGION_DIR), true,
 		"ch3_region_data_dir_exists")
 	if DirAccess.dir_exists_absolute(REGION_DIR):

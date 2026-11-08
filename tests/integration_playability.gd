@@ -781,7 +781,19 @@ func _test_ch2_big_map(scene) -> void:
 	check(arena_a != null and arena_b != null, "chapter_2_branch_a_two_arenas")
 	if arena_a != null and arena_b != null:
 		var before: int = scene._cleared_in_chapter
-		arena_a.cleared.emit()
+		# Clear the first encounter through the real arena: lock it, kill the
+		# spawned wave (including the queued second group), and settle once.
+		scene.player.global_position = arena_a.global_position
+		scene._update_room_locks()
+		check(arena_a.is_locked(), "chapter_2_first_encounter_locks")
+		for attempt in 5:
+			for enemy in arena_a.get_node(ArenaRoom.ENEMIES_NODE).get_children():
+				if enemy is Enemy and not enemy.dead:
+					enemy.take_damage(100000)
+			await create_timer(0.4).timeout
+			if arena_a.is_cleared():
+				break
+		check(arena_a.is_cleared(), "chapter_2_first_encounter_cleared_in_combat")
 		check(await _wait_reward(scene), "chapter_2_first_encounter_reward")
 		check(scene._cleared_in_chapter == before + 1, "chapter_2_first_encounter_counts")
 		check(scene._cleared_encounters.has("ch2_branch_a/Arena"),
@@ -797,7 +809,14 @@ func _test_ch2_big_map(scene) -> void:
 		await process_frame
 		check(arena_b.is_locked(), "chapter_2_second_encounter_locks_alone")
 		check(not arena_a.is_locked(), "chapter_2_first_encounter_does_not_lock")
-		arena_b.cleared.emit()
+		for attempt in 5:
+			for enemy in arena_b.get_node(ArenaRoom.ENEMIES_NODE).get_children():
+				if enemy is Enemy and not enemy.dead:
+					enemy.take_damage(100000)
+			await create_timer(0.4).timeout
+			if arena_b.is_cleared():
+				break
+		check(arena_b.is_cleared(), "chapter_2_second_encounter_cleared_in_combat")
 		check(await _wait_reward(scene), "chapter_2_second_encounter_reward")
 		check(scene._cleared_in_chapter == before + 2, "chapter_2_second_encounter_counts")
 		check(scene._cleared_encounters.has("ch2_branch_a/Arena2"),
@@ -857,7 +876,28 @@ func _test_ch2_big_map(scene) -> void:
 				"chapter_2_boss_phase_%d_matches_seed" % phase)
 		scene.player._invulnerable_left = 100
 		scene._boss.take_damage(100000)
+		# Pass 86: pausing during the 1.2 s beat must delay the required pick.
+		# It used to open behind the pause menu (layer 100), where the pick was
+		# invisible and Resume was refused, leaving the page stuck.
+		await create_timer(0.3).timeout
+		scene._toggle_pause()
+		await create_timer(1.5).timeout
+		check(not scene._authority_choice.is_open(), "chapter_2_authority_waits_for_pause")
+		check(scene.pause_menu.is_open() and paused, "chapter_2_authority_pause_holds")
+		scene._toggle_pause()
+		# Pass 86: the door the dying boss just unlocked is live during the beat.
+		# Opening the required pick under the MDS fade (layer 100, above $UI)
+		# would freeze the transition with the pick invisible on a black screen.
+		mds.load_room("ch2_entry")
+		await create_timer(0.15).timeout
+		check(mds.changing_room, "chapter_2_authority_transition_runs")
+		check(not scene._authority_choice.is_open(), "chapter_2_authority_waits_for_transition")
+		check(await _wait_room_id(mds, "ch2_entry"), "chapter_2_authority_transition_finishes")
+		check(not scene._authority_choice.is_open() and not paused,
+			"chapter_2_authority_waits_for_fade_in")
 		check(await _wait_authority_choice(scene), "chapter_2_authority_choice_opens")
+		await process_frame
+		check(not scene.hud.visible, "chapter_2_authority_hides_hud")
 		var flow := root.get_node_or_null("Flow") as GameFlow
 		var profile: Profile = flow.profile if flow != null else null
 		var expected_pool := AuthorityController.build_pool(
@@ -878,48 +918,182 @@ func _test_ch2_big_map(scene) -> void:
 		check(scene._story.is_open(), "chapter_2_choice")
 		scene._story.choose(0)
 		await create_timer(1.2).timeout
-		check(scene._chapter == 1, "chapter_2_stops_at_chapter_2_end")
-		check(scene._finished, "chapter_2_completes_without_entering_chapter_3")
-		check(scene.ending_screen.visible, "chapter_2_end_screen_visible")
+		# Pass 80: the Chapter 2 ending now hands off into Chapter 3 in place.
+		# The authored choice effects are unchanged; the Chapter 3 intro replaces
+		# the ending screen and the campaign keeps running.
+		var audio := root.get_node_or_null("Audio") as AudioManager
+		check(scene._chapter == 2, "chapter_2_hands_off_to_chapter_3")
+		check(not scene._finished, "chapter_2_does_not_finish_campaign")
+		check(not scene.ending_screen.visible, "chapter_2_no_ending_screen")
+		check(scene._story.is_open() and not scene._story._choice_mode,
+			"chapter_3_intro_opens_after_chapter_2")
+		check(scene._story._eyebrow.text.contains("第 3 章"),
+			"chapter_3_handoff_intro_eyebrow")
+		check(scene._story._body.text.contains(String(CampaignData.chapter(2)["intro"][0])),
+			"chapter_3_intro_uses_chapter_3_lines")
+		check(scene._chapter_plan != null and scene._chapter_plan.big_map,
+			"chapter_3_plan_active_after_handoff")
+		check(audio != null
+			and audio._current_music == String(CampaignData.chapter(2)["music"]),
+			"chapter_3_music_on_handoff")
+		check(audio != null and audio._voice.stream != null
+			and String(audio._voice.stream.resource_path).ends_with("ch3_intro.ogg"),
+			"chapter_3_intro_voice_on_handoff")
+
+
+## Chapter 4 big map through the real campaign route (pass 91): the Chapter 3
+## ending hands off into the Chapter 4 intro, the plan's entry region spawns the
+## player on its authored SpawnPoint, a real encounter clear advances the chapter
+## counter, the event region settles once, and Boss 4 ends the campaign. The
+## Chapter 4 plan/world are the routed ones — nothing is mounted here.
+func _test_ch4_big_map(scene) -> void:
+	var mds = scene._mds_world
+	var plan: ChapterPlanData = scene._chapter_plan
+	check(plan != null and plan.big_map, "chapter_4_plan_is_big_map")
+	if plan == null or not plan.big_map:
+		return
+	check(String(plan.resource_path).ends_with("chapter_4_demo.tres"),
+		"chapter_4_loads_its_own_plan")
+	check(mds.current_room == "ch4_entry", "chapter_4_starts_at_plan_entry")
+	check(mds.current_room == plan.start_region(), "chapter_4_start_room_comes_from_plan")
+	check(scene._chapter_clear_target() == 7, "chapter_4_clear_target_seven")
+	check(scene._chapter_progress_total() == 8, "chapter_4_progress_total_includes_boss")
+	check(is_equal_approx(scene._fall_limit_local, 1680.0),
+		"chapter_4_entry_fall_plane_from_plan")
+	check(scene._map_overlay.title_text() == "笑面剧场地图", "chapter_4_map_title_region")
+	check(scene._map_overlay.title_text() != "档案馆地图",
+		"chapter_4_map_title_not_chapter_1")
+	check(scene._cleared_in_chapter == 0, "chapter_4_starts_with_clear_zero")
+	var entry_room := mds.room_node as MDSBigRoom
+	check(entry_room != null, "chapter_4_entry_uses_big_room_pipeline")
+	if entry_room == null:
+		return
+	check(entry_room.validation_errors.is_empty(), "chapter_4_entry_geometry_valid")
+	var spawn := entry_room.get_node_or_null("SpawnPoint") as Marker2D
+	check(spawn != null, "chapter_4_entry_spawn_marker")
+	if spawn != null:
+		check(scene.player.global_position.distance_to(spawn.global_position) < 2.0,
+			"chapter_4_entry_spawn_position")
+	await physics_frame
+	check(scene.player.is_on_floor(), "chapter_4_entry_player_on_floor")
+
+	# A real combat encounter: the branch arena locks, the spawned wave dies, and
+	# the clear counts once against the plan target.
+	await mds.load_room("ch4_branch_a")
+	check(await _wait_room_id(mds, "ch4_branch_a"), "chapter_4_branch_a_loads")
+	var branch := mds.room_node as MDSBigRoom
+	var arena: ArenaRoom = null
+	if branch != null:
+		arena = branch.get_node_or_null("Arena") as ArenaRoom
+	check(arena != null, "chapter_4_branch_a_arena_present")
+	if arena != null:
+		scene.player.global_position = arena.global_position
+		scene._update_room_locks()
+		check(arena.is_locked(), "chapter_4_first_encounter_locks")
+		for attempt in 5:
+			for enemy in arena.get_node(ArenaRoom.ENEMIES_NODE).get_children():
+				if enemy is Enemy and not enemy.dead:
+					enemy.take_damage(100000)
+			await create_timer(0.4).timeout
+			if arena.is_cleared():
+				break
+		check(arena.is_cleared(), "chapter_4_first_encounter_cleared_in_combat")
+		check(await _wait_reward(scene), "chapter_4_first_encounter_reward")
+		check(scene._cleared_in_chapter == 1, "chapter_4_first_encounter_counts")
+		check(scene._cleared_encounters.has("ch4_branch_a/Arena"),
+			"chapter_4_first_encounter_id")
+		scene._reward_ui._choose(0)
+		await process_frame
+
+	await _test_ch4_bigmap_event_trigger(scene)
+	await _test_ch4_bigmap_boss(scene)
+
+
+## Chapter 3 big map through the real campaign route (pass 80): the Chapter 2
+## ending hands off into the Chapter 3 intro, the plan's entry region spawns the
+## player on its authored SpawnPoint, a real encounter clear advances the
+## chapter counter, the event region settles once, and Boss 3 closes the chapter
+## without entering Chapter 4.
+func _test_ch3_big_map(scene) -> void:
+	var mds = scene._mds_world
+	var plan: ChapterPlanData = scene._chapter_plan
+	check(plan != null and plan.big_map, "chapter_3_plan_is_big_map")
+	if plan == null or not plan.big_map:
+		return
+	check(mds.current_room == "ch3_entry", "chapter_3_starts_at_plan_entry")
+	check(mds.current_room == plan.start_region(), "chapter_3_start_room_comes_from_plan")
+	check(scene._chapter_clear_target() == 7, "chapter_3_clear_target_seven")
+	check(scene._chapter_progress_total() == 8, "chapter_3_progress_total_includes_boss")
+	check(is_equal_approx(scene._fall_limit_local, 1680.0),
+		"chapter_3_entry_fall_plane_from_plan")
+	check(scene._map_overlay.title_text() == "无光海地图", "chapter_3_map_title_region")
+	check(scene._map_overlay.title_text() != "档案馆地图",
+		"chapter_3_map_title_not_chapter_1")
+	check(scene._cleared_in_chapter == 0, "chapter_3_starts_with_clear_zero")
+	var entry_room := mds.room_node as MDSBigRoom
+	check(entry_room != null, "chapter_3_entry_uses_big_room_pipeline")
+	if entry_room == null:
+		return
+	check(entry_room.validation_errors.is_empty(), "chapter_3_entry_geometry_valid")
+	var spawn := entry_room.get_node_or_null("SpawnPoint") as Marker2D
+	check(spawn != null, "chapter_3_entry_spawn_marker")
+	if spawn != null:
+		check(scene.player.global_position.distance_to(spawn.global_position) < 2.0,
+			"chapter_3_entry_spawn_position")
+	await physics_frame
+	check(scene.player.is_on_floor(), "chapter_3_entry_player_on_floor")
+
+	# A real combat encounter: the branch arena locks, the spawned wave dies, and
+	# the clear counts once against the plan target.
+	await mds.load_room("ch3_branch_a")
+	check(await _wait_room_id(mds, "ch3_branch_a"), "chapter_3_branch_a_loads")
+	var branch := mds.room_node as MDSBigRoom
+	var arena: ArenaRoom = null
+	if branch != null:
+		arena = branch.get_node_or_null("Arena") as ArenaRoom
+	check(arena != null, "chapter_3_branch_a_arena_present")
+	if arena != null:
+		scene.player.global_position = arena.global_position
+		scene._update_room_locks()
+		check(arena.is_locked(), "chapter_3_first_encounter_locks")
+		for attempt in 5:
+			for enemy in arena.get_node(ArenaRoom.ENEMIES_NODE).get_children():
+				if enemy is Enemy and not enemy.dead:
+					enemy.take_damage(100000)
+			await create_timer(0.4).timeout
+			if arena.is_cleared():
+				break
+		check(arena.is_cleared(), "chapter_3_first_encounter_cleared_in_combat")
+		check(await _wait_reward(scene), "chapter_3_first_encounter_reward")
+		check(scene._cleared_in_chapter == 1, "chapter_3_first_encounter_counts")
+		check(scene._cleared_encounters.has("ch3_branch_a/Arena"),
+			"chapter_3_first_encounter_id")
+		scene._reward_ui._choose(0)
+		await process_frame
+
+	await _test_ch3_bigmap_event_trigger(scene)
+	await _test_ch3_bigmap_boss(scene)
 
 
 ## Chapter 3 event region. The region-level entry trigger added for Chapter 2 is
 ## chapter-agnostic — a big-map region whose plan type is `event` and whose
 ## chapter authors event data — so the Chapter 3 plan needs no separate trigger.
-## This attaches the step-2 region world and the Chapter 3 plan to the live
-## scene for the check only: `CHAPTER_PLAN_PATHS[2]` stays empty and the campaign
-## keeps the legacy linear world. The caller restores that world afterwards.
+## Since pass 80 the campaign itself loads the Chapter 3 plan and big-map world,
+## so this walks the live routed world into `ch3_event`.
 func _test_ch3_bigmap_event_trigger(scene) -> void:
-	var plan := load("res://resources/chapters/chapter_3_demo.tres") as ChapterPlanData
+	var plan: ChapterPlanData = scene._chapter_plan
 	check(plan != null and plan.big_map, "chapter_3_plan_is_big_map")
 	if plan == null or not plan.big_map:
 		return
 	var flow := root.get_node_or_null("Flow") as GameFlow
-	# Build the region world the same way `_start_mds_chapter` builds a chapter
-	# world, but with the Chapter 3 plan attached and `ch3_event` as the start.
-	scene._teardown_mds(false)
-	scene._chapter = 2
-	scene._chapter_plan = plan
-	scene._mds_active = true
-	scene._event_room_id = ""
-	scene._cleared_encounters.clear()
-	scene._cleared_in_chapter = 0
-	var camera := scene.player.get_node_or_null("Camera2D") as Camera2D
-	var world := (load("res://scenes/mds/chapter_3_bigmap_world.tscn") as PackedScene).instantiate() as MDSWorldGame
-	world.process_mode = Node.PROCESS_MODE_PAUSABLE
-	world.player = scene.player
-	world.camera = camera
-	world.world_file = "res://scenes/mds/chapter_3_bigmap.mdsworld.json"
-	world.starting_room = "ch3_event"
-	world.room_loaded.connect(scene._on_mds_room_loaded)
-	scene.add_child(world)
-	scene._mds_world = world
-	check(await _wait_mds(scene), "chapter_3_bigmap_world_loads")
+	var world := scene._mds_world as MDSWorldGame
+	check(world != null, "chapter_3_event_world_is_routed")
+	if world == null:
+		return
+	await world.load_room("ch3_event")
 	check(await _wait_room_id(world, "ch3_event"), "chapter_3_event_region_loads")
 	var room := world.room_node as MDSBigRoom
 	check(room != null, "chapter_3_event_region_uses_big_room_pipeline")
-	# The plan drives the clear target and fall plane even though the campaign
-	# route still points at the legacy world.
 	check(scene._chapter_clear_target() == 7, "chapter_3_event_clear_target_seven")
 	check(scene._chapter_progress_total() == 8, "chapter_3_event_progress_includes_boss")
 	check(is_equal_approx(scene._fall_limit_local, 1680.0),
@@ -1002,8 +1176,6 @@ func _test_ch3_bigmap_event_trigger(scene) -> void:
 	var read_open: bool = await _wait_story(scene)
 	check(read_open, "chapter_3_event_read_page_opens")
 	if not read_open:
-		scene._teardown_mds(false)
-		scene._chapter_plan = null
 		return
 	var decoded_before: int = 0
 	if flow != null and flow.profile != null:
@@ -1032,46 +1204,49 @@ func _test_ch3_bigmap_event_trigger(scene) -> void:
 	check(scene._cleared_in_chapter == clears_before + 1,
 		"chapter_3_event_read_counts_once")
 
-	# Leave the scene without the test-only plan/world; the caller re-enters the
-	# chapter so the standard structural pass runs against the legacy world.
-	scene._teardown_mds(false)
-	scene._chapter_plan = null
+	# Leave the routed world in place for the boss leg; it keeps the event node
+	# settled exactly as the campaign would.
 	scene._event_room_id = ""
 
 
 ## Chapter 4 event region. The region-level entry trigger added with Chapter 2 is
 ## chapter-agnostic — a big-map region whose plan type is `event` and whose
 ## chapter authors event data — so the Chapter 4 plan needs no separate trigger.
-## This attaches the step-2 region world and the Chapter 4 plan to the live
-## scene for the check only: `CHAPTER_PLAN_PATHS[3]` stays empty and the
-## campaign keeps the legacy linear world. The caller restores that world
-## afterwards.
+## Since pass 91 the campaign itself loads the Chapter 4 plan and big-map world,
+## so this walks the live routed world into `ch4_event`.
 func _test_ch4_bigmap_event_trigger(scene) -> void:
-	var plan := load("res://resources/chapters/chapter_4_demo.tres") as ChapterPlanData
-	check(plan != null and plan.big_map, "chapter_4_plan_is_big_map")
+	var plan: ChapterPlanData = scene._chapter_plan
+	check(plan != null and plan.big_map, "chapter_4_event_plan_is_big_map")
 	if plan == null or not plan.big_map:
 		return
-	# Lock the route and data this pass must not disturb: slot 3 stays empty (the
-	# campaign keeps loading the legacy Chapter 4 world), Chapters 1–3 keep their
-	# plans and worlds, and the plan keeps its wired waves / 7-clear target /
-	# deferred boss scene. No Chapter 4-only trigger code exists either.
+	# Lock the route pass 91 installs: all four chapters load their big-map
+	# plans/worlds, the legacy Chapter 4 world stays on disk but unrouted, and
+	# the Chapter 4 plan keeps its wired waves / 7-clear target / boss scene. No
+	# Chapter 4-only trigger code exists either.
 	var game_script := load("res://scripts/game.gd") as GDScript
 	var constants: Dictionary = game_script.get_script_constant_map() if game_script != null else {}
 	var plan_paths: Array = constants.get("CHAPTER_PLAN_PATHS", [])
 	var world_files: Array = constants.get("MDS_WORLD_FILES", [])
+	var world_scenes: Array = constants.get("MDS_CHAPTER_SCENES", [])
 	check(plan_paths.size() == 4, "chapter_4_game_keeps_four_plan_slots")
 	if plan_paths.size() == 4:
-		check(String(plan_paths[3]) == "", "chapter_4_plan_slot_stays_empty")
-		check(String(plan_paths[2]) == "", "chapter_3_plan_slot_stays_empty")
+		check(String(plan_paths[3]).ends_with("chapter_4_demo.tres"),
+			"chapter_4_plan_slot_wired")
+		check(String(plan_paths[2]).ends_with("chapter_3_demo.tres"),
+			"chapter_3_plan_slot_wired")
 		check(String(plan_paths[1]).ends_with("chapter_2_demo.tres"),
 			"chapter_2_plan_slot_unchanged")
 		check(String(plan_paths[0]).ends_with("chapter_1_demo.tres"),
 			"chapter_1_plan_slot_unchanged")
 	if world_files.size() == 4:
-		check(String(world_files[3]).ends_with("chapter_4.mdsworld.json"),
-			"chapter_4_still_loads_legacy_world")
-		check(String(world_files[2]).ends_with("chapter_3.mdsworld.json"),
-			"chapter_3_still_loads_legacy_world")
+		check(String(world_files[3]).ends_with("chapter_4_bigmap.mdsworld.json"),
+			"chapter_4_loads_big_map_world")
+		check(String(world_files[2]).ends_with("chapter_3_bigmap.mdsworld.json"),
+			"chapter_3_loads_big_map_world")
+	if world_scenes.size() == 4:
+		check((world_scenes[3] as PackedScene).resource_path
+			== "res://scenes/mds/chapter_4_bigmap_world.tscn",
+			"chapter_4_uses_big_map_world_scene")
 	check(plan.clear_target() == 7, "chapter_4_event_clear_target_seven")
 	check(plan.encounter_ids().size() == 7, "chapter_4_event_encounters_unchanged")
 	check(plan.content_pending == false, "chapter_4_event_waves_stay_wired")
@@ -1088,8 +1263,8 @@ func _test_ch4_bigmap_event_trigger(scene) -> void:
 		"chapter_4_region_world_still_present")
 	var game_source := FileAccess.get_file_as_string("res://scripts/game.gd")
 	check(not game_source.contains("ch4_event"), "chapter_4_has_no_dedicated_event_trigger")
-	check(not game_source.contains("chapter_4_bigmap"),
-		"chapter_4_region_world_not_routed")
+	check(game_source.contains("chapter_4_bigmap"),
+		"chapter_4_region_world_is_routed")
 	# Chapters 1–3 keep their event numbers; only the Chapter 4 table is new.
 	# Their own suites cover the full copy and the Chapter 1 room trigger.
 	check(Ch1EventData.CORRUPTION_COST == 8 and Ch1EventData.PAGES_REWARD == 12
@@ -1100,31 +1275,15 @@ func _test_ch4_bigmap_event_trigger(scene) -> void:
 		and Ch3EventData.FALLBACK_PAGES == 6, "chapter_3_event_numbers_unchanged")
 
 	var flow := root.get_node_or_null("Flow") as GameFlow
-	# Build the region world the same way `_start_mds_chapter` builds a chapter
-	# world, but with the Chapter 4 plan attached and `ch4_event` as the start.
-	scene._teardown_mds(false)
-	scene._chapter = 3
-	scene._chapter_plan = plan
-	scene._mds_active = true
-	scene._event_room_id = ""
-	scene._cleared_encounters.clear()
-	scene._cleared_in_chapter = 0
-	var camera := scene.player.get_node_or_null("Camera2D") as Camera2D
-	var world := (load("res://scenes/mds/chapter_4_bigmap_world.tscn") as PackedScene).instantiate() as MDSWorldGame
-	world.process_mode = Node.PROCESS_MODE_PAUSABLE
-	world.player = scene.player
-	world.camera = camera
-	world.world_file = "res://scenes/mds/chapter_4_bigmap.mdsworld.json"
-	world.starting_room = "ch4_event"
-	world.room_loaded.connect(scene._on_mds_room_loaded)
-	scene.add_child(world)
-	scene._mds_world = world
-	check(await _wait_mds(scene), "chapter_4_bigmap_world_loads")
+	var world := scene._mds_world as MDSWorldGame
+	check(world != null, "chapter_4_event_world_is_routed")
+	if world == null:
+		return
+	await world.load_room("ch4_event")
 	check(await _wait_room_id(world, "ch4_event"), "chapter_4_event_region_loads")
 	var room := world.room_node as MDSBigRoom
 	check(room != null, "chapter_4_event_region_uses_big_room_pipeline")
-	# The plan drives the clear target and fall plane even though the campaign
-	# route still points at the legacy world.
+	# The routed plan drives the clear target and the fall plane.
 	check(scene._chapter_clear_target() == 7, "chapter_4_event_clear_target_from_plan")
 	check(scene._chapter_progress_total() == 8, "chapter_4_event_progress_includes_boss")
 	check(is_equal_approx(scene._fall_limit_local, 1680.0),
@@ -1137,8 +1296,6 @@ func _test_ch4_bigmap_event_trigger(scene) -> void:
 	var page_open: bool = await _wait_story(scene)
 	check(page_open, "chapter_4_event_page_opens")
 	if not page_open:
-		scene._teardown_mds(false)
-		scene._chapter_plan = null
 		return
 	check(scene.run_state.rng.state == rng_before, "chapter_4_event_page_keeps_run_rng")
 	var expected_event := Ch4EventData.pick(scene.run_state.run_seed, "ch4_event/event")
@@ -1167,9 +1324,13 @@ func _test_ch4_bigmap_event_trigger(scene) -> void:
 		"chapter_4_event_encounter_settles")
 	check(scene._cleared_in_chapter == clears_before + 1,
 		"chapter_4_event_counts_once")
+	# The HUD denominator comes from the plan (7 encounters + boss) and the
+	# numerator counts this chapter's clears, including the encounter the chain
+	# fought before the event region.
 	var progress_label := scene.hud.find_child("Progress", true, false) as Label
-	check(progress_label != null and progress_label.text == "档案  1 / 8",
-		"chapter_4_event_hud_progress_one_of_eight")
+	check(progress_label != null
+		and progress_label.text == "档案  %d / 8" % (clears_before + 1),
+		"chapter_4_event_hud_progress_counts_clears")
 	check(scene.run_state.rng.state == rng_before, "chapter_4_event_take_keeps_run_rng")
 
 	# The settled node survives through the real run-save file under the same
@@ -1210,8 +1371,6 @@ func _test_ch4_bigmap_event_trigger(scene) -> void:
 	var read_open: bool = await _wait_story(scene)
 	check(read_open, "chapter_4_event_read_page_opens")
 	if not read_open:
-		scene._teardown_mds(false)
-		scene._chapter_plan = null
 		return
 	var decoded_before: int = 0
 	if flow != null and flow.profile != null:
@@ -1219,6 +1378,10 @@ func _test_ch4_bigmap_event_trigger(scene) -> void:
 	var pages_before_read: int = scene.run_state.pages
 	var corruption_before: int = scene.run_state.corruption
 	var corruption_multiplier: float = scene.run_state.corruption_gain_multiplier
+	# Test scaffolding only: park the purify_flow relic's five-second timer so a
+	# tick cannot strip a point inside the 0.3 s resolve window. The event cost is
+	# still asserted exactly.
+	scene.relic_effects._purify_seconds = 0.0
 	scene._story.choose(0)
 	await create_timer(0.3).timeout
 	var expected_corruption := mini(corruption_before + maxi(
@@ -1240,10 +1403,8 @@ func _test_ch4_bigmap_event_trigger(scene) -> void:
 	check(scene._cleared_in_chapter == clears_before + 1,
 		"chapter_4_event_read_counts_once")
 
-	# Leave the scene without the test-only plan/world; the caller re-enters the
-	# chapter so the standard structural pass runs against the legacy world.
-	scene._teardown_mds(false)
-	scene._chapter_plan = null
+	# Leave the routed world in place for the boss leg; it keeps the event node
+	# settled exactly as the campaign would.
 	scene._event_room_id = ""
 
 
@@ -1267,10 +1428,10 @@ func _children_of_type(parent: Node, type_name: String) -> Array:
 ## Chapter 3 boss: the plan routes the LastReader scene, the live boss spawns
 ## above the region floor, the chapter-3 phase copy is selected with the
 ## chapter index key, the blank-page window runs on the real boss, and a
-## defeated boss stays down on reload. The plan/world are attached to this
-## scene for the check only; the campaign route still uses the legacy world.
+## defeated boss stays down on reload. Since pass 80 the campaign itself routes
+## this plan and world, so the boss runs on the live routed world.
 func _test_ch3_bigmap_boss(scene) -> void:
-	var plan := load("res://resources/chapters/chapter_3_demo.tres") as ChapterPlanData
+	var plan: ChapterPlanData = scene._chapter_plan
 	check(plan != null and plan.big_map, "chapter_3_boss_plan_is_big_map")
 	if plan == null or not plan.big_map:
 		return
@@ -1278,23 +1439,25 @@ func _test_ch3_bigmap_boss(scene) -> void:
 	if plan.boss_scene != null:
 		check(plan.boss_scene.resource_path == "res://scenes/bosses/last_reader.tscn",
 			"chapter_3_boss_plan_scene_is_last_reader")
-	# Lock the route this pass must not disturb: the plan slots stay empty (the
-	# campaign keeps loading the legacy Chapter 3 world), and the Chapter 3 plan
-	# keeps its 7 encounters / authored waves / base authority pool.
+	# Lock the route: Chapter 3 loads its big-map plan/world (pass 80), Chapter 4
+	# is wired too (pass 91), and the Chapter 3 plan keeps its 7 encounters /
+	# authored waves / base authority pool.
 	var game_script := load("res://scripts/game.gd") as GDScript
 	var constants: Dictionary = game_script.get_script_constant_map() if game_script != null else {}
 	var plan_paths: Array = constants.get("CHAPTER_PLAN_PATHS", [])
 	var world_files: Array = constants.get("MDS_WORLD_FILES", [])
 	check(plan_paths.size() == 4, "game_keeps_four_plan_slots")
 	if plan_paths.size() == 4:
-		check(String(plan_paths[2]) == "", "chapter_3_plan_slot_stays_empty")
-		check(String(plan_paths[3]) == "", "chapter_4_plan_slot_stays_empty")
+		check(String(plan_paths[2]).ends_with("chapter_3_demo.tres"),
+			"chapter_3_plan_slot_wired")
+		check(String(plan_paths[3]).ends_with("chapter_4_demo.tres"),
+			"chapter_4_plan_slot_wired")
 		check(ResourceLoader.exists("res://resources/chapters/chapter_4_demo.tres"),
-			"chapter_4_plan_authored_but_not_routed")
+			"chapter_4_plan_present")
 	check(world_files.size() == 4, "game_keeps_four_world_files")
 	if world_files.size() == 4:
-		check(String(world_files[2]).ends_with("chapter_3.mdsworld.json"),
-			"chapter_3_still_loads_legacy_world")
+		check(String(world_files[2]).ends_with("chapter_3_bigmap.mdsworld.json"),
+			"chapter_3_loads_big_map_world")
 	check(plan.clear_target() == 7, "chapter_3_clear_target_unchanged")
 	check(plan.encounter_ids().size() == 7, "chapter_3_encounters_unchanged")
 	check(plan.wave_for("ch3_branch_a", "ch3_branch_a/Arena").size() == 2,
@@ -1304,27 +1467,11 @@ func _test_ch3_bigmap_boss(scene) -> void:
 		plan_authority_ids.append(authority.id)
 	check(plan_authority_ids.has(&"revive") and plan_authority_ids.has(&"rewrite"),
 		"chapter_3_authority_pool_unchanged")
-	scene._teardown_mds(false)
-	scene._chapter = 2
-	scene._chapter_plan = plan
-	scene._mds_active = true
-	scene._event_room_id = ""
-	scene._cleared_encounters.clear()
-	scene._cleared_in_chapter = 0
-	scene._boss_defeated = false
-	scene._boss_aftermath_started = false
-	scene._boss = null
-	var camera := scene.player.get_node_or_null("Camera2D") as Camera2D
-	var world := (load("res://scenes/mds/chapter_3_bigmap_world.tscn") as PackedScene).instantiate() as MDSWorldGame
-	world.process_mode = Node.PROCESS_MODE_PAUSABLE
-	world.player = scene.player
-	world.camera = camera
-	world.world_file = "res://scenes/mds/chapter_3_bigmap.mdsworld.json"
-	world.starting_room = "ch3_boss"
-	world.room_loaded.connect(scene._on_mds_room_loaded)
-	scene.add_child(world)
-	scene._mds_world = world
-	check(await _wait_mds(scene), "chapter_3_boss_world_loads")
+	var world := scene._mds_world as MDSWorldGame
+	check(world != null, "chapter_3_boss_world_is_routed")
+	if world == null:
+		return
+	await world.load_room("ch3_boss")
 	check(await _wait_room_id(world, "ch3_boss"), "chapter_3_boss_region_loads")
 	var room := world.room_node as MDSBigRoom
 	check(room != null, "chapter_3_boss_region_uses_big_room_pipeline")
@@ -1335,8 +1482,6 @@ func _test_ch3_bigmap_boss(scene) -> void:
 	check(not (scene._boss is LungBellGuardian), "chapter_3_boss_is_not_chapter_2")
 	check(not (scene._boss is InkArchivistCh1), "chapter_3_boss_is_not_chapter_1")
 	if boss == null:
-		scene._teardown_mds(false)
-		scene._chapter_plan = null
 		return
 	var chapter := CampaignData.chapter(2)
 	check(boss.data.contact_damage == int(chapter["boss_damage"]),
@@ -1400,14 +1545,15 @@ func _test_ch3_bigmap_boss(scene) -> void:
 
 	# The Chapter 3 ending: defeating the Last Reader through the real flow
 	# grants the authored authority, plays the Chapter 3 outro and choice, then
-	# stops at the chapter boundary instead of auto-entering the unauthored
-	# Chapter 4 — the Chapter 2 closure applied to Chapter 3.
+	# (since pass 91) hands off into the Chapter 4 intro in place.
 	if arena != null:
 		scene.player.global_position = arena.global_position
 		scene._update_room_locks()
 	scene.player._invulnerable_left = 100
 	boss.take_damage(100000)
 	check(await _wait_authority_choice(scene), "chapter_3_authority_choice_opens")
+	await process_frame
+	check(not scene.hud.visible, "chapter_3_authority_hides_hud")
 	var expected_pool := AuthorityController.build_pool(
 		plan.authority_pool, scene.run_state, flow.profile if flow != null else null,
 		scene._records)
@@ -1427,38 +1573,33 @@ func _test_ch3_bigmap_boss(scene) -> void:
 	check(scene._story.is_open(), "chapter_3_choice")
 	scene._story.choose(0)
 	await create_timer(1.2).timeout
-	check(scene._chapter == 2, "chapter_3_stops_at_chapter_3_end")
-	check(scene._finished, "chapter_3_completes_without_entering_chapter_4")
-	check(scene.ending_screen.visible, "chapter_3_end_screen_visible")
-	check(scene._boss_defeated, "chapter_3_boss_recorded_defeated")
-
-	# A defeated boss stays down on reload (the resume guard is
-	# chapter-agnostic). `_finished` keeps the deferred aftermath quiet while the
-	# room is re-entered; the ending paused the tree, so unpause for the reload.
-	paused = false
-	scene._finished = true
-	scene._boss_defeated = true
-	if is_instance_valid(scene._boss):
-		scene._boss.queue_free()
-	scene._boss = null
-	await world.load_room("ch3_boss")
-	check(await _wait_room_id(world, "ch3_boss"), "chapter_3_boss_reloads")
-	await create_timer(0.3).timeout
-	check(scene._boss == null, "chapter_3_boss_no_second_spawn")
-	var reloaded := world.room_node as MDSBigRoom
-	if reloaded != null:
-		var reloaded_arena := reloaded.get_node_or_null("Arena") as ArenaRoom
-		var bosses := 0
-		if reloaded_arena != null:
-			for child in reloaded_arena.get_node(ArenaRoom.ENEMIES_NODE).get_children():
-				if child is LastReader:
-					bosses += 1
-		check(bosses == 0, "chapter_3_boss_room_holds_no_boss")
-	scene._finished = false
-	scene._boss_defeated = false
-	scene._teardown_mds(false)
-	scene._chapter_plan = null
-	scene._event_room_id = ""
+	# Pass 91: the Chapter 3 choice hands off into Chapter 4 in place. The
+	# authored choice effects are unchanged; the Chapter 4 intro replaces the
+	# ending screen and the campaign keeps running.
+	var audio := root.get_node_or_null("Audio") as AudioManager
+	check(scene._chapter == 3, "chapter_3_hands_off_to_chapter_4")
+	check(not scene._finished, "chapter_3_does_not_finish_campaign")
+	check(not scene.ending_screen.visible, "chapter_3_no_ending_screen")
+	check(scene._story.is_open() and not scene._story._choice_mode,
+		"chapter_4_intro_opens_after_chapter_3")
+	check(scene._story._eyebrow.text.contains("第 4 章"),
+		"chapter_4_handoff_intro_eyebrow")
+	check(scene._story._body.text.contains(String(CampaignData.chapter(3)["intro"][0])),
+		"chapter_4_intro_uses_chapter_4_lines")
+	check(scene._chapter_plan != null and scene._chapter_plan.big_map
+		and String(scene._chapter_plan.resource_path).ends_with("chapter_4_demo.tres"),
+		"chapter_4_plan_active_after_handoff")
+	check(audio != null
+		and audio._current_music == String(CampaignData.chapter(3)["music"]),
+		"chapter_4_music_on_handoff")
+	check(audio != null and audio._voice.stream != null
+		and String(audio._voice.stream.resource_path).ends_with("ch4_intro.ogg"),
+		"chapter_4_intro_voice_on_handoff")
+	# The Chapter 4 intro is open and the campaign moved on, so the "defeated boss
+	# stays down on reload" check cannot replay inside Chapter 3 any more; it lives
+	# in `integration_ch3_bigmap._test_boss` (the boss-defeated reload there starts
+	# from its own resume checkpoint). Leave the scene in the handoff state the
+	# real flow produces: the caller closes the intro and boots Chapter 4.
 
 
 ## Chapter 4 boss: the plan routes the SmilingArchivist scene, the live boss
@@ -1468,11 +1609,11 @@ func _test_ch3_bigmap_boss(scene) -> void:
 ## on reload. Defeating it runs the authored chapter-end chain (authority →
 ## Chapter 4 outro → authored choice → campaign end), locks that copy and the
 ## ending rule, and proves the campaign stops at Chapter 4 (chapter_count() == 4,
-## no fifth chapter). The plan/world are attached to this scene for the check
-## only; the campaign route still uses the legacy world, and no dedicated mechanic
+## no fifth chapter). Since pass 91 the campaign itself routes this plan and
+## world, so the boss runs on the live routed world; no dedicated mechanic
 ## extension (delete-word / copy-weapon / stage traps) lands here.
 func _test_ch4_bigmap_boss(scene) -> void:
-	var plan := load("res://resources/chapters/chapter_4_demo.tres") as ChapterPlanData
+	var plan: ChapterPlanData = scene._chapter_plan
 	check(plan != null and plan.big_map, "chapter_4_boss_plan_is_big_map")
 	if plan == null or not plan.big_map:
 		return
@@ -1480,21 +1621,24 @@ func _test_ch4_bigmap_boss(scene) -> void:
 	if plan.boss_scene != null:
 		check(plan.boss_scene.resource_path == "res://scenes/bosses/smiling_archivist.tscn",
 			"chapter_4_boss_plan_scene_is_smiling_archivist")
-	# Lock the route this pass must not disturb: the plan slots stay empty (the
-	# campaign keeps loading the legacy Chapter 4 world), and the Chapter 4 plan
-	# keeps its 7 encounters / authored waves / base authority pool.
+	# Lock the route pass 91 installs: Chapter 4 loads its plan and big-map
+	# world, the legacy Chapter 4 world stays on disk but unrouted, Chapter 3
+	# keeps its wired plan/world (pass 80), and the Chapter 4 plan keeps its 7
+	# encounters / authored waves / base authority pool.
 	var game_script := load("res://scripts/game.gd") as GDScript
 	var constants: Dictionary = game_script.get_script_constant_map() if game_script != null else {}
 	var plan_paths: Array = constants.get("CHAPTER_PLAN_PATHS", [])
 	var world_files: Array = constants.get("MDS_WORLD_FILES", [])
 	check(plan_paths.size() == 4, "chapter_4_boss_game_keeps_four_plan_slots")
 	if plan_paths.size() == 4:
-		check(String(plan_paths[3]) == "", "chapter_4_boss_plan_slot_stays_empty")
-		check(String(plan_paths[2]) == "", "chapter_3_boss_plan_slot_stays_empty")
+		check(String(plan_paths[3]).ends_with("chapter_4_demo.tres"),
+			"chapter_4_boss_plan_slot_wired")
+		check(String(plan_paths[2]).ends_with("chapter_3_demo.tres"),
+			"chapter_3_boss_plan_slot_wired")
 	check(world_files.size() == 4, "chapter_4_boss_game_keeps_four_world_files")
 	if world_files.size() == 4:
-		check(String(world_files[3]).ends_with("chapter_4.mdsworld.json"),
-			"chapter_4_still_loads_legacy_world")
+		check(String(world_files[3]).ends_with("chapter_4_bigmap.mdsworld.json"),
+			"chapter_4_boss_loads_big_map_world")
 	check(FileAccess.file_exists("res://scenes/mds/chapter_4.mdsworld.json"),
 		"chapter_4_old_world_still_present")
 	check(FileAccess.file_exists("res://scenes/mds/chapter_4_world.tscn"),
@@ -1510,27 +1654,11 @@ func _test_ch4_bigmap_boss(scene) -> void:
 	check(plan_authority_ids.has(&"revive") and plan_authority_ids.has(&"rewrite"),
 		"chapter_4_boss_authority_pool_unchanged")
 
-	scene._teardown_mds(false)
-	scene._chapter = 3
-	scene._chapter_plan = plan
-	scene._mds_active = true
-	scene._event_room_id = ""
-	scene._cleared_encounters.clear()
-	scene._cleared_in_chapter = 0
-	scene._boss_defeated = false
-	scene._boss_aftermath_started = false
-	scene._boss = null
-	var camera := scene.player.get_node_or_null("Camera2D") as Camera2D
-	var world := (load("res://scenes/mds/chapter_4_bigmap_world.tscn") as PackedScene).instantiate() as MDSWorldGame
-	world.process_mode = Node.PROCESS_MODE_PAUSABLE
-	world.player = scene.player
-	world.camera = camera
-	world.world_file = "res://scenes/mds/chapter_4_bigmap.mdsworld.json"
-	world.starting_room = "ch4_boss"
-	world.room_loaded.connect(scene._on_mds_room_loaded)
-	scene.add_child(world)
-	scene._mds_world = world
-	check(await _wait_mds(scene), "chapter_4_boss_world_loads")
+	var world := scene._mds_world as MDSWorldGame
+	check(world != null, "chapter_4_boss_world_is_routed")
+	if world == null:
+		return
+	await world.load_room("ch4_boss")
 	check(await _wait_room_id(world, "ch4_boss"), "chapter_4_boss_region_loads")
 	var room := world.room_node as MDSBigRoom
 	check(room != null, "chapter_4_boss_region_uses_big_room_pipeline")
@@ -1542,8 +1670,6 @@ func _test_ch4_bigmap_boss(scene) -> void:
 	check(not (scene._boss is LungBellGuardian), "chapter_4_boss_is_not_chapter_2")
 	check(not (scene._boss is InkArchivistCh1), "chapter_4_boss_is_not_chapter_1")
 	if boss == null:
-		scene._teardown_mds(false)
-		scene._chapter_plan = null
 		return
 	var chapter := CampaignData.chapter(3)
 	# The Chapter 4 ending copy is authored and must stay untouched: four outro
@@ -1721,26 +1847,11 @@ func _test_ch4_bigmap_boss(scene) -> void:
 				if child is SmilingArchivist:
 					bosses += 1
 		check(bosses == 0, "chapter_4_boss_room_holds_no_boss")
-	scene._finished = false
-	scene._boss_defeated = false
-	scene._teardown_mds(false)
-	scene._chapter_plan = null
+	# Leave the routed world live in the finished state the campaign ending left
+	# behind; the campaign ends here, so nothing starts a fifth chapter.
+	scene._finished = true
+	scene._boss_defeated = true
 	scene._event_room_id = ""
-
-
-## Re-enters [param chapter_index] after a test-only world swap so the standard
-## structural pass still sees the campaign's own world file.
-func _restore_chapter_world(scene, chapter_index: int) -> void:
-	scene._finished = false
-	scene._ending_pending = false
-	scene.ending_screen.visible = false
-	paused = false
-	scene._start_chapter(chapter_index)
-	await create_timer(0.2).timeout
-	if scene._story.is_open():
-		scene._story.close()
-	await process_frame
-	check(await _wait_mds(scene), "chapter_%d_world_restored" % (chapter_index + 1))
 
 
 ## Waits for the deferred reward overlay a cleared arena opens.
@@ -1809,19 +1920,15 @@ func _arena_enemy_ids(arena: ArenaRoom) -> Array:
 	return out
 
 
+## The Chapter 1 legacy linear room pass. Since pass 91 every later chapter runs
+## its own big-map leg (`_test_ch2_big_map` / `_test_ch3_big_map` /
+## `_test_ch4_big_map`), so this only ever sees `chapter_index == 0`; the old
+## Chapter 4 stage-art audit now lives on the big-map regions in
+## `integration_ch4_bigmap`.
 func _test_mds_chapter(scene, chapter_index: int) -> void:
 	var mds = scene._mds_world
 	var prefix := "ch%d" % (chapter_index + 1)
 	check(mds.current_room == "%s_01" % prefix, "chapter_%d_mds_starts" % (chapter_index + 1))
-	if chapter_index == 3:
-		# Chapter 4 art audit: the MDS rooms must keep using the dedicated
-		# painting, with TheaterBackdrop only adding its light overlay.
-		var art := mds.room_node.get_node_or_null("BackgroundArt") as Sprite2D
-		check(art != null and art.texture != null
-			and art.texture.resource_path.ends_with("smiling_theater.png"),
-			"chapter_4_background_uses_painting")
-		var theater := mds.room_node.get_node_or_null("TheaterBackdrop") as TheaterBackdrop
-		check(theater != null and theater.generated_art, "chapter_4_theater_overlay_is_lightweight")
 	var expected_title := "档案馆地图"
 	if chapter_index > 0:
 		expected_title = "%s地图" % String(CampaignData.chapter(chapter_index).get("region", ""))
@@ -1957,25 +2064,32 @@ func _test_mds_chapter(scene, chapter_index: int) -> void:
 	check(scene._story.is_open(), "chapter_%d_choice" % (chapter_index + 1))
 	scene._story.choose(0)
 	await create_timer(0.35).timeout
-	if chapter_index == 0 or chapter_index >= 2:
-		await create_timer(0.8).timeout
-	if chapter_index == 0:
-		check(scene._finished, "chapter_1_demo_ends")
-		check(scene._chapter == 0, "chapter_1_ends_without_entering_chapter_2")
-		check(scene.ending_screen.visible, "chapter_1_demo_end_screen")
-	elif chapter_index == 2:
-		# Chapter 3 stops at its own boundary: Chapter 4 is still unreachable.
-		check(scene._finished, "chapter_3_demo_ends")
-		check(scene._chapter == 2, "chapter_3_ends_without_entering_chapter_4")
-		check(scene.ending_screen.visible, "chapter_3_demo_end_screen")
-	elif chapter_index == 3:
-		# Chapter 4 is the last authored chapter: the campaign ends here and
-		# there is no fifth chapter to enter.
-		check(scene._finished, "chapter_4_campaign_ends")
-		check(scene._chapter == 3, "chapter_4_ends_without_a_fifth_chapter")
-		check(scene.ending_screen.visible, "chapter_4_campaign_end_screen")
-	elif chapter_index + 1 < CampaignData.chapter_count():
-		check(scene._chapter == chapter_index + 1, "chapter_%d_transitions" % (chapter_index + 1))
+	await create_timer(0.8).timeout
+	# Chapter 1 hands the campaign to the Chapter 2 big map in place: the authored
+	# choice effects are unchanged, the demo flag still records the clear, and the
+	# Chapter 2 intro replaces the ending screen. (Chapters 2–4 run their own
+	# big-map legs, and Chapters 3/4 hand off / end in those legs.)
+	var flow := root.get_node_or_null("Flow") as GameFlow
+	check(scene._chapter == 1, "chapter_1_enters_chapter_2")
+	check(not scene._finished, "chapter_1_does_not_finish_campaign")
+	check(not scene.ending_screen.visible, "chapter_1_no_ending_screen")
+	check(scene._story.is_open() and not scene._story._choice_mode,
+		"chapter_2_intro_opens_after_choice")
+	check(scene._story._title.text == String(CampaignData.chapter(1)["title"]),
+		"chapter_2_intro_uses_chapter_2_title")
+	check(scene._story._body.text.contains(String(CampaignData.chapter(1)["intro"][0])),
+		"chapter_2_intro_uses_chapter_2_lines")
+	check(scene._chapter_plan != null and scene._chapter_plan.big_map,
+		"chapter_2_plan_active_after_handoff")
+	check(flow != null and flow.profile != null and flow.profile.demo_cleared,
+		"chapter_1_still_marks_demo_cleared")
+	var audio := root.get_node_or_null("Audio") as AudioManager
+	check(audio != null
+		and audio._current_music == String(CampaignData.chapter(1)["music"]),
+		"chapter_2_music_on_handoff")
+	check(audio != null and audio._voice.stream != null
+		and String(audio._voice.stream.resource_path).ends_with("ch2_intro.ogg"),
+		"chapter_2_intro_voice_on_handoff")
 
 func _run() -> void:
 	var flow := root.get_node("Flow") as GameFlow
@@ -2133,46 +2247,56 @@ func _run() -> void:
 		"fall_ch1_limit_restored")
 
 	for chapter_index in CampaignData.chapter_count():
+		var handoff := false
 		if chapter_index > 0:
-			# The demo stops after Chapter 1; start the remaining chapters
-			# explicitly for structural coverage.
 			scene._finished = false
-			scene._ending_pending = false
 			scene.ending_screen.visible = false
 			scene.get_tree().paused = false
-			scene._start_chapter(chapter_index)
-			await create_timer(0.2).timeout
-			check(scene._story.is_open(), "chapter_%d_intro" % (chapter_index + 1))
+			# Chapters 1–2 hand the campaign to the next chapter in place.
+			# Continue from the intro already opened instead of starting the
+			# chapter a second time.
+			handoff = scene._chapter == chapter_index \
+				and scene._story.is_open() and not scene._story._choice_mode
+			if handoff:
+				check(scene._story._eyebrow.text.contains("第 %d 章" % (chapter_index + 1)),
+					"chapter_%d_handoff_intro_eyebrow" % (chapter_index + 1))
+			else:
+				# Start the remaining chapters explicitly for structural coverage.
+				scene._ending_pending = false
+				scene._start_chapter(chapter_index)
+				await create_timer(0.2).timeout
+				check(scene._story.is_open(), "chapter_%d_intro" % (chapter_index + 1))
 			scene._story.close()
 			await process_frame
 			check(await _wait_mds(scene), "chapter_%d_mds_loads" % (chapter_index + 1))
 		check(scene._chapter == chapter_index, "chapter_index_%d" % chapter_index)
 		if chapter_index == 1:
-			# Chapter 2 is a real big-map region world now. It stays unreachable
-			# in the campaign; the loop starts it explicitly for structure.
+			# Chapter 2 is reached through the real Chapter 1 completion page;
+			# the loop also starts it explicitly when needed for structure.
+			check(scene._cleared_in_chapter == 0, "chapter_2_starts_with_clear_zero")
+			var spawn := scene._mds_world.room_node.get_node_or_null("SpawnPoint") as Marker2D
+			check(spawn != null, "chapter_2_handoff_spawn_marker")
+			if spawn != null:
+				check(scene.player.global_position.distance_to(spawn.global_position) < 2.0,
+					"chapter_2_handoff_spawn_position")
+			await physics_frame
+			check(scene.player.is_on_floor(), "chapter_2_handoff_player_on_floor")
 			check(is_equal_approx(scene._fall_limit_local, 1680.0),
 				"chapter_2_fall_plane_from_plan")
 			check(scene._chapter_clear_target() == 7, "chapter_2_clear_target_from_plan")
 			check(scene._chapter_progress_total() == 8, "chapter_2_progress_total_from_plan")
 			await _test_ch2_big_map(scene)
+		elif chapter_index == 2:
+			# Chapter 3 is reached through the real Chapter 2 completion page and
+			# runs on the routed plan/world; its choice hands off to Chapter 4.
+			await _test_ch3_big_map(scene)
+		elif chapter_index == 3:
+			# Chapter 4 is reached through the real Chapter 3 completion page and
+			# runs on the routed plan/world; Boss 4 ends the campaign.
+			await _test_ch4_big_map(scene)
 		else:
-			if chapter_index == 2:
-				# Chapter 3: the event region trigger and the Boss 3 scene are
-				# proved against the step-2 region world, attached to this
-				# scene for the check only. The legacy world is restored right
-				# after, so the structural pass below and the campaign route
-				# stay unchanged.
-				await _test_ch3_bigmap_event_trigger(scene)
-				await _test_ch3_bigmap_boss(scene)
-				await _restore_chapter_world(scene, chapter_index)
-			elif chapter_index == 3:
-				# Chapter 4: the same chapter-agnostic event region trigger and
-				# the plan-routed SmilingArchivist boss are proved against the
-				# Chapter 4 region world, attached for the check only. The legacy
-				# world is restored right after for the structural pass below.
-				await _test_ch4_bigmap_event_trigger(scene)
-				await _test_ch4_bigmap_boss(scene)
-				await _restore_chapter_world(scene, chapter_index)
+			# Chapter 1 keeps the legacy linear rooms and the room-local fall
+			# plane; its completion page hands off to the Chapter 2 big map.
 			check(is_equal_approx(scene._fall_limit_local, ChapterPlanData.DEFAULT_FALL_Y),
 				"chapter_%d_fall_plane_default" % (chapter_index + 1))
 			check(scene._chapter_clear_target() == 6,
@@ -2191,5 +2315,765 @@ func _run() -> void:
 	if audio._voice != null:
 		audio._voice.stop()
 		audio._voice.stream = null
+	# Pass 97: one continuous new-game -> ending chain on the real surfaces.
+	await _test_full_campaign_chain()
+	if audio._music != null:
+		audio._music.stop()
+		audio._music.stream = null
+	if audio._voice != null:
+		audio._voice.stop()
+		audio._voice.stream = null
 	print("INTEGRATION: %d checks, %d failures" % [assertions, failures])
 	quit(1 if failures > 0 else 0)
+
+
+
+
+# --- Pass 97: full 1->4 campaign chain ----------------------------------------
+#
+# One continuous run on the real surfaces: a fresh profile boots the real Hub,
+# the authored tutorial steps are walked, the run starts through the Hub's own
+# request, and every chapter handoff is crossed with real MDS gates, real arena
+# fights, the real reward/event/authority/story pages and the real run-save
+# file. Progression never calls `load_room` or `_mark_encounter_cleared`; the
+# only harness liberty is standing the player inside an arena (the same
+# technique the big-map suites use), never a room transition.
+
+const CHAIN_RUN_PATH := "user://test_chain_run.cfg"
+const CHAIN_PROFILE_PATH := "user://test_chain_profile.cfg"
+
+var _chain_constants: Dictionary = {}
+## Chapter 4's boss-death checkpoint, written before its authority pick, so it
+## still carries the Chapter 3 authority. Replayed by the cross-chapter leg.
+var _chain_boss_checkpoint: Dictionary = {}
+
+
+func _chain_game_constants() -> Dictionary:
+	if _chain_constants.is_empty():
+		var script := load("res://scripts/game.gd") as GDScript
+		if script != null:
+			_chain_constants = script.get_script_constant_map()
+	return _chain_constants
+
+
+func _chain_prefix(chapter_index: int) -> String:
+	return "ch%d" % (chapter_index + 1)
+
+
+func _chain_room(chapter_index: int, region: String) -> String:
+	return "%s_%s" % [_chain_prefix(chapter_index), region]
+
+
+func _chain_audio() -> AudioManager:
+	return root.get_node_or_null("Audio") as AudioManager
+
+
+func _chain_voice_ends_with(suffix: String) -> bool:
+	var audio := _chain_audio()
+	return audio != null and audio._voice.stream != null \
+		and String(audio._voice.stream.resource_path).ends_with(suffix)
+
+
+func _chain_music_is(path: String) -> bool:
+	var audio := _chain_audio()
+	return audio != null and audio._current_music == path
+
+
+## Uses the authored gate [param gate_name] and waits for its target room. A
+## floor arrival keeps that same gate inert for 1.2 s (pass 36), so that grace
+## is waited out first.
+func _chain_use_gate(scene, gate_name: String, expected_room: String) -> bool:
+	var mds = scene._mds_world
+	var from_room: String = mds.current_room
+	var gate := MDSGate.find_gate(mds.room_node, gate_name)
+	check(gate != null, "chain_gate_present_%s_%s" % [from_room, gate_name])
+	if gate == null:
+		return false
+	var wait := 0.45
+	if mds._arrival_gate == gate_name:
+		var grace_left: float = float(mds._arrival_grace_until - Time.get_ticks_msec()) / 1000.0
+		wait = maxf(wait, grace_left + 0.15)
+	await create_timer(wait).timeout
+	scene.player.velocity = Vector2.ZERO
+	gate.use()
+	var arrived := await _wait_room_id(mds, expected_room, 6.0)
+	check(arrived, "chain_gate_walk_%s_%s_to_%s" % [from_room, gate_name, expected_room])
+	return arrived
+
+
+## Locks [param arena] by standing the real player inside its entry band, then
+## kills everything that spawns (queued waves included) through the normal
+## damage path until the arena clears and the reward page opens.
+func _chain_clear_arena(scene, arena: ArenaRoom, label: String) -> bool:
+	if arena == null:
+		check(false, "chain_arena_missing_" + label)
+		return false
+	scene.player._invulnerable_left = 999.0
+	scene.player.global_position = arena.global_position + Vector2(0, -120)
+	scene.player.velocity = Vector2.ZERO
+	scene._update_room_locks()
+	check(arena.is_locked(), "chain_arena_locks_" + label)
+	for _attempt in 12:
+		var enemies := arena.get_node_or_null(ArenaRoom.ENEMIES_NODE)
+		if enemies != null:
+			for enemy in enemies.get_children():
+				if enemy is Enemy and not enemy.dead:
+					enemy.take_damage(100000)
+		await create_timer(0.35).timeout
+		if arena.is_cleared():
+			break
+	check(arena.is_cleared(), "chain_arena_clears_" + label)
+	var reward_open := await _wait_reward(scene, 3.0)
+	check(reward_open, "chain_reward_opens_" + label)
+	return reward_open
+
+
+## Takes the rest card (index 2) so combat rewards never add corruption; the
+## campaign-end judgement then depends on the authored chapter choices alone.
+func _chain_take_rest_reward(scene, label: String) -> void:
+	check(scene._reward_ui.visible, "chain_reward_visible_" + label)
+	if not scene._reward_ui.visible:
+		return
+	check(scene._reward_options.size() == 3, "chain_reward_three_cards_" + label)
+	scene._reward_ui._choose(2)
+	await process_frame
+	await process_frame
+	check(not scene._reward_ui.visible, "chain_reward_closed_" + label)
+	check(not paused, "chain_reward_unpauses_" + label)
+
+
+## Reads the live checkpoint and checks the keys a handoff contract depends on.
+func _chain_read_save(label: String, expectation: Dictionary) -> Dictionary:
+	var saved := RunSave.read(CHAIN_RUN_PATH)
+	check(not saved.is_empty(), "chain_save_written_" + label)
+	if saved.is_empty():
+		return saved
+	var run: Dictionary = saved.get("run", {})
+	var progress: Dictionary = saved.get("progress", {})
+	var authority: Dictionary = saved.get("authority", {})
+	var world: Dictionary = saved.get("world", {})
+	for key in expectation:
+		match String(key):
+			"chapter":
+				check(int(run.get("chapter", -1)) == int(expectation[key]),
+					"chain_save_chapter_" + label)
+			"room":
+				check(String(run.get("room", "")) == String(expectation[key]),
+					"chain_save_room_" + label)
+			"cleared":
+				check(int(progress.get("cleared_in_chapter", -1)) == int(expectation[key]),
+					"chain_save_cleared_" + label)
+			"authority":
+				check(String(authority.get("id", "")) == String(expectation[key]),
+					"chain_save_authority_" + label)
+			"authority_chapter":
+				check(int(authority.get("chapter", -99)) == int(expectation[key]),
+					"chain_save_authority_chapter_" + label)
+			"mercy":
+				check(int(run.get("mercy", -99)) == int(expectation[key]),
+					"chain_save_mercy_" + label)
+			"pages_min":
+				check(int(run.get("pages", -1)) >= int(expectation[key]),
+					"chain_save_pages_" + label)
+			"boss_defeated":
+				check(bool(world.get("boss_defeated", false)) == bool(expectation[key]),
+					"chain_save_boss_defeated_" + label)
+			"encounters_include":
+				var ids: Array = progress.get("cleared_encounters", [])
+				for id in expectation[key] as Array:
+					check(ids.has(String(id)), "chain_save_encounter_%s_%s" % [label, id])
+			"encounters_empty":
+				check((progress.get("cleared_encounters", []) as Array).is_empty(),
+					"chain_save_encounters_empty_" + label)
+	return saved
+
+
+func _chain_wait_intro(scene, chapter_index: int, timeout := 4.0) -> bool:
+	var left := timeout
+	while left > 0.0:
+		if scene._chapter == chapter_index and scene._story != null \
+				and scene._story.is_open() and not scene._story._choice_mode:
+			return true
+		await create_timer(0.05).timeout
+		left -= 0.05
+	return false
+
+
+func _chain_wait_on_floor(scene, frames := 40) -> bool:
+	for _frame in frames:
+		await physics_frame
+		if scene.player.is_on_floor():
+			return true
+	return false
+
+
+## Chapter 2–4 handoff contract: routing switched, intro text/voice/music, spawn
+## marker reached on foot, plan-driven clear target / HUD denominator / fall
+## plane / map title, and a chapter that starts from a clean slate.
+func _chain_check_chapter_opening(scene, chapter_index: int) -> void:
+	var number := chapter_index + 1
+	var prefix := _chain_prefix(chapter_index)
+	var chapter := CampaignData.chapter(chapter_index)
+	var constants := _chain_game_constants()
+	var plan_paths: Array = constants.get("CHAPTER_PLAN_PATHS", [])
+	var world_files: Array = constants.get("MDS_WORLD_FILES", [])
+	var world_scenes: Array = constants.get("MDS_CHAPTER_SCENES", [])
+	var plan: ChapterPlanData = scene._chapter_plan
+	check(await _chain_wait_intro(scene, chapter_index),
+		"chain_intro_open_%d" % number)
+	check(scene._chapter == chapter_index, "chain_chapter_index_%d" % number)
+	check(plan != null and plan.big_map, "chain_plan_is_big_map_%d" % number)
+	if plan != null:
+		check(plan_paths.size() == 4
+			and String(plan_paths[chapter_index]) == plan.resource_path,
+			"chain_plan_routed_%d" % number)
+		check(plan.start_region() == "%s_entry" % prefix,
+			"chain_plan_start_region_%d" % number)
+	# Intro page: eyebrow, title, every authored line, voice and music key.
+	check(scene._story._eyebrow.text.contains("第 %d 章" % int(chapter["number"])),
+		"chain_intro_eyebrow_%d" % number)
+	check(scene._story._title.text == String(chapter["title"]),
+		"chain_intro_title_%d" % number)
+	var intro: Array = chapter["intro"]
+	for line_index in intro.size():
+		check(scene._story._body.text.contains(String(intro[line_index])),
+			"chain_intro_line_%d_%d" % [number, line_index])
+	check(_chain_music_is(String(chapter["music"])), "chain_music_%d" % number)
+	check(_chain_voice_ends_with("%s.ogg" % String(chapter["voice_intro"])),
+		"chain_intro_voice_%d" % number)
+	scene._story.close()
+	await process_frame
+	check(not scene._ending_pending, "chain_intro_closes_%d" % number)
+	check(await _wait_mds(scene), "chain_mds_ready_%d" % number)
+	check(scene._mds_world.world_file == String(world_files[chapter_index]),
+		"chain_world_routed_%d" % number)
+	check(world_scenes.size() == 4 and scene._mds_world.scene_file_path
+		== (world_scenes[chapter_index] as PackedScene).resource_path,
+		"chain_world_scene_routed_%d" % number)
+	check(scene._mds_world.current_room == "%s_entry" % prefix,
+		"chain_starts_at_entry_%d" % number)
+	# Spawn: the authored entrance marker, standing on it rather than falling in.
+	var spawn := scene._mds_world.room_node.get_node_or_null("SpawnPoint") as Marker2D
+	check(spawn != null, "chain_spawn_marker_%d" % number)
+	if spawn != null:
+		check(scene.player.global_position.distance_to(spawn.global_position) < 2.0,
+			"chain_spawn_at_marker_%d" % number)
+	check(await _chain_wait_on_floor(scene), "chain_spawn_on_floor_%d" % number)
+	# Plan-driven numbers, HUD denominator, fall plane and map title.
+	check(scene._chapter_clear_target() == 7, "chain_clear_target_%d" % number)
+	check(scene._chapter_progress_total() == 8, "chain_progress_total_%d" % number)
+	var progress_label := scene.hud.find_child("Progress", true, false) as Label
+	check(progress_label != null and progress_label.text == "档案  0 / 8",
+		"chain_hud_denominator_%d" % number)
+	var entry_size: Vector2 = plan.region_size("%s_entry" % prefix) if plan != null \
+		else Vector2.ZERO
+	check(is_equal_approx(scene._fall_limit_local, entry_size.y + 240.0),
+		"chain_fall_plane_from_plan_%d" % number)
+	check(is_equal_approx(scene._fall_limit_local, 1680.0),
+		"chain_fall_plane_authored_%d" % number)
+	check(scene._map_overlay.title_text() == "%s地图" % String(chapter["region"]),
+		"chain_map_title_%d" % number)
+	# The handoff clears the chapter it left: no progress, no dead boss.
+	check(scene._cleared_in_chapter == 0, "chain_cleared_zero_%d" % number)
+	check(scene._cleared_encounters.is_empty(), "chain_encounters_empty_%d" % number)
+	check(not scene._boss_defeated, "chain_boss_reset_%d" % number)
+
+
+## Walks one Chapter 2–4 big map end to end on real gates: entry -> branch_b
+## (fight) -> hub -> branch_a (two fights) -> hub -> event (one-shot page) ->
+## hub -> well (two fights) -> elite (fight) -> boss -> authority -> outro ->
+## chapter-end choice. Returns right after the choice; the handoff (or the
+## campaign end on Chapter 4) is left running for the caller to assert.
+func _chain_walk_big_map(scene, choice_index: int, chapter_index: int) -> void:
+	var number := chapter_index + 1
+	var chapter := CampaignData.chapter(chapter_index)
+	# --- entry -> branch_b -> hub -> branch_a.
+	check(await _chain_use_gate(scene, "bot1", _chain_room(chapter_index, "branch_b")),
+		"chain_ch%d_entry_to_branch_b" % number)
+	await _chain_clear_arena(scene,
+		scene._mds_world.room_node.get_node_or_null("Arena") as ArenaRoom,
+		"ch%d_branch_b" % number)
+	await _chain_take_rest_reward(scene, "ch%d_branch_b" % number)
+	check(scene._cleared_in_chapter == 1, "chain_ch%d_first_clear" % number)
+	check(scene._cleared_encounters.has(
+		"%s/Arena" % _chain_room(chapter_index, "branch_b")),
+		"chain_ch%d_branch_b_settled" % number)
+	check(await _chain_use_gate(scene, "right1", _chain_room(chapter_index, "hub")),
+		"chain_ch%d_branch_b_to_hub" % number)
+	check(await _chain_use_gate(scene, "top1", _chain_room(chapter_index, "branch_a")),
+		"chain_ch%d_hub_to_branch_a" % number)
+	for arena_name in ["Arena", "Arena2"]:
+		await _chain_clear_arena(scene,
+			scene._mds_world.room_node.get_node_or_null(arena_name) as ArenaRoom,
+			"ch%d_branch_a_%s" % [number, arena_name])
+		await _chain_take_rest_reward(scene, "ch%d_branch_a_%s" % [number, arena_name])
+	check(scene._cleared_in_chapter == 3, "chain_ch%d_three_clears" % number)
+	# --- back to the hub, then the one-shot event region.
+	check(await _chain_use_gate(scene, "bot1", _chain_room(chapter_index, "hub")),
+		"chain_ch%d_branch_a_to_hub" % number)
+	check(await _chain_use_gate(scene, "right1", _chain_room(chapter_index, "event")),
+		"chain_ch%d_hub_to_event" % number)
+	check(await _wait_story(scene, 4.0), "chain_ch%d_event_page" % number)
+	check(scene._story._choice_mode, "chain_ch%d_event_is_choice" % number)
+	var event_id := RoomProgress.event_encounter_id(_chain_room(chapter_index, "event"))
+	var pages_before: int = scene.run_state.pages
+	scene._story.choose(1)
+	await create_timer(0.4).timeout
+	check(scene._cleared_encounters.has(event_id), "chain_ch%d_event_settled" % number)
+	check(scene.run_state.pages == pages_before + 12, "chain_ch%d_event_pages" % number)
+	check(scene._cleared_in_chapter == 4, "chain_ch%d_four_clears" % number)
+	check(not scene._story.is_open(), "chain_ch%d_event_closed" % number)
+	# Leaving and re-entering must not reopen a settled event page.
+	check(await _chain_use_gate(scene, "left1", _chain_room(chapter_index, "hub")),
+		"chain_ch%d_event_to_hub" % number)
+	check(await _chain_use_gate(scene, "right1", _chain_room(chapter_index, "event")),
+		"chain_ch%d_hub_to_event_again" % number)
+	await create_timer(1.2).timeout
+	check(not scene._story.is_open(), "chain_ch%d_event_one_shot" % number)
+	check(await _chain_use_gate(scene, "left1", _chain_room(chapter_index, "hub")),
+		"chain_ch%d_event_back_to_hub" % number)
+	# --- the well's two arenas, the elite, then the one-way boss door.
+	check(await _chain_use_gate(scene, "bot1", _chain_room(chapter_index, "well")),
+		"chain_ch%d_hub_to_well" % number)
+	for arena_name in ["Arena", "Arena2"]:
+		await _chain_clear_arena(scene,
+			scene._mds_world.room_node.get_node_or_null(arena_name) as ArenaRoom,
+			"ch%d_well_%s" % [number, arena_name])
+		await _chain_take_rest_reward(scene, "ch%d_well_%s" % [number, arena_name])
+	check(scene._cleared_in_chapter == 6, "chain_ch%d_six_clears" % number)
+	check(await _chain_use_gate(scene, "right1", _chain_room(chapter_index, "elite")),
+		"chain_ch%d_well_to_elite" % number)
+	await _chain_clear_arena(scene,
+		scene._mds_world.room_node.get_node_or_null("Arena") as ArenaRoom,
+		"ch%d_elite" % number)
+	await _chain_take_rest_reward(scene, "ch%d_elite" % number)
+	check(scene._cleared_in_chapter == 7, "chain_ch%d_target_met" % number)
+	check(scene._cleared_in_chapter == scene._chapter_clear_target(),
+		"chain_ch%d_target_matches_plan" % number)
+	# --- boss: the plan's scene, the real fight, this chapter's authority pick.
+	check(await _chain_use_gate(scene, "right1", _chain_room(chapter_index, "boss")),
+		"chain_ch%d_elite_to_boss" % number)
+	await process_frame
+	var boss_arena := scene._mds_world.room_node.get_node_or_null("Arena") as ArenaRoom
+	check(boss_arena != null, "chain_ch%d_boss_arena" % number)
+	check(scene._boss != null and is_instance_valid(scene._boss) and not scene._boss.dead,
+		"chain_ch%d_boss_spawned" % number)
+	var plan: ChapterPlanData = scene._chapter_plan
+	check(plan != null and plan.boss_scene != null and scene._boss != null
+		and scene._boss.scene_file_path == plan.boss_scene.resource_path,
+		"chain_ch%d_boss_scene_routed" % number)
+	var objective := scene.hud.find_child("Objective", true, false) as Label
+	check(objective != null and objective.text == "击败 %s" % String(chapter["boss_name"]),
+		"chain_ch%d_boss_objective" % number)
+	if boss_arena == null or scene._boss == null:
+		return
+	scene.player._invulnerable_left = 999.0
+	scene.player.global_position = boss_arena.global_position + Vector2(0, -120)
+	scene.player.velocity = Vector2.ZERO
+	scene._update_room_locks()
+	check(boss_arena.is_locked(), "chain_ch%d_boss_locks" % number)
+	scene._boss.take_damage(100000)
+	# `_on_boss_died` writes the pre-pick checkpoint synchronously, so the final
+	# chapter's copy still carries the previous chapter's authority.
+	if chapter_index == CampaignData.chapter_count() - 1:
+		_chain_boss_checkpoint = RunSave.read(CHAIN_RUN_PATH)
+		check(not _chain_boss_checkpoint.is_empty(),
+			"chain_ch4_boss_checkpoint_saved")
+		if not _chain_boss_checkpoint.is_empty():
+			var snap_run: Dictionary = _chain_boss_checkpoint.get("run", {})
+			var snap_world: Dictionary = _chain_boss_checkpoint.get("world", {})
+			var snap_authority: Dictionary = _chain_boss_checkpoint.get("authority", {})
+			check(int(snap_run.get("chapter", -1)) == chapter_index,
+				"chain_ch4_boss_checkpoint_chapter")
+			check(String(snap_run.get("room", "")) == _chain_room(chapter_index, "boss"),
+				"chain_ch4_boss_checkpoint_room")
+			check(bool(snap_world.get("boss_defeated", false)),
+				"chain_ch4_boss_checkpoint_boss_dead")
+			check(int(snap_authority.get("chapter", -99)) == chapter_index - 1,
+				"chain_ch4_boss_checkpoint_carries_previous_authority")
+	check(await _wait_authority_choice(scene, 5.0), "chain_ch%d_authority_opens" % number)
+	check(scene._authority_choice.get_button_count() >= 2,
+		"chain_ch%d_authority_pool" % number)
+	scene._authority_choice._choose(0)
+	await create_timer(0.4).timeout
+	check(scene.run_state.authority != null, "chain_ch%d_authority_applied" % number)
+	check(scene._authority_granted_chapter == chapter_index,
+		"chain_ch%d_authority_chapter" % number)
+	scene.save_run_now()
+	_chain_read_save("ch%d_after_authority" % number, {
+		"chapter": chapter_index,
+		"room": _chain_room(chapter_index, "boss"),
+		"cleared": 7,
+		"authority_chapter": chapter_index,
+		"boss_defeated": true,
+	})
+	# --- outro -> chapter-end choice.
+	check(await _wait_story(scene, 4.0), "chain_ch%d_outro" % number)
+	check(scene._story._title.text == String(chapter["title"]),
+		"chain_ch%d_outro_title" % number)
+	check(scene._story._body.text.contains(String(chapter["outro"][0])),
+		"chain_ch%d_outro_lines" % number)
+	check(_chain_voice_ends_with("%s.ogg" % String(chapter["voice_outro"])),
+		"chain_ch%d_outro_voice" % number)
+	check(_chain_music_is(String(chapter["music"])),
+		"chain_ch%d_outro_music" % number)
+	scene._story.close()
+	await create_timer(0.25).timeout
+	check(scene._story.is_open() and scene._story._choice_mode,
+		"chain_ch%d_end_choice" % number)
+	var choice: Dictionary = chapter["choice"]
+	check(scene._story._body.text == String(choice["body"]),
+		"chain_ch%d_choice_body" % number)
+	check(scene._story._options.get_child_count() == (choice["options"] as Array).size(),
+		"chain_ch%d_choice_options" % number)
+	var mercy_before: int = scene._mercy
+	var corruption_before: int = scene.run_state.corruption
+	scene._story.choose(choice_index)
+	await create_timer(0.25).timeout
+	var option: Dictionary = (choice["options"] as Array)[choice_index]
+	check(scene._mercy == mercy_before + int(option.get("mercy", 0)),
+		"chain_ch%d_choice_mercy" % number)
+	if option.has("corruption"):
+		check(scene.run_state.corruption > corruption_before,
+			"chain_ch%d_choice_corruption" % number)
+	if chapter["id"] == &"smiling_theater":
+		check(scene._burned_final == (choice_index == 1),
+			"chain_ch4_burn_flag_follows_choice")
+
+
+func _chain_cleanup(flow) -> void:
+	RunSave.clear(CHAIN_RUN_PATH)
+	for suffix in ["", ".bak", ".tmp"]:
+		var path: String = CHAIN_PROFILE_PATH + String(suffix)
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	if flow != null:
+		flow.auto_save = false
+		flow.run_save_path = RunSave.DEFAULT_PATH
+		flow.profile_path = GameFlow.DEFAULT_PROFILE_PATH
+		flow.resume_requested = false
+
+
+## Task 1 of pass 97: one real run from a fresh profile to the ending screen,
+## then a real checkpoint resume that walks the other ending.
+func _test_full_campaign_chain() -> void:
+	var flow := root.get_node_or_null("Flow") as GameFlow
+	var audio := root.get_node_or_null("Audio") as AudioManager
+	if flow == null or audio == null:
+		check(false, "chain_autoloads_present")
+		return
+	# Real saves on temp paths: the chain must write and re-read checkpoints.
+	flow.profile_path = CHAIN_PROFILE_PATH
+	flow.run_save_path = CHAIN_RUN_PATH
+	flow.auto_save = true
+	flow.resume_requested = false
+	flow.difficulty = 2
+	flow.reset_profile()
+	flow.title_shown_this_session = true
+	check(flow.profile != null and not flow.profile.tutorial_done,
+		"chain_fresh_profile")
+
+	# --- Boot: the real Hub, the authored tutorial steps, the real run request.
+	var hub = load("res://scenes/hub/hub.tscn").instantiate()
+	root.add_child(hub)
+	current_scene = hub
+	await create_timer(0.6).timeout
+	check(hub.tutorial_flow != null and hub.tutorial_flow.is_active(),
+		"chain_tutorial_starts")
+	check(hub.tutorial_flow.get_hint().contains("第 1 步"), "chain_tutorial_step_1")
+	hub._open_tutorial_codex()
+	await create_timer(0.25).timeout
+	check(paused and hub._tutorial_codex.visible, "chain_tutorial_codex_opens")
+	check(hub.tutorial_flow.get_hint().contains("第 2 步"), "chain_tutorial_step_2")
+	hub._close_tutorial_codex()
+	await create_timer(0.25).timeout
+	check(not paused, "chain_tutorial_codex_closes")
+	var tutorial_words: Array[WordData] = []
+	for word in hub._tutorial_run.inventory.words:
+		if tutorial_words.size() < 2 and word != null:
+			tutorial_words.append(word)
+	var tutorial_phrase: ResolvedPhrase = PhraseResolver.new().resolve(tutorial_words)
+	check(tutorial_phrase != null, "chain_tutorial_phrase_resolves")
+	hub._on_tutorial_phrase_equipped(0, tutorial_phrase)
+	await create_timer(0.2).timeout
+	check(hub.tutorial_flow.get_hint().contains("训练碑"), "chain_tutorial_step_3")
+	hub.interact_with(hub.training_dummy)
+	await create_timer(0.25).timeout
+	check(not hub.tutorial_flow.is_active(), "chain_tutorial_finishes")
+	check(flow.profile.tutorial_done, "chain_tutorial_persisted")
+	var saved_profile := Profile.new()
+	root.add_child(saved_profile)
+	check(saved_profile.load_profile(CHAIN_PROFILE_PATH)
+		and saved_profile.tutorial_done, "chain_tutorial_on_disk")
+	saved_profile.queue_free()
+	# A real run request boots the real game scene through the Hub's own path.
+	hub.request_run()
+	var booted := false
+	for _i in 160:
+		await create_timer(0.05).timeout
+		if current_scene != null and current_scene.has_method("_start_chapter"):
+			booted = true
+			break
+	check(booted, "chain_run_request_boots_game")
+	var scene = current_scene
+	if scene == null or not scene.has_method("_start_chapter"):
+		_chain_cleanup(flow)
+		return
+
+	# --- Chapter 1: intro -> five fights + one event -> boss 1 -> choice.
+	# The chapter start is deferred behind `_ready`, so wait for the authored
+	# intro page instead of sampling the frame the scene swap lands on.
+	check(await _chain_wait_intro(scene, 0, 6.0), "chain_ch1_intro")
+	check(scene._chapter == 0, "chain_chapter_1_boots")
+	check(scene._story.is_open(), "chain_ch1_intro_open")
+	check(scene._story._eyebrow.text.contains("第 1 章"), "chain_ch1_intro_eyebrow")
+	check(scene._story._title.text == String(CampaignData.chapter(0)["title"]),
+		"chain_ch1_intro_title")
+	check(_chain_music_is(String(CampaignData.chapter(0)["music"])), "chain_ch1_music")
+	check(_chain_voice_ends_with("ch1_intro.ogg"), "chain_ch1_intro_voice")
+	scene._story.close()
+	await process_frame
+	check(await _wait_mds(scene), "chain_ch1_mds_ready")
+	check(scene._mds_world.current_room == "ch1_01", "chain_ch1_starts_room_1")
+	check(scene._chapter_clear_target() == 6, "chain_ch1_clear_target")
+	check(scene._chapter_progress_total() == 7, "chain_ch1_progress_total")
+	var ch1_progress := scene.hud.find_child("Progress", true, false) as Label
+	check(ch1_progress != null and ch1_progress.text == "档案  0 / 7",
+		"chain_ch1_hud_denominator")
+	check(is_equal_approx(scene._fall_limit_local, ChapterPlanData.DEFAULT_FALL_Y),
+		"chain_ch1_fall_plane")
+	for room_number in [1, 2, 3, 4, 5, 6]:
+		var room_id := "ch1_%02d" % room_number
+		if room_number > 1:
+			check(await _chain_use_gate(scene, "right1", room_id),
+				"chain_ch1_gate_room_%d" % room_number)
+		check(scene._mds_world.current_room == room_id,
+			"chain_ch1_room_%d" % room_number)
+		if room_number == 5:
+			# Authored event room: the page opens on entry and takes a choice;
+			# no fight and no reward page.
+			check(await _wait_story(scene, 4.0), "chain_ch1_event_page")
+			var ch1_event_before: int = scene.run_state.pages
+			scene._story.choose(1)
+			await create_timer(0.4).timeout
+			check(scene.run_state.pages == ch1_event_before + 12,
+				"chain_ch1_event_pages")
+			check(scene._cleared_encounters.has("ch1_05/event"),
+				"chain_ch1_event_settled")
+			check(scene._cleared_in_chapter == 5, "chain_ch1_five_clears")
+			continue
+		await _chain_clear_arena(scene,
+			scene._mds_world.room_node.get_node_or_null("Arena") as ArenaRoom,
+			"ch1_room_%d" % room_number)
+		await _chain_take_rest_reward(scene, "ch1_room_%d" % room_number)
+		# The Chapter 1 event room (room 5) counts as one clear too, so a combat
+		# room's clear count equals its room number on this route.
+		var expected_clears: int = room_number
+		check(scene._cleared_in_chapter == expected_clears,
+			"chain_ch1_clear_count_%d" % room_number)
+		if room_number == 3:
+			# Optional vault through its interact door and back.
+			check(await _chain_use_gate(scene, "door1", "ch1_vault"),
+				"chain_ch1_vault_entered")
+			check(scene._chests.size() >= 1 and scene._steles.size() >= 1,
+				"chain_ch1_vault_content")
+			check(await _chain_use_gate(scene, "door1", "ch1_03"),
+				"chain_ch1_vault_returned")
+	check(scene._cleared_in_chapter == 6, "chain_ch1_six_clears")
+	check(await _chain_use_gate(scene, "right1", "ch1_rest"), "chain_ch1_rest_room")
+	check(await _chain_use_gate(scene, "right1", "ch1_boss"), "chain_ch1_boss_room")
+	await process_frame
+	var ch1_boss_arena := scene._mds_world.room_node.get_node_or_null("Arena") as ArenaRoom
+	check(scene._boss is InkArchivistCh1, "chain_ch1_boss_scene")
+	check(ch1_boss_arena != null, "chain_ch1_boss_arena")
+	if ch1_boss_arena != null and scene._boss != null:
+		scene.player._invulnerable_left = 999.0
+		scene.player.global_position = ch1_boss_arena.global_position + Vector2(0, -120)
+		scene.player.velocity = Vector2.ZERO
+		scene._update_room_locks()
+		check(ch1_boss_arena.is_locked(), "chain_ch1_boss_locks")
+		scene._boss.take_damage(100000)
+	check(await _wait_authority_choice(scene, 5.0), "chain_ch1_authority_opens")
+	scene._authority_choice._choose(0)
+	await create_timer(0.4).timeout
+	check(scene.run_state.authority != null, "chain_ch1_authority_applied")
+	check(scene._authority_granted_chapter == 0, "chain_ch1_authority_chapter")
+	check(await _wait_story(scene, 4.0), "chain_ch1_outro")
+	check(_chain_voice_ends_with("ch1_outro.ogg"), "chain_ch1_outro_voice")
+	scene._story.close()
+	await create_timer(0.25).timeout
+	check(scene._story.is_open() and scene._story._choice_mode, "chain_ch1_end_choice")
+	check(not flow.profile.demo_cleared, "chain_ch1_demo_not_cleared_yet")
+	scene._story.choose(0)
+	# --- Handoff 1 -> 2.
+	check(await _chain_wait_intro(scene, 1, 4.0), "chain_handoff_1_opens_chapter_2")
+	check(not scene._finished, "chain_handoff_1_no_ending")
+	check(flow.profile.demo_cleared, "chain_handoff_1_demo_cleared")
+	var disk_profile := Profile.new()
+	root.add_child(disk_profile)
+	check(disk_profile.load_profile(CHAIN_PROFILE_PATH) and disk_profile.demo_cleared,
+		"chain_handoff_1_demo_cleared_on_disk")
+	disk_profile.queue_free()
+	check(scene._mercy == 1, "chain_handoff_1_mercy_choice_applied")
+	await _chain_check_chapter_opening(scene, 1)
+	_chain_read_save("ch2_entry", {
+		"chapter": 1,
+		"room": "ch2_entry",
+		"cleared": 0,
+		"mercy": 1,
+		"pages_min": 12,
+		"encounters_empty": true,
+		"boss_defeated": false,
+	})
+	# --- Chapter 2 -> handoff 2 -> 3.
+	await _chain_walk_big_map(scene, 0, 1)
+	check(await _chain_wait_intro(scene, 2, 4.0), "chain_handoff_2_opens_chapter_3")
+	check(not scene._finished, "chain_handoff_2_no_ending")
+	check(scene._mercy == 2, "chain_handoff_2_mercy_accumulated")
+	check(flow.profile.endings.is_empty(), "chain_handoff_2_records_no_ending")
+	await _chain_check_chapter_opening(scene, 2)
+	_chain_read_save("ch3_entry", {
+		"chapter": 2,
+		"room": "ch3_entry",
+		"cleared": 0,
+		"mercy": 2,
+		"encounters_empty": true,
+		"boss_defeated": false,
+	})
+	# --- Chapter 3 -> handoff 3 -> 4.
+	await _chain_walk_big_map(scene, 0, 2)
+	check(await _chain_wait_intro(scene, 3, 4.0), "chain_handoff_3_opens_chapter_4")
+	check(not scene._finished, "chain_handoff_3_no_ending")
+	check(scene._mercy == 3, "chain_handoff_3_mercy_accumulated")
+	check(flow.profile.endings.is_empty(), "chain_handoff_3_records_no_ending")
+	await _chain_check_chapter_opening(scene, 3)
+	_chain_read_save("ch4_entry", {
+		"chapter": 3,
+		"room": "ch4_entry",
+		"cleared": 0,
+		"mercy": 3,
+		"encounters_empty": true,
+		"boss_defeated": false,
+	})
+	# --- Chapter 4: burn the roster and end the campaign.
+	await _chain_walk_big_map(scene, 1, 3)
+	check(scene._burned_final, "chain_ch4_burned_flag")
+	check(await _chain_wait_finished(scene, 4.0), "chain_campaign_ends")
+	check(scene.ending_screen.visible, "chain_ending_screen")
+	check(flow.last_ending.get("id", &"") == &"burned", "chain_burned_ending")
+	check(paused, "chain_ending_pauses")
+	check(flow.profile.endings.has("burned"), "chain_burned_recorded")
+	check(not FileAccess.file_exists(CHAIN_RUN_PATH), "chain_ending_clears_checkpoint")
+	var burned_title := scene.ending_screen.get_node_or_null(
+		"Center/Panel/Margin/VBox/Title") as Label
+	check(burned_title != null and burned_title.text == "焚毁档案",
+		"chain_burned_end_screen_title")
+	check(_chain_voice_ends_with("ending_burned.ogg"), "chain_burned_ending_voice")
+	# `ending_for` has no chapter term (CampaignData): the judgement point is the
+	# campaign end, so the same merciful run reaches `restored` when the final
+	# choice rewrites the roster instead of burning it. The README line naming
+	# the third chapter end as that point is stale copy (recorded in the pass-97
+	# notes); the rule itself is untouched here.
+	check(CampaignData.ending_for(true, 0, 3, false).get("id", &"") == &"restored",
+		"chain_restored_rule_reachable")
+	check(CampaignData.ending_for(true, 0, 0, true).get("id", &"") == &"burned",
+		"chain_burned_rule_wins")
+	# --- Cross-chapter carry-over: replay the Chapter 4 boss-death checkpoint.
+	# It was written before Chapter 4's authority pick, carrying the Chapter 3
+	# authority. Resuming must keep the inherited authority, still offer this
+	# chapter's pick (pass 83), name the objective after Chapter 4's boss
+	# (pass 84), and never spawn a second boss.
+	paused = false
+	root.remove_child(scene)
+	scene.free()
+	await process_frame
+	check(not _chain_boss_checkpoint.is_empty(), "chain_boss_snapshot_captured")
+	if _chain_boss_checkpoint.is_empty():
+		_chain_cleanup(flow)
+		return
+	check(RunSave.write(_chain_boss_checkpoint, CHAIN_RUN_PATH), "chain_snapshot_written")
+	flow.resume_requested = true
+	var resumed = load("res://scenes/main.tscn").instantiate()
+	root.add_child(resumed)
+	current_scene = resumed
+	await create_timer(0.5).timeout
+	check(await _wait_mds(resumed), "chain_resume_boots")
+	check(resumed._chapter == 3, "chain_resume_chapter_4")
+	check(resumed._mds_world.current_room == "ch4_boss", "chain_resume_boss_room")
+	check(resumed._boss == null, "chain_resume_no_second_boss")
+	check(resumed._boss_defeated, "chain_resume_boss_defeated")
+	check(resumed.run_state.authority != null, "chain_resume_authority_carried")
+	check(resumed._authority_granted_chapter == 2,
+		"chain_resume_authority_chapter_carried")
+	var objective := resumed.hud.find_child("Objective", true, false) as Label
+	check(objective != null and objective.text == "笑面史官已经倒下",
+		"chain_resume_objective_uses_this_chapter_boss")
+	# Pass 97 regression: the checkpoint restores the player inside the boss
+	# arena, so the lock pass must not re-arm a room whose boss is already down.
+	# Before the fix it re-locked the arena, replayed the boss entrance sting and
+	# replaced the "已经倒下" objective with a fresh kill order while the
+	# authority pick was already pending.
+	var resume_boss_arena: ArenaRoom = resumed._mds_boss_arena
+	check(resume_boss_arena != null and not resume_boss_arena.is_locked(),
+		"chain_resume_dead_boss_room_stays_open")
+	check(not resumed._boss_entrance_started,
+		"chain_resume_dead_boss_no_entrance_replay")
+	check(_chain_music_is(String(CampaignData.chapter(3)["music"])),
+		"chain_resume_dead_boss_keeps_chapter_music")
+	check(await _wait_authority_choice(resumed, 6.0),
+		"chain_resume_authority_pick_offered")
+	resumed._authority_choice._choose(0)
+	await create_timer(0.4).timeout
+	check(resumed._authority_granted_chapter == 3,
+		"chain_resume_authority_chapter_updated")
+	check(await _wait_story(resumed, 5.0), "chain_resume_outro")
+	check(_chain_voice_ends_with("ch4_outro.ogg"), "chain_resume_outro_voice")
+	resumed._story.close()
+	await create_timer(0.3).timeout
+	check(resumed._story.is_open() and resumed._story._choice_mode,
+		"chain_resume_end_choice")
+	resumed._story.choose(0)
+	check(await _chain_wait_finished(resumed, 4.0), "chain_resume_campaign_ends")
+	check(flow.last_ending.get("id", &"") == &"restored", "chain_resume_restored_ending")
+	check(flow.profile.endings.has("burned") and flow.profile.endings.has("restored"),
+		"chain_both_endings_recorded")
+	var restored_title := resumed.ending_screen.get_node_or_null(
+		"Center/Panel/Margin/VBox/Title") as Label
+	check(restored_title != null and restored_title.text == "复原",
+		"chain_restored_end_screen_title")
+	var echoes := resumed.ending_screen.get_node_or_null(
+		"Center/Panel/Margin/VBox/Echoes") as Label
+	check(echoes != null and not echoes.text.is_empty(), "chain_restored_end_echoes")
+	# The end screen and the gallery read the same record.
+	var gallery := EndingGalleryUI.new()
+	root.add_child(gallery)
+	gallery.open(flow.profile)
+	var restored_index := -1
+	var burned_index := -1
+	for index in gallery.get_entry_count():
+		var text := gallery.get_entry_text(index)
+		if text.begins_with("复原"):
+			restored_index = index
+		elif text.begins_with("焚毁档案"):
+			burned_index = index
+	check(restored_index >= 0 and gallery.is_unlocked(restored_index),
+		"chain_gallery_restored_unlocked")
+	check(burned_index >= 0 and gallery.is_unlocked(burned_index),
+		"chain_gallery_burned_unlocked")
+	gallery.close()
+	gallery.queue_free()
+	paused = false
+	root.remove_child(resumed)
+	resumed.free()
+	await process_frame
+	_chain_cleanup(flow)
+
+
+func _chain_wait_finished(scene, timeout := 4.0) -> bool:
+	var left := timeout
+	while left > 0.0:
+		if scene._finished:
+			return true
+		await create_timer(0.05).timeout
+		left -= 0.05
+	return false

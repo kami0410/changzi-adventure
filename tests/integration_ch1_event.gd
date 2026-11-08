@@ -301,6 +301,55 @@ func _run() -> void:
 		"event_fallback_reports_no_word")
 	check(scene.run_state.pages == pages_before_fallback + 6, "event_fallback_pays_pages")
 
+	# Pass 86: opening the map inside the 0.8 s event window must not stack the
+	# required choice on top of it. The page waits behind the map; closing the
+	# map lets it open normally instead of unpausing the run underneath it.
+	scene._cleared_encounters.erase("ch1_05/event")
+	scene._cleared_in_chapter = maxi(scene._cleared_in_chapter - 1, 0)
+	scene._event_room_id = ""
+	await scene._mds_world.load_room("ch1_05")
+	await _wait_mds(scene)
+	await _press_key(KEY_M)
+	await _release_key(KEY_M)
+	check(scene._map_overlay.is_open(), "event_map_opens_in_window")
+	check(paused, "event_map_pauses")
+	await create_timer(1.2).timeout
+	check(not scene._story.is_open(), "event_page_waits_for_map")
+	check(scene._map_overlay.is_open(), "event_map_stays_open")
+	check(paused, "event_map_keeps_pause")
+	await _press_key(KEY_ESCAPE)
+	await _release_key(KEY_ESCAPE)
+	check(not scene._map_overlay.is_open(), "event_map_closes")
+	check(await _wait_story(scene), "event_page_opens_after_map")
+	check(paused and not scene._map_overlay.is_open(), "event_page_pauses_alone")
+	await _press_button(JOY_BUTTON_DPAD_DOWN)
+	await _release_button(JOY_BUTTON_DPAD_DOWN)
+	await _press_button(JOY_BUTTON_A)
+	await _release_button(JOY_BUTTON_A)
+	await create_timer(0.5).timeout
+	check(not scene._story.is_open(), "event_page_choice_resolves")
+	check(not paused, "event_page_choice_unpauses")
+	check(not scene.pause_menu.is_open(), "event_page_choice_no_pause_menu")
+
+	# Pass 86: stepping through the door inside the 0.8 s beat is the third way
+	# out. `current_room` only flips after the fade-out, so the page must read
+	# the transition itself; otherwise it opens under the MDS fade (layer 100,
+	# above the story layer), pauses the world and freezes on a black screen.
+	scene._cleared_encounters.erase("ch1_05/event")
+	scene._cleared_in_chapter = maxi(scene._cleared_in_chapter - 1, 0)
+	scene._event_room_id = ""
+	await scene._mds_world.load_room("ch1_05")
+	await _wait_mds(scene)
+	# `load_room` returns after the fade-in (0.175 s); 0.5 s more puts the page
+	# timer (0.8 s after room_loaded) in the middle of the fade-out.
+	await create_timer(0.5).timeout
+	scene._mds_world.load_room("ch1_04")
+	await create_timer(0.6).timeout
+	check(not scene._story.is_open(), "event_page_cancelled_by_fade")
+	check(not paused, "event_fade_leave_does_not_pause")
+	check(await _wait_mds(scene) and scene._mds_world.current_room == "ch1_04",
+		"event_fade_leave_finishes")
+
 	scene.queue_free()
 	await process_frame
 	await process_frame

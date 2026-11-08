@@ -12,6 +12,11 @@ var _quit_button: Button = null
 var _footer: Label = null
 var _nodes_ready: bool = false
 var _confirm: ConfirmationDialog = null
+## The handler currently armed on the shared confirmation dialog. Dismissing
+## the dialog (Esc, Cancel, or closing it) must not leave that one-shot
+## connection behind: the next confirmation would then run both handlers, so
+## cancelling "退出" and confirming "重新开始" would also abandon the run.
+var _confirm_action := Callable()
 
 
 func _ready() -> void:
@@ -153,14 +158,37 @@ func _ask_confirm(text: String, action: Callable) -> void:
 		_confirm.name = "ConfirmDialog"
 		_confirm.process_mode = Node.PROCESS_MODE_ALWAYS
 		add_child(_confirm)
+		_confirm.canceled.connect(_clear_confirm)
+		_confirm.confirmed.connect(_run_confirm)
+		# Hiding the dialog by any other route (programmatic close, window
+		# dismissal) is a cancel too. `canceled` alone would leave the action
+		# armed for the next confirmation.
+		_confirm.visibility_changed.connect(_on_confirm_visibility_changed)
+	_clear_confirm()
 	_confirm.dialog_text = text
-	if _confirm.confirmed.is_connected(action):
-		_confirm.confirmed.disconnect(action)
-	_confirm.confirmed.connect(action, CONNECT_ONE_SHOT)
+	_confirm_action = action
 	# A unit test can build the pause menu before the root is in the tree; a
 	# native Window cannot pop there. In game the menu is always inside it.
 	if is_inside_tree():
 		_confirm.popup_centered()
+
+
+## Both signals go through one arming slot, so the dialog never holds two
+## actions at once. Confirming runs the armed action exactly once.
+func _run_confirm() -> void:
+	var action := _confirm_action
+	_clear_confirm()
+	if action.is_valid():
+		action.call()
+
+
+func _clear_confirm() -> void:
+	_confirm_action = Callable()
+
+
+func _on_confirm_visibility_changed() -> void:
+	if _confirm != null and not _confirm.visible:
+		_clear_confirm()
 
 
 func _do_restart() -> void:

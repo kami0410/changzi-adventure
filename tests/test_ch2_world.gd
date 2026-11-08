@@ -13,6 +13,9 @@ const ROOM_DATA_DIR := "res://resources/rooms/ch2_bigmap"
 const FIXTURE_PATH := "res://tests/fixtures/big_room/ch2_graph.mdsworld.json"
 const PLAN_PATH := "res://resources/chapters/chapter_2_demo.tres"
 const CH1_PLAN_PATH := "res://resources/chapters/chapter_1_demo.tres"
+const CH3_PLAN_PATH := "res://resources/chapters/chapter_3_demo.tres"
+const CH3_WORLD_PATH := "res://scenes/mds/chapter_3_bigmap.mdsworld.json"
+const CH3_WORLD_SCENE_PATH := "res://scenes/mds/chapter_3_bigmap_world.tscn"
 const CH1_WORLD_PATH := "res://scenes/mds/chapter_1.mdsworld.json"
 const OLD_CH2_WORLD_PATH := "res://scenes/mds/chapter_2.mdsworld.json"
 const OLD_CH2_SCENE_PATH := "res://scenes/mds/chapter_2_world.tscn"
@@ -479,28 +482,30 @@ func _test_game_wiring(t: Callable) -> void:
 	if world_files.size() == 4:
 		t.call(world_files[0], CH1_WORLD_PATH, "ch2_game_ch1_world_unchanged")
 		t.call(world_files[1], WORLD_PATH, "ch2_game_uses_big_map_world")
-		t.call(world_files[2], "res://scenes/mds/chapter_3.mdsworld.json",
-			"ch2_game_ch3_world_unchanged")
-		t.call(world_files[3], "res://scenes/mds/chapter_4.mdsworld.json",
-			"ch2_game_ch4_world_unchanged")
+		t.call(world_files[2], CH3_WORLD_PATH,
+			"ch2_game_ch3_uses_big_map_world")
+		# Pass 91 routes Chapter 4's big-map world; the legacy world stays on
+		# disk but is no longer loaded.
+		t.call(world_files[3], "res://scenes/mds/chapter_4_bigmap.mdsworld.json",
+			"ch2_game_ch4_uses_big_map_world")
 	if chapter_scenes.size() == 4:
 		t.call((chapter_scenes[0] as PackedScene).resource_path,
 			"res://scenes/mds/chapter_1_world.tscn", "ch2_game_ch1_world_scene_unchanged")
 		t.call((chapter_scenes[1] as PackedScene).resource_path, WORLD_SCENE_PATH,
 			"ch2_game_uses_big_map_world_scene")
-		t.call((chapter_scenes[2] as PackedScene).resource_path,
-			"res://scenes/mds/chapter_3_world.tscn", "ch2_game_ch3_world_scene_unchanged")
+		t.call((chapter_scenes[2] as PackedScene).resource_path, CH3_WORLD_SCENE_PATH,
+			"ch2_game_ch3_uses_big_map_world_scene")
 		t.call((chapter_scenes[3] as PackedScene).resource_path,
-			"res://scenes/mds/chapter_4_world.tscn", "ch2_game_ch4_world_scene_unchanged")
+			"res://scenes/mds/chapter_4_bigmap_world.tscn",
+			"ch2_game_ch4_uses_big_map_world_scene")
 	if plan_paths.size() == 4:
 		t.call(plan_paths[0], CH1_PLAN_PATH, "ch2_game_ch1_plan_unchanged")
 		t.call(plan_paths[1], PLAN_PATH, "ch2_game_uses_ch2_plan")
-		t.call(plan_paths[2], "", "ch2_game_ch3_has_no_plan_yet")
-		t.call(plan_paths[3], "", "ch2_game_ch4_has_no_plan_yet")
-		# The Chapter 4 plan is authored (pass 51) but deliberately unrouted;
-		# the empty slot is a routing decision, not a missing file.
+		t.call(plan_paths[2], CH3_PLAN_PATH, "ch2_game_ch3_uses_big_map_plan")
+		t.call(plan_paths[3], "res://resources/chapters/chapter_4_demo.tres",
+			"ch2_game_ch4_uses_its_plan")
 		t.call(ResourceLoader.exists("res://resources/chapters/chapter_4_demo.tres"), true,
-			"ch2_game_ch4_plan_authored_but_not_routed")
+			"ch2_game_ch4_plan_present")
 
 	var packed := load(WORLD_SCENE_PATH) as PackedScene
 	t.call(packed != null, true, "ch2_world_scene_loads")

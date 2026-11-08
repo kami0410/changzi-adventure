@@ -4,8 +4,10 @@ extends SceneTree
 ## bounds, fall planes, vertical transit, hidden vault, bench, shortcut
 ## persistence, multi-content resume, and the boss aftermath resume.
 ##
-## The campaign still ends at Chapter 1. This suite starts Chapter 2 explicitly
-## and only drives test/probe state; it never makes Chapter 2 reachable.
+## Since pass 76–77 the campaign hands Chapter 1 off to Chapter 2, but this
+## suite still starts Chapter 2 explicitly so it can assert the big-map graph
+## without replaying the whole first chapter. Since pass 80 the Chapter 2 ending
+## hands off into Chapter 3 (Chapter 4 stays unreachable).
 
 var failures: int = 0
 var assertions: int = 0
@@ -105,6 +107,28 @@ func _wait_reward(scene, timeout := 3.0) -> bool:
 		await create_timer(0.05).timeout
 		left -= 0.05
 	return false
+
+
+## One spawned enemy's shared-path art. A wired enemy renders its own PNG at
+## white; one without dedicated art keeps the Chapter 1 painting and the
+## fallback tint. Pass 78 closed the Chapter 2 gap, so every wave here is wired.
+func _check_enemy_art(arena: ArenaRoom, id: StringName, sprite_suffix: String,
+		tint: Color) -> void:
+	var found: Enemy = null
+	for child in arena.get_node(ArenaRoom.ENEMIES_NODE).get_children():
+		if child is Enemy and child.data != null and child.data.id == id:
+			found = child
+			break
+	check(found != null, "ch2_enemy_present_%s" % id)
+	if found == null:
+		return
+	check(found.sprite_visual != null, "ch2_enemy_sprite_%s" % id)
+	if found.sprite_visual == null:
+		return
+	check(found.sprite_visual.texture != null
+		and found.sprite_visual.texture.resource_path.ends_with(sprite_suffix),
+		"ch2_enemy_art_%s" % id)
+	check(found.sprite_visual.modulate == tint, "ch2_enemy_art_tint_%s" % id)
 
 
 func _wait_story(scene, timeout := 5.0) -> bool:
@@ -559,6 +583,20 @@ func _run() -> void:
 		"vault_reload_does_not_repeat_discovery")
 	check(not scene._reward_ui.visible, "vault_no_false_reward")
 
+	# --- Pass 78 art: branch_b is the one real Chapter 2 wave that spawns the
+	# lung moth and the breath hound. Both now paint their own PNG at white.
+	# Check it before the lift section marks every encounter cleared.
+	await mds.load_room("ch2_branch_b")
+	check(await _wait_room(scene, "ch2_branch_b"), "art_room_loads")
+	await process_frame
+	var art_arena := mds.room_node.get_node_or_null("Arena") as ArenaRoom
+	check(art_arena != null, "art_arena_present")
+	if art_arena != null:
+		_check_enemy_art(art_arena, &"lung_moth",
+			"assets/sprites/enemies/lung_moth.png", Color.WHITE)
+		_check_enemy_art(art_arena, &"breath_hound",
+			"assets/sprites/enemies/breath_hound.png", Color.WHITE)
+
 	# --- Vertical transit: the authored lift really reaches the top gate, the
 	# jump triggers it, the arrival launches up, and the floor gate does not
 	# bounce the player straight back down (the acceptance defect).
@@ -821,19 +859,12 @@ func _run() -> void:
 		check(arena_b.is_locked(), "arena_b_locks")
 		check(not arena_a.is_locked(), "arena_a_stays_open")
 		check(_arena_doors_locked(arena_b), "arena_b_doors_block")
-		# The four Chapter 2 enemies without dedicated art still use the
-		# tinted Chapter 1 painting; this locks the documented gap, not new art.
-		var rust: Enemy = null
-		for enemy in arena_b.get_node(ArenaRoom.ENEMIES_NODE).get_children():
-			if enemy is Enemy and enemy.data != null and enemy.data.id == &"rust_whisperer":
-				rust = enemy
-		check(rust != null, "arena_b_spawns_rust_whisperer")
-		if rust != null and rust.sprite_visual != null:
-			check(rust.sprite_visual.texture.resource_path.ends_with(
-				"assets/sprites/enemies/scribe_bug.png"),
-				"rust_whisperer_keeps_chapter_1_fallback")
-			check(rust.sprite_visual.modulate == Color("c8e1cd"),
-				"rust_whisperer_keeps_fallback_tint")
+		# Pass 78 closed the Chapter 2 art gap: both enemies in this wave paint
+		# their own PNG at white instead of the tinted Chapter 1 fallback.
+		_check_enemy_art(arena_b, &"rust_whisperer",
+			"assets/sprites/enemies/rust_whisperer.png", Color.WHITE)
+		_check_enemy_art(arena_b, &"collapse_husk",
+			"assets/sprites/enemies/collapse_husk.png", Color.WHITE)
 		check(await _kill_arena(arena_b), "arena_b_clears")
 		check(_arena_doors_open(arena_b), "arena_b_doors_release")
 		check(await _wait_reward(scene), "arena_b_reward_opens")
@@ -1008,8 +1039,8 @@ func _run() -> void:
 		"ch2_resume_shortcut_barrier_open")
 
 	# --- Boss defeat checkpoint: quit before the authority pick; resuming must
-	# not spawn a second boss, must finish the authority/outro, and must stop at
-	# the Chapter 2 boundary instead of walking into Chapter 3.
+	# not spawn a second boss, must finish the authority/outro, and (since pass
+	# 80) hands off into the Chapter 3 intro at the Chapter 2 boundary.
 	await resumed._mds_world.load_room("ch2_boss")
 	check(await _wait_room(resumed, "ch2_boss"), "ch2_resume_boss_loads")
 	await process_frame
@@ -1070,9 +1101,13 @@ func _run() -> void:
 	check(aftermath._story.is_open(), "ch2_aftermath_choice")
 	aftermath._story.choose(0)
 	await create_timer(1.6).timeout
-	check(aftermath._chapter == 1, "ch2_stops_at_chapter_2_boundary")
-	check(aftermath._finished, "ch2_aftermath_finishes")
-	check(aftermath.ending_screen.visible, "ch2_aftermath_end_screen")
+	# Pass 80: the Chapter 2 ending now hands off into Chapter 3 instead of
+	# stopping; the Chapter 3 intro replaces the ending screen.
+	check(aftermath._chapter == 2, "ch2_aftermath_enters_chapter_3")
+	check(not aftermath._finished, "ch2_aftermath_does_not_finish")
+	check(not aftermath.ending_screen.visible, "ch2_aftermath_no_end_screen")
+	check(aftermath._story.is_open() and not aftermath._story._choice_mode,
+		"ch2_aftermath_opens_chapter_3_intro")
 
 	# --- Gate visuals covered every region the graph has, and every gate in
 	# them (20 connected + 2 arrival) carries a visible doorway and caption.

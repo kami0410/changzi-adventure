@@ -138,6 +138,27 @@ func _test_pause_confirmation(t: Callable) -> void:
 	if menu._confirm != null:
 		t.call(menu._confirm.dialog_text.contains("放弃本局"), true, "quit_confirmation_text")
 		menu._confirm.hide()
+	# The two buttons share one dialog. It must only ever hold one armed action:
+	# before, each press added a one-shot connection, so cancelling 退出 and then
+	# confirming 重新开始 ran both handlers and abandoned the run as well.
+	menu._on_quit_pressed()
+	t.call(menu._confirm_action.get_method() == &"_do_quit", true, "quit_confirmation_armed")
+	menu._on_restart_pressed()
+	t.call(menu._confirm_action.get_method() == &"_do_restart", true,
+		"rearming_replaces_previous_action")
+	t.call(menu._confirm.confirmed.get_connections().size(), 1,
+		"confirmation_holds_one_connection")
+	menu._on_quit_pressed()
+	t.call(menu._confirm_action.get_method() == &"_do_quit", true, "third_confirmation_arms_quit")
+	t.call(menu._confirm.confirmed.get_connections().size(), 1,
+		"confirmation_still_holds_one_connection")
+	if menu._confirm != null:
+		menu._confirm.hide()
+	menu._on_quit_pressed()
+	menu._clear_confirm()
+	t.call(menu._confirm_action.is_valid(), false, "cancelled_confirmation_disarmed")
+	if menu._confirm != null:
+		menu._confirm.hide()
 	tree.root.remove_child(menu)
 	menu.free()
 	tree.paused = false

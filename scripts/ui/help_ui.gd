@@ -161,7 +161,7 @@ func _refresh_key_hints() -> void:
 	_add_line(_explore_content, "背包", "inventory")
 	_add_line(_explore_content, "造句台", "codex")
 	_add_line(_explore_content, "设置", "settings")
-	_add_line(_explore_content, "地图（第一章）", "map")
+	_add_line(_explore_content, "地图", "map")
 	_add_line(_explore_content, "本说明", "help")
 	_add_line(_combat_content, "轻攻击（连段 3 段）", "attack")
 	_add_line(_combat_content, "切换武器", "weapon_1 / weapon_2")

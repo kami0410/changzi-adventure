@@ -480,6 +480,23 @@ func _run() -> void:
 			"gamepad_confirm_quit_escape_cancels")
 		check(paused and scene.pause_menu.is_open(),
 			"gamepad_confirm_quit_cancel_keeps_pause")
+		# Cancelling 退出 must disarm it. Both pause buttons share one dialog;
+		# a leftover one-shot made the next confirm run two handlers, so
+		# confirming 重新开始 also abandoned the run and landed in the Hub.
+		check(not scene.pause_menu._confirm_action.is_valid(),
+			"gamepad_confirm_quit_cancel_disarms")
+		restart_button.pressed.emit()
+		await process_frame
+		check(scene.pause_menu._confirm_action.get_method() == &"_do_restart",
+			"gamepad_confirm_restart_arms_only_restart")
+		check(scene.pause_menu._confirm.confirmed.get_connections().size() == 1,
+			"gamepad_confirm_single_connection")
+		await _press_key(KEY_ESCAPE)
+		await _release_key(KEY_ESCAPE)
+		check(not scene.pause_menu._confirm_action.is_valid(),
+			"gamepad_confirm_restart_escape_disarms")
+		check(paused and scene.pause_menu.is_open(),
+			"gamepad_confirm_escape_keeps_pause")
 	await _press_button(JOY_BUTTON_START)
 	await process_frame
 	await _release_button(JOY_BUTTON_START)

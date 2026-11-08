@@ -8,8 +8,8 @@ extends RefCounted
 ## the event node and boss region own no wave, and the plan no longer marks its
 ## wave content pending. Step 3 reuses the chapter-agnostic big-map event
 ## trigger: the event region opens the Chapter 3 page on entry and the settled
-## node stays quiet across reloads. Nothing here makes Chapter 3 reachable:
-## game.gd keeps plan slot 2 empty and the old linear world.
+## node stays quiet across reloads. Pass 80 routes plan slot 2 and the big-map
+## world into the campaign, so Chapter 3 is reachable from the Chapter 2 ending.
 
 const EVENT_KEYS: Array[String] = [
 	"eyebrow", "title", "body", "read_label", "take_label",
@@ -51,7 +51,7 @@ func run(t: Callable) -> void:
 	_test_event_trigger_inputs(t)
 	_test_chapter_one_unchanged(t)
 	_test_chapter_two_unchanged(t)
-	_test_chapter_three_still_unwired(t)
+	_test_chapter_three_wiring(t)
 
 
 func _test_event_variants(t: Callable) -> void:
@@ -586,24 +586,25 @@ func _test_chapter_two_unchanged(t: Callable) -> void:
 	t.call(int(chapter.get("boss_hp", 0)), 360, "ch3_ch2_boss_hp_unchanged")
 
 
-func _test_chapter_three_still_unwired(t: Callable) -> void:
+func _test_chapter_three_wiring(t: Callable) -> void:
 	var game_script := load(GAME_SCRIPT_PATH) as GDScript
-	t.call(game_script != null, true, "ch3_unwired_game_script_loads")
+	t.call(game_script != null, true, "ch3_wiring_game_script_loads")
 	if game_script != null:
 		var constants := game_script.get_script_constant_map()
 		var plan_paths: Array = constants.get("CHAPTER_PLAN_PATHS", [])
 		t.call(plan_paths.size(), 4, "ch3_game_has_four_plan_slots")
 		if plan_paths.size() == 4:
-			t.call(plan_paths[2], "", "ch3_game_plan_slot_stays_empty")
-			t.call(plan_paths[3], "", "ch4_game_plan_slot_stays_empty")
-			# The Chapter 4 plan is authored (pass 51) but deliberately unrouted.
+			t.call(plan_paths[2], CH3_PLAN_PATH, "ch3_game_plan_slot_wired")
+			# Pass 91 wires the Chapter 4 plan as well.
+			t.call(plan_paths[3], "res://resources/chapters/chapter_4_demo.tres",
+				"ch4_game_plan_slot_wired")
 			t.call(ResourceLoader.exists("res://resources/chapters/chapter_4_demo.tres"), true,
-				"ch4_game_plan_authored_but_not_routed")
+				"ch4_game_plan_present")
 			t.call(plan_paths[1], CH2_PLAN_PATH, "ch3_ch2_plan_slot_unchanged")
 		var world_files: Array = constants.get("MDS_WORLD_FILES", [])
 		if world_files.size() == 4:
-			t.call(world_files[2], OLD_CH3_WORLD_PATH,
-				"ch3_game_still_uses_the_old_world")
+			t.call(world_files[2], CH3_BIGMAP_WORLD_PATH,
+				"ch3_game_uses_the_big_map_world")
 	var plan := load(CH3_PLAN_PATH) as ChapterPlanData
 	if plan != null:
 		t.call(plan.content_pending, false,

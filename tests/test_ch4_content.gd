@@ -55,7 +55,7 @@ func run(t: Callable) -> void:
 	_test_chapter_one_unchanged(t)
 	_test_chapter_two_unchanged(t)
 	_test_chapter_three_unchanged(t)
-	_test_chapter_four_still_unwired(t)
+	_test_chapter_four_wiring(t)
 
 
 func _test_event_variants(t: Callable) -> void:
@@ -642,27 +642,30 @@ func _test_chapter_three_unchanged(t: Callable) -> void:
 	t.call(int(chapter.get("boss_hp", 0)), 380, "ch4_ch3_boss_hp_unchanged")
 
 
-func _test_chapter_four_still_unwired(t: Callable) -> void:
+## Since pass 91 the Chapter 4 plan and big-map world are the routed ones; the
+## legacy linear world stays on disk untouched, and `ch4_shortcut` still has no
+## in-game grant (the barrier stays closed).
+func _test_chapter_four_wiring(t: Callable) -> void:
 	var game_script := load(GAME_SCRIPT_PATH) as GDScript
-	t.call(game_script != null, true, "ch4_unwired_game_script_loads")
+	t.call(game_script != null, true, "ch4_wiring_game_script_loads")
 	if game_script != null:
 		var constants := game_script.get_script_constant_map()
 		var plan_paths: Array = constants.get("CHAPTER_PLAN_PATHS", [])
 		t.call(plan_paths.size(), 4, "ch4_game_has_four_plan_slots")
 		if plan_paths.size() == 4:
-			t.call(plan_paths[3], "", "ch4_game_plan_slot_stays_empty")
-			t.call(plan_paths[2], "", "ch4_game_ch3_plan_slot_stays_empty")
+			t.call(plan_paths[3], CH4_PLAN_PATH, "ch4_game_plan_slot_wired")
+			t.call(plan_paths[2], CH3_PLAN_PATH, "ch4_game_ch3_plan_slot_wired")
 			t.call(plan_paths[1], CH2_PLAN_PATH, "ch4_game_ch2_plan_slot_unchanged")
 			t.call(plan_paths[0], CH1_PLAN_PATH, "ch4_game_ch1_plan_slot_unchanged")
 		var world_files: Array = constants.get("MDS_WORLD_FILES", [])
 		if world_files.size() == 4:
-			t.call(world_files[3], OLD_CH4_WORLD_PATH,
-				"ch4_game_still_uses_the_old_world")
+			t.call(world_files[3], CH4_BIGMAP_WORLD_PATH,
+				"ch4_game_uses_the_big_map_world")
 		var game_source := FileAccess.get_file_as_string(GAME_SCRIPT_PATH)
-		t.call(game_source.contains("chapter_4_demo.tres"), false,
-			"ch4_plan_is_not_referenced_by_the_game")
-		t.call(game_source.contains("chapter_4_bigmap"), false,
-			"ch4_region_world_is_not_referenced_by_the_game")
+		t.call(game_source.contains("chapter_4_demo.tres"), true,
+			"ch4_plan_is_referenced_by_the_game")
+		t.call(game_source.contains("chapter_4_bigmap"), true,
+			"ch4_region_world_is_referenced_by_the_game")
 		t.call(game_source.contains("ch4_shortcut"), false,
 			"ch4_game_grants_no_shortcut")
 	var plan := load(CH4_PLAN_PATH) as ChapterPlanData

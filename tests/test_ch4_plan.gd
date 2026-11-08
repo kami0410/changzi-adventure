@@ -43,7 +43,7 @@ func run(t: Callable) -> void:
 	_test_fixture_geometry(t)
 	_test_old_world_unchanged(t)
 	_test_other_chapters_unchanged(t)
-	_test_routing_unchanged(t)
+	_test_routing(t)
 
 
 func _test_plan_shape(t: Callable) -> void:
@@ -685,10 +685,10 @@ func _test_other_chapters_unchanged(t: Callable) -> void:
 		t.call(ch3.validate(), PackedStringArray(), "ch4_ch3_plan_validates_clean")
 
 
-func _test_routing_unchanged(t: Callable) -> void:
-	# The plan exists, but this pass deliberately does not route it: game.gd's
-	# slot stays empty and the old linear world keeps being used (while Chapter 4
-	# itself remains unreachable).
+func _test_routing(t: Callable) -> void:
+	# Since pass 91 the plan is routed: game.gd's slot 3 carries it and the
+	# big-map world is the one the campaign loads. The legacy linear world stays
+	# on disk untouched.
 	t.call(ResourceLoader.exists(PLAN_PATH), true, "ch4_plan_resource_exists")
 	t.call(FileAccess.file_exists(OLD_CH4_WORLD_PATH), true,
 		"ch4_old_world_still_present")
@@ -703,24 +703,24 @@ func _test_routing_unchanged(t: Callable) -> void:
 		if plan_paths.size() == 4:
 			t.call(plan_paths[0], CH1_PLAN_PATH, "ch4_game_ch1_plan_unchanged")
 			t.call(plan_paths[1], CH2_PLAN_PATH, "ch4_game_ch2_plan_unchanged")
-			t.call(plan_paths[2], "", "ch4_game_ch3_plan_slot_stays_empty")
-			t.call(plan_paths[3], "", "ch4_game_plan_slot_stays_empty")
+			t.call(plan_paths[2], CH3_PLAN_PATH, "ch4_game_ch3_plan_slot_wired")
+			t.call(plan_paths[3], PLAN_PATH, "ch4_game_plan_slot_wired")
 		var world_files: Array = game_constants.get("MDS_WORLD_FILES", [])
 		t.call(world_files.size(), 4, "ch4_game_has_four_world_files")
 		if world_files.size() == 4:
-			t.call(world_files[3], OLD_CH4_WORLD_PATH,
-				"ch4_game_still_uses_the_old_world")
+			t.call(world_files[3], "res://scenes/mds/chapter_4_bigmap.mdsworld.json",
+				"ch4_game_uses_the_big_map_world")
 		var chapter_scenes: Array = game_constants.get("MDS_CHAPTER_SCENES", [])
 		t.call(chapter_scenes.size(), 4, "ch4_game_has_four_world_scenes")
 		if chapter_scenes.size() == 4:
-			t.call((chapter_scenes[3] as PackedScene).resource_path, OLD_CH4_SCENE_PATH,
-				"ch4_game_still_uses_the_old_world_scene")
+			t.call((chapter_scenes[3] as PackedScene).resource_path,
+				"res://scenes/mds/chapter_4_bigmap_world.tscn",
+				"ch4_game_uses_the_big_map_world_scene")
 	var game_source := FileAccess.get_file_as_string(GAME_SCRIPT_PATH)
-	t.call(game_source.contains("chapter_4_demo.tres"), false,
-		"ch4_game_does_not_load_the_plan_yet")
-	# The real region world landed in a later pass (structure only): the data
-	# and scene directories exist and hold one pair per plan region, while the
-	# plan itself still is not routed into game.gd.
+	t.call(game_source.contains("chapter_4_demo.tres"), true,
+		"ch4_game_loads_the_plan")
+	# The region world exists as a data/scene pair per plan region and is the
+	# one the campaign instantiates.
 	t.call(DirAccess.dir_exists_absolute(REGION_DIR), true,
 		"ch4_region_data_dir_built")
 	t.call(DirAccess.dir_exists_absolute(SCENE_DIR), true,

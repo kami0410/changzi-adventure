@@ -1,8 +1,9 @@
 class_name CampaignData
 extends RefCounted
 
-## Three authored chapters. Each chapter is one continuous level with two
-## combat rooms and one boss room, plus a memory stele for optional exploration.
+## Four authored chapters, each a continuous level that ends on its own boss.
+## Chapters 1–3 are reachable in this build (Chapter 1 linear rooms, Chapters
+## 2–3 big-map regions); Chapter 4 is authored but not routed yet.
 
 const LEVEL_PATHS: Array[String] = [
 	"res://scenes/levels/biome_1.tscn",

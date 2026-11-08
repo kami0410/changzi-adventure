@@ -18,6 +18,10 @@ var _fragment_label: Label
 var _status: Label
 var _close_button: Button
 var _rows: Dictionary = {}
+## Focus owner before the page opened. Every other Hub/run page returns focus
+## to its opener; without this the archive left the viewport with no focus at
+## all, so D-pad/A/B went dead until the player touched the mouse.
+var _return_focus: Control = null
 
 
 func _ready() -> void:
@@ -45,6 +49,8 @@ func open() -> void:
 	if not _built:
 		_build()
 		_built = true
+	var viewport := get_viewport() if is_inside_tree() else null
+	_return_focus = viewport.gui_get_focus_owner() if viewport != null else null
 	_open = true
 	visible = true
 	_refresh_close_hint()
@@ -57,7 +63,11 @@ func close() -> void:
 		return
 	_open = false
 	visible = false
+	var previous := _return_focus
+	_return_focus = null
 	closed.emit()
+	if previous != null and is_instance_valid(previous) and previous.is_inside_tree() and previous.is_visible_in_tree():
+		previous.grab_focus()
 
 
 func is_open() -> bool:

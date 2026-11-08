@@ -5,12 +5,11 @@ extends SceneTree
 ## two-arena region, the event page, the shortcut barrier, a world-level save /
 ## resume, the Smiling Archivist boss and the campaign boundary.
 ##
-## The campaign still loads the legacy chapter-4 world and ends at chapter 3's
-## boundary, so chapter 4 stays unreachable. This suite attaches the chapter-4
-## plan and the big-map world to the live main scene for the checks only (the
-## same test hook integration_playability uses for the chapter-4 event/boss
-## passes); it never touches `CHAPTER_PLAN_PATHS`, chapter routing or
-## reachability, and it never grants `ch4_shortcut` from a gameplay source.
+## The campaign loads this big-map world for Chapter 4 (pass 91) and the chapter
+## ends the campaign. This suite still attaches the chapter-4 plan and world to
+## the live main scene so the whole graph can be walked from one mount; it never
+## touches `CHAPTER_PLAN_PATHS` or chapter routing, and it never grants
+## `ch4_shortcut` from a gameplay source.
 
 var failures: int = 0
 var assertions: int = 0
@@ -178,9 +177,9 @@ func _progress_text(scene) -> String:
 
 
 ## Attaches the chapter-4 plan and the real big-map world to the live scene,
-## exactly the way the game builds a chapter world, but with the plan the
-## campaign does not load yet. `save_data` restores a world-level checkpoint
-## (the same dictionary `_build_run_save` stores under `mds`).
+## exactly the way the game builds a chapter world. `save_data` restores a
+## world-level checkpoint (the same dictionary `_build_run_save` stores under
+## `mds`).
 func _mount_chapter_4(scene, start_room := "ch4_entry",
 		save_data: Dictionary = {}, reset_progress := true) -> bool:
 	var plan := load("res://resources/chapters/chapter_4_demo.tres") as ChapterPlanData
@@ -802,9 +801,9 @@ func _run() -> void:
 		_finish(scene)
 		return
 
-	# --- The campaign route is untouched: the plan slot stays empty, the game
-	# keeps loading the legacy chapter-4 world, and the plan content the earlier
-	# passes authored is unchanged. This suite only mounts a test world.
+	# --- The Chapter 4 route (pass 91): slot 3 carries this plan, the game
+	# loads this big-map world, the legacy chapter-4 world stays on disk, and the
+	# plan content the earlier passes authored is unchanged.
 	var game_script := load("res://scripts/game.gd") as GDScript
 	var constants: Dictionary = game_script.get_script_constant_map() if game_script != null else {}
 	var enemy_art: Dictionary = constants.get("ENEMY_ART", {})
@@ -812,14 +811,16 @@ func _run() -> void:
 	var world_files: Array = constants.get("MDS_WORLD_FILES", [])
 	check(plan_paths.size() == 4, "game_keeps_four_plan_slots")
 	if plan_paths.size() == 4:
-		check(String(plan_paths[2]) == "", "chapter_3_plan_slot_stays_empty")
-		check(String(plan_paths[3]) == "", "chapter_4_plan_slot_stays_empty")
+		check(String(plan_paths[2]).ends_with("chapter_3_demo.tres"),
+			"chapter_3_plan_slot_wired")
+		check(String(plan_paths[3]).ends_with("chapter_4_demo.tres"),
+			"chapter_4_plan_slot_wired")
 	check(world_files.size() == 4, "game_keeps_four_world_files")
 	if world_files.size() == 4:
-		check(String(world_files[2]).ends_with("chapter_3.mdsworld.json"),
-			"chapter_3_still_loads_legacy_world")
-		check(String(world_files[3]).ends_with("chapter_4.mdsworld.json"),
-			"chapter_4_still_loads_legacy_world")
+		check(String(world_files[2]).ends_with("chapter_3_bigmap.mdsworld.json"),
+			"chapter_3_loads_big_map_world")
+		check(String(world_files[3]).ends_with("chapter_4_bigmap.mdsworld.json"),
+			"chapter_4_loads_big_map_world")
 	check(FileAccess.file_exists("res://scenes/mds/chapter_4.mdsworld.json"),
 		"legacy_chapter_4_world_exists")
 	check(FileAccess.file_exists("res://scenes/mds/chapter_4_world.tscn"),
@@ -1800,8 +1801,8 @@ func _run() -> void:
 		check(scene._mds_world == mds, "chapter_4_keeps_its_world")
 		check(mds.world_file == CH4_WORLD_FILE, "chapter_4_did_not_load_chapter_5")
 		check(CampaignData.chapter_count() == 4, "chapter_4_is_the_last_chapter")
-		check(plan_paths.size() == 4 and String(plan_paths[3]) == "",
-			"chapter_4_has_no_plan_slot_at_end")
+		check(plan_paths.size() == 4 and String(plan_paths[3]).ends_with(
+			"chapter_4_demo.tres"), "chapter_4_plan_slot_still_wired_at_end")
 		check(scene._cleared_in_chapter == 7, "chapter_4_clears_unchanged_at_end")
 		if flow.profile != null:
 			var expected_ending := CampaignData.ending_for(true,

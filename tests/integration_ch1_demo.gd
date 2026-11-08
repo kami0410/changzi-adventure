@@ -360,7 +360,7 @@ func _run() -> void:
 		check(scene.hud.get_message_text()
 			== DeathHintData.pick(scene.run_state.run_seed, &"relic"),
 			"demo_revive_relic_line_matches_seed")
-		check(scene.hud.get_message_text().contains("不灭档案"),
+		check(scene.hud.get_message_text().contains("不朽档案"),
 			"demo_revive_relic_keeps_relic")
 
 	# 吞噬: a passive run-long rule. The live corruption value feeds both the

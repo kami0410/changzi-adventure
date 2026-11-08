@@ -48,7 +48,7 @@ func run(t: Callable) -> void:
 	_test_region_content(t)
 	_test_vertical_props(t)
 	_test_fixture_mirror(t)
-	_test_stays_unwired(t)
+	_test_routed(t)
 	_test_old_worlds_kept(t)
 
 
@@ -496,7 +496,9 @@ func _test_fixture_mirror(t: Callable) -> void:
 	t.call(game_source.contains("tests/fixtures"), false, "ch4_game_never_loads_test_fixtures")
 
 
-func _test_stays_unwired(t: Callable) -> void:
+## Since pass 91 the campaign loads this world; the legacy linear world stays on
+## disk untouched and `ch4_shortcut` still has no in-game grant.
+func _test_routed(t: Callable) -> void:
 	var game_script := load(GAME_SCRIPT_PATH) as GDScript
 	t.call(game_script != null, true, "ch4_world_game_script_loads")
 	if game_script == null:
@@ -509,20 +511,26 @@ func _test_stays_unwired(t: Callable) -> void:
 	t.call(chapter_scenes.size(), 4, "ch4_world_game_has_four_world_scenes")
 	t.call(plan_paths.size(), 4, "ch4_world_game_has_four_plan_slots")
 	if world_files.size() == 4:
-		t.call(world_files[3], OLD_CH4_WORLD_PATH, "ch4_world_game_still_uses_the_old_world")
+		t.call(world_files[3], WORLD_PATH, "ch4_world_game_uses_the_big_map_world")
 	if chapter_scenes.size() == 4:
-		t.call((chapter_scenes[3] as PackedScene).resource_path, OLD_CH4_SCENE_PATH,
-			"ch4_world_game_still_uses_the_old_world_scene")
+		t.call((chapter_scenes[3] as PackedScene).resource_path, WORLD_SCENE_PATH,
+			"ch4_world_game_uses_the_big_map_world_scene")
 	if plan_paths.size() == 4:
-		t.call(plan_paths[3], "", "ch4_world_game_plan_slot_stays_empty")
+		t.call(plan_paths[3], "res://resources/chapters/chapter_4_demo.tres",
+			"ch4_world_game_plan_slot_wired")
 
 	var game_source := FileAccess.get_file_as_string(GAME_SCRIPT_PATH)
-	t.call(game_source.contains("chapter_4_bigmap"), false,
-		"ch4_world_is_not_referenced_by_the_game")
+	t.call(game_source.contains("chapter_4_bigmap"), true,
+		"ch4_world_is_referenced_by_the_game")
+	# Region scenes are resolved by the world file, never hard-coded in game.gd.
 	t.call(game_source.contains("ch4_bigmap"), false,
 		"ch4_region_scenes_are_not_referenced_by_the_game")
 	t.call(game_source.contains("ch4_shortcut"), false,
 		"ch4_world_grants_no_shortcut")
+	t.call(FileAccess.file_exists(OLD_CH4_WORLD_PATH), true,
+		"ch4_world_old_world_still_present")
+	t.call(FileAccess.file_exists(OLD_CH4_SCENE_PATH), true,
+		"ch4_world_old_world_scene_still_present")
 
 	# The plan now owns its six wave tables (content layer step 2) but still no
 	# boss route, while the pass-53 content layer authors the base authority

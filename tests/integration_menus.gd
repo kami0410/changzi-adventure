@@ -683,6 +683,18 @@ func _run() -> void:
 			await _press_key(KEY_H)
 			await _release_key(KEY_H)
 			check(scene._help_ui.visible, "help_overlay_visible")
+			# The map works in every MDS chapter (1–3 now); the help sheet must
+			# not claim it belongs to Chapter 1 alone.
+			var map_label := ""
+			var map_key := ""
+			for row in scene._help_ui._explore_content.get_children():
+				if row is HBoxContainer and row.get_child_count() >= 2:
+					var name_label := row.get_child(0) as Label
+					if name_label != null and name_label.text.begins_with("地图"):
+						map_label = name_label.text
+						map_key = (row.get_child(1) as Label).text
+			check(map_label == "地图", "help_map_label_chapter_neutral")
+			check(map_key == GameFlow.input_label(&"map"), "help_map_key_matches_binding")
 			check(not scene.settings_menu.visible, "help_overlay_replaces_settings")
 			check(paused, "help_overlay_keeps_pause")
 			scene._help_ui.close()
@@ -772,6 +784,14 @@ func _run() -> void:
 	# Hub archive: focus, B closes, A upgrades.
 	var archive_bought: Array[StringName] = []
 	hub.archive_ui.purchased.connect(func(id: StringName): archive_bought.append(id))
+	# Stand in for whatever the player was focused on before the page opened.
+	# The Hub polls actions rather than navigating focus, but every other page
+	# hands focus back, and the archive used to leave the viewport with none.
+	var archive_opener := Button.new()
+	archive_opener.name = "ArchiveOpenerProbe"
+	hub.add_child(archive_opener)
+	await _settle()
+	archive_opener.grab_focus()
 	hub.archive_ui.bind(hub.profile)
 	hub.archive_ui.open()
 	await _settle()
@@ -779,6 +799,7 @@ func _run() -> void:
 	await _press_button(JOY_BUTTON_B)
 	await _release_button(JOY_BUTTON_B)
 	check(not hub.archive_ui.is_open(), "hub_archive_b_closes")
+	check(_focus_owner() == archive_opener, "hub_archive_close_returns_focus")
 	hub.archive_ui.open()
 	await _settle()
 	await _press_button(JOY_BUTTON_A)
@@ -1527,8 +1548,24 @@ func _run() -> void:
 	await _press_key(KEY_ENTER)
 	await _release_key(KEY_ENTER)
 	await create_timer(1.2).timeout
-	check(chapter_run._finished, "chapter_end_choice_enter_finishes")
-	check(not chapter_run._story.visible, "chapter_end_choice_story_hidden")
+	# Chapter 1 now hands off to the Chapter 2 big map: the choice closes and
+	# the Chapter 2 intro opens in place of the ending screen.
+	check(chapter_run._chapter == 1, "chapter_end_choice_enters_chapter_2")
+	check(not chapter_run._finished, "chapter_end_choice_does_not_finish_campaign")
+	check(chapter_run._story.is_open() and not chapter_run._story._choice_mode,
+		"chapter_end_choice_opens_chapter_2_intro")
+	check(chapter_run._story.visible, "chapter_end_chapter_2_intro_visible")
+	check(paused, "chapter_end_chapter_2_intro_pauses")
+	check(_focus_owner() == chapter_run._story._continue,
+		"chapter_end_chapter_2_intro_focus")
+	check(_focus_is_reasonable(), "chapter_end_chapter_2_intro_focus_visible")
+	# The ending screen is still the campaign-end surface; drive it directly so
+	# this suite keeps covering its first-frame focus handoff.
+	chapter_run._story.close()
+	await create_timer(0.2).timeout
+	chapter_run._finish(true)
+	await create_timer(1.2).timeout
+	check(chapter_run._finished, "chapter_end_ending_after_handoff")
 	check(chapter_run.ending_screen.visible, "chapter_end_ending_visible")
 	check(paused, "chapter_end_ending_pauses")
 	check(_focus_owner() == chapter_run.ending_screen._return_button,
@@ -1576,7 +1613,20 @@ func _run() -> void:
 	await _press_button(JOY_BUTTON_A)
 	await _release_button(JOY_BUTTON_A)
 	await create_timer(1.2).timeout
-	check(chapter_run._finished, "chapter_end_pad_choice_finishes")
+	# Same handoff with a pad: the Chapter 2 intro takes focus, and the
+	# campaign-end surface still hands focus to its return button.
+	check(chapter_run._chapter == 1, "chapter_end_pad_choice_enters_chapter_2")
+	check(not chapter_run._finished, "chapter_end_pad_choice_does_not_finish")
+	check(chapter_run._story.is_open() and not chapter_run._story._choice_mode,
+		"chapter_end_pad_choice_opens_chapter_2_intro")
+	check(paused, "chapter_end_pad_chapter_2_intro_pauses")
+	check(_focus_owner() == chapter_run._story._continue,
+		"chapter_end_pad_chapter_2_intro_focus")
+	chapter_run._story.close()
+	await create_timer(0.2).timeout
+	chapter_run._finish(true)
+	await create_timer(1.2).timeout
+	check(chapter_run._finished, "chapter_end_pad_ending_after_handoff")
 	check(chapter_run.ending_screen.visible, "chapter_end_pad_ending_visible")
 	check(paused, "chapter_end_pad_ending_pauses")
 	check(_focus_owner() == chapter_run.ending_screen._return_button,

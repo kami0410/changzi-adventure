@@ -25,23 +25,23 @@ const PICKUP_SCENE = preload("res://scenes/combat/pickup.tscn")
 const MDS_CHAPTER_SCENES: Array[PackedScene] = [
 	preload("res://scenes/mds/chapter_1_world.tscn"),
 	preload("res://scenes/mds/chapter_2_bigmap_world.tscn"),
-	preload("res://scenes/mds/chapter_3_world.tscn"),
-	preload("res://scenes/mds/chapter_4_world.tscn"),
+	preload("res://scenes/mds/chapter_3_bigmap_world.tscn"),
+	preload("res://scenes/mds/chapter_4_bigmap_world.tscn"),
 ]
 const MDS_WORLD_FILES: Array[String] = [
 	"res://scenes/mds/chapter_1.mdsworld.json",
 	"res://scenes/mds/chapter_2_bigmap.mdsworld.json",
-	"res://scenes/mds/chapter_3.mdsworld.json",
-	"res://scenes/mds/chapter_4.mdsworld.json",
+	"res://scenes/mds/chapter_3_bigmap.mdsworld.json",
+	"res://scenes/mds/chapter_4_bigmap.mdsworld.json",
 ]
 ## Chapter plans are data-only for now: Chapter 1 drives its linear rooms and
-## Chapter 2 drives the big-map regions. Empty entries keep the legacy defaults
-## (CampaignData.rooms + ROOM_WAVES) for chapters 3–4.
+## Chapters 2–4 drive the big-map regions. Empty entries keep the legacy
+## defaults (CampaignData.rooms + ROOM_WAVES) for chapters without a plan.
 const CHAPTER_PLAN_PATHS: Array[String] = [
 	"res://resources/chapters/chapter_1_demo.tres",
 	"res://resources/chapters/chapter_2_demo.tres",
-	"",
-	"",
+	"res://resources/chapters/chapter_3_demo.tres",
+	"res://resources/chapters/chapter_4_demo.tres",
 ]
 ## A weapon never vanishes: equipping swaps with the held one and drops it.
 const WEAPON_DROP_CHANCE := 0.04
@@ -59,8 +59,16 @@ const ENEMY_ART: Dictionary = {
 	&"choir_summoner": preload("res://assets/sprites/enemies/choir_summoner.png"),
 	&"mirror_sniper": preload("res://assets/sprites/enemies/mirror_sniper.png"),
 	&"page_swarm": preload("res://assets/sprites/enemies/page_swarm.png"),
+	&"breath_hound": preload("res://assets/sprites/enemies/breath_hound.png"),
+	&"lung_moth": preload("res://assets/sprites/enemies/lung_moth.png"),
+	&"rust_whisperer": preload("res://assets/sprites/enemies/rust_whisperer.png"),
+	&"collapse_husk": preload("res://assets/sprites/enemies/collapse_husk.png"),
 }
-const ENEMY_ART_FALLBACK: Dictionary = {&"breath_hound": &"ink_hound", &"lung_moth": &"hanging_scribe", &"rust_whisperer": &"scribe_bug", &"collapse_husk": &"blank_man"}
+## Empty since pass 78: the four Chapter 2 enemies that used to borrow Chapter 1
+## paintings (and Chapter 3 reuses three of them) now own dedicated sprites.
+## The table and its tint stay in place so a future enemy without art can fall
+## back explicitly instead of rendering nothing.
+const ENEMY_ART_FALLBACK: Dictionary = {}
 ## Tint applied only to Chapter 1 art reused by an enemy without its own
 ## sprite. Enemies wired into ENEMY_ART render at Color.WHITE.
 const ENEMY_FALLBACK_TINT := Color("c8e1cd")
@@ -105,6 +113,10 @@ var _chapters: Array[Dictionary] = []
 var _chapter := 0
 var _chapter_plan: ChapterPlanData = null
 var _event_room_id := ""
+## `Time.get_ticks_msec()` of the last `room_loaded`. The MDS fade-in finishes
+## after that signal, and a delayed required page must not take the screen while
+## the fade still covers it.
+var _room_loaded_msec := -100000
 var _rooms: Array[ArenaRoom] = []
 var _steles: Array[MemoryStele] = []
 var _chests: Array[TreasureChest] = []
@@ -124,6 +136,10 @@ var _cleared_in_chapter := 0
 var _help_ui: HelpUI
 var _reward_ui: RewardChoice
 var _reward_options: Array[Dictionary] = []
+## True from the moment a room settles until its reward page is on screen. The
+## page can wait out another modal or a transition, and a checkpoint written in
+## that window would resume into a cleared room with the unchosen reward gone.
+var _reward_pending := false
 var _reward_room: ArenaRoom
 var _overlay: Control
 ## Focus owner before the current overlay opened, restored on close when the
@@ -142,6 +158,11 @@ var _active_shop: MemoryShop
 var _mercy := 0
 var _records := 0
 var _burned_final := false
+## Chapter index whose boss granted the authority currently held. A boss-death
+## checkpoint is written before the pick, so on resume an authority inherited
+## from an earlier chapter must not suppress this chapter's pick. `-1` means no
+## authority has been granted yet.
+var _authority_granted_chapter := -1
 var _screen_fx: ScreenFX
 var _hit_stop: HitStop
 var _boss_entrance_started := false
@@ -331,6 +352,11 @@ func _restore_run_save(data: Dictionary) -> bool:
 	var world: Dictionary = data.get("world", {})
 	_restore_shop_cache(world.get("shops", {}))
 	_restore_frenzy(world.get("frenzy", {}))
+	# The 不朽档案 revive is once per *run*, not once per session. Its spent flag
+	# lives on RelicEffects, so a checkpoint taken after the relic already saved
+	# the player used to boot with the revive re-armed and it fired a second
+	# time. Old checkpoints have no key: false keeps their previous behaviour.
+	relic_effects.revive_used = bool(world.get("relic_revive_used", false))
 	return true
 
 
@@ -423,6 +449,11 @@ func _restore_authority(data: Dictionary) -> void:
 	_authority.revive_used = bool(data.get("revive_used", false))
 	_authority.rewrite_used = bool(data.get("rewrite_used", false))
 	_authority.archive_used = bool(data.get("archive_used", false))
+	# Old checkpoints predate the key: treating the authority as granted in the
+	# saved chapter keeps them from reopening a pick that already happened. The
+	# saved chapter is read from the checkpoint itself because this runs in
+	# `_ready`, before `_start_chapter` applies it to `_chapter`.
+	_authority_granted_chapter = int(data.get("chapter", _resume_run_value("chapter", _chapter)))
 	hud.set_authority(authority.display_name, _authority.can_use())
 
 
@@ -512,6 +543,12 @@ func _build_run_save() -> Dictionary:
 			"revive_used": _authority.revive_used,
 			"rewrite_used": _authority.rewrite_used,
 			"archive_used": _authority.archive_used,
+			# Which chapter's boss handed this authority over. It separates "the
+			# pick for this chapter already happened" from "this is last
+			# chapter's authority, the new pick is still owed" when a boss-death
+			# checkpoint is resumed. Old saves lack the key and are treated as
+			# granted in their own chapter (the pre-existing behaviour).
+			"chapter": _authority_granted_chapter,
 		}
 	var examples: Array = []
 	for phrase in _example_phrases:
@@ -560,6 +597,7 @@ func _build_run_save() -> Dictionary:
 			"opened_chest_ids": _opened_chests.keys(),
 			"opened_chests": _legacy_opened_chests.keys(),
 			"boss_defeated": _boss_defeated,
+			"relic_revive_used": relic_effects.revive_used,
 			"shops": _serialize_shop_cache(),
 			"frenzy": {
 				"active": _frenzy_active,
@@ -581,7 +619,7 @@ func save_run_now() -> bool:
 		return false
 	if _finished or _ending_pending or _death_committed:
 		return false
-	if _reward_ui != null and _reward_ui.visible:
+	if _reward_pending or (_reward_ui != null and _reward_ui.visible):
 		# The room is marked cleared before the choice opens. Writing now would
 		# resume into a cleared room with the unchosen reward gone; keep the
 		# previous checkpoint so quitting at the reward screen only replays it.
@@ -601,7 +639,8 @@ func save_run_on_exit() -> void:
 
 ## HUD hides under any modal page so the page is the only thing to read.
 func _sync_hud_visibility() -> void:
-	var modal: bool = _overlay != null or pause_menu.is_open() or _story.is_open() 		or (_reward_ui != null and _reward_ui.visible) or (_shop_ui != null and _shop_ui.visible) 		or (_map_overlay != null and _map_overlay.is_open()) or ending_screen.visible 		or (_archive_choice != null and _archive_choice.is_open())
+	var modal: bool = _overlay != null or pause_menu.is_open() or _story.is_open() 		or (_reward_ui != null and _reward_ui.visible) or (_shop_ui != null and _shop_ui.visible) 		or (_map_overlay != null and _map_overlay.is_open()) or ending_screen.visible 		or (_archive_choice != null and _archive_choice.is_open()) \
+		or (_authority_choice != null and _authority_choice.is_open())
 	hud.visible = not modal
 
 
@@ -1190,8 +1229,8 @@ func _start_chapter(index: int) -> void:
 
 
 ## Chapter plan resource, or null for chapters that still use the legacy
-## CampaignData room list. Chapter 1 keeps its linear plan; Chapter 2 uses the
-## big-map region plan.
+## CampaignData room list. Chapter 1 keeps its linear plan; Chapters 2–4 use
+## their big-map region plans.
 func _load_chapter_plan(chapter_index: int) -> ChapterPlanData:
 	if chapter_index < 0 or chapter_index >= CHAPTER_PLAN_PATHS.size():
 		return null
@@ -1299,6 +1338,7 @@ func _teardown_mds(clear_progress := true) -> void:
 func _on_mds_room_loaded(room_id: String) -> void:
 	if not _mds_active or _mds_world == null:
 		return
+	_room_loaded_msec = Time.get_ticks_msec()
 	var room_node := _mds_world.room_node
 	if room_node == null:
 		return
@@ -1407,7 +1447,7 @@ func _on_mds_room_loaded(room_id: String) -> void:
 				if _boss_defeated:
 					# Quit during the authority/outro sequence: finish it instead of
 					# spawning a second boss and re-paying the kill reward.
-					hud.set_objective("墨骸史官已经倒下")
+					hud.set_objective("%s已经倒下" % chapter["boss_name"])
 					_resume_boss_aftermath.call_deferred()
 				else:
 					_boss = _spawn_boss(arena, chapter, _chapter)
@@ -1534,7 +1574,10 @@ func _resume_boss_aftermath() -> void:
 	if _boss_aftermath_started or _finished or _ending_pending:
 		return
 	_boss_aftermath_started = true
-	if _authority.authority == null:
+	# A checkpoint is written before the authority pick. An authority carried
+	# over from an earlier chapter therefore means this chapter's pick is still
+	# owed; only an authority granted by this chapter skips the choice.
+	if _authority.authority == null or _authority_granted_chapter != _chapter:
 		await _grant_chapter_authority()
 	if is_inside_tree() and not _ended():
 		_complete_chapter()
@@ -1608,15 +1651,56 @@ func _room_local_height(room_id: String) -> float:
 
 func _open_event_after_transition(room_id: String) -> void:
 	await get_tree().create_timer(0.8).timeout
-	if not is_inside_tree() or _finished or _ending_pending:
-		return
 	# Walking back out before the page opens must cancel it: opening the paused
 	# page during the next room's fade leaves the player on a black screen (the
 	# story layer sits under the fade) and stalls the transition. Re-entering
 	# the room schedules it again because it is still uncleared.
+	while is_inside_tree() and not _finished and not _ending_pending:
+		if not _mds_active or _mds_world == null or _mds_world.current_room != room_id:
+			return
+		# A transition started inside the beat means the player is already
+		# leaving. `current_room` only flips after the fade-out, so without this
+		# check the page could open on the dying room's black fade and freeze
+		# there. Cancelling is safe: re-entering schedules the page again.
+		if _mds_world.changing_room:
+			return
+		if not _ui_blocks_delayed_page():
+			break
+		# A page (map/pause/inventory/shop...) opened during the 0.8 s beat owns
+		# the screen. Opening the event choice under or over it would stack two
+		# modals; closing the map would then unpause the world while the required
+		# choice is still up. Wait for the player to come back to gameplay.
+		await get_tree().create_timer(0.05).timeout
+	if not is_inside_tree() or _finished or _ending_pending:
+		return
 	if not _mds_active or _mds_world == null or _mds_world.current_room != room_id:
 		return
 	_open_chapter_event(room_id)
+
+
+## True while another page/pause owns the screen. Delayed pages (event page,
+## boss authority pick) must wait for it to close instead of stacking: the pause
+## menu draws above every game page and the map unpauses unconditionally on
+## close, so an overlap can hide a required choice or resume the run underneath
+## it.
+func _ui_blocks_delayed_page() -> bool:
+	if get_tree().paused:
+		return true
+	if _overlay != null or pause_menu.is_open():
+		return true
+	if _map_overlay != null and _map_overlay.is_open():
+		return true
+	if _story != null and _story.is_open():
+		return true
+	if _reward_ui != null and _reward_ui.visible:
+		return true
+	if _shop_ui != null and _shop_ui.visible:
+		return true
+	if _authority_choice != null and _authority_choice.is_open():
+		return true
+	if _archive_choice != null and _archive_choice.is_open():
+		return true
+	return ending_screen != null and ending_screen.visible
 
 
 ## Event page for the active chapter: no forced fight; reading grants a word at
@@ -1649,6 +1733,9 @@ func _open_chapter_event(room_id: String) -> void:
 			{"label": String(event.get("take_label", "拿残页")),
 				"note": "残页 +%d" % pages_reward},
 		])
+	# Hide the HUD on the same frame the page appears instead of waiting for the
+	# next `_process` sync; pause/map/other pages already hide synchronously.
+	_sync_hud_visibility()
 	var picked: int = await _story.choice_made
 	if picked == 0:
 		run_state.add_corruption(corruption_cost)
@@ -1762,6 +1849,12 @@ func _update_room_locks() -> void:
 	for room in _rooms:
 		if room.is_locked() or room.is_cleared():
 			continue
+		# A defeated boss stays down. A boss-death checkpoint restores the player
+		# inside the arena, so re-locking it would replay the entrance sting over
+		# a dead boss and overwrite the "已经倒下" objective with a fresh kill
+		# order while the authority pick is already pending.
+		if _boss_defeated and _is_boss_room(room):
+			continue
 		if room.contains_entry(player.global_position):
 			var enemies_root := room.get_node_or_null(ArenaRoom.ENEMIES_NODE)
 			if enemies_root != null:
@@ -1828,6 +1921,7 @@ func _on_room_cleared(room: ArenaRoom, chapter_index: int) -> void:
 		_reward_options = RunLoot.elite_choices(run_state, chapter_seed, Flow.profile, _chapter)
 	else:
 		_reward_options = RunLoot.choices(run_state, chapter_seed, Flow.profile, _chapter)
+	_reward_pending = true
 	_open_reward.call_deferred()
 
 func _current_plan_room() -> Dictionary:
@@ -1837,7 +1931,34 @@ func _current_plan_room() -> Dictionary:
 
 
 func _open_reward() -> void:
-	if _finished or _ending_pending:
+	# An enemy corpse is freed by a 0.35 s scene timer that keeps running while
+	# the tree is paused, so killing the last enemy and opening the map, pause
+	# menu or an overlay inside that window lets the room clear behind the page.
+	# The reward is required; stacking it there lets closing the map resume the
+	# world with an unpicked page on screen. Wait for gameplay to own the screen
+	# like the event page and the authority pick do. Death is final: a run that
+	# died in the same window is not owed the reward any more.
+	while is_inside_tree() and not _ended() and not _death_committed:
+		if _reward_ui != null and _reward_ui.visible:
+			return
+		# Unlike the event page this pick cannot be cancelled: the room is
+		# already recorded cleared, so re-entering would not offer it again.
+		# Wait the transition out instead of opening under the MDS fade.
+		if _mds_active and _mds_world != null and _mds_world.changing_room:
+			await get_tree().create_timer(0.05).timeout
+			continue
+		if not _ui_blocks_delayed_page():
+			break
+		await get_tree().create_timer(0.05).timeout
+	if not is_inside_tree() or _ended() or _death_committed:
+		_reward_pending = false
+		return
+	if _reward_ui != null and _reward_ui.visible:
+		return
+	if _reward_options.is_empty():
+		# Nothing to offer: release the checkpoint hold so a later room entry
+		# can still save. RunLoot always returns a full set, so this is a guard.
+		_reward_pending = false
 		return
 	_close_overlay()
 	get_tree().paused = true
@@ -1850,6 +1971,7 @@ func _on_reward_chosen(index: int) -> void:
 	var choice := _reward_options[index]
 	_apply_reward(choice)
 	_reward_options.clear()
+	_reward_pending = false
 	_reward_ui.hide()
 	get_tree().paused = false
 	hud.show_message("获得：" + String(choice["title"]))
@@ -2106,6 +2228,22 @@ func _grant_chapter_authority() -> void:
 	if _chapter_plan == null or _chapter_plan.authority_pool.is_empty():
 		return
 	await get_tree().create_timer(1.2).timeout
+	# The 1.2 s beat leaves room to pause, open the map, or step through the door
+	# the dying boss just unlocked. This pick is required, so wait until gameplay
+	# owns the screen again. A page would stack above/below it; a room transition
+	# would freeze under the MDS fade (CanvasLayer 100, above $UI) with the pick
+	# invisible. `room_loaded` also fires before the fade-in clears.
+	while is_inside_tree() and not _ended():
+		if _mds_active and _mds_world != null and _mds_world.changing_room:
+			await get_tree().create_timer(0.05).timeout
+			continue
+		if _ui_blocks_delayed_page():
+			await get_tree().create_timer(0.05).timeout
+			continue
+		if Time.get_ticks_msec() - _room_loaded_msec < 400:
+			await get_tree().create_timer(0.05).timeout
+			continue
+		break
 	if not is_inside_tree() or _ended():
 		return
 	# The authored pool plus condition unlocks (devour at high corruption,
@@ -2115,11 +2253,15 @@ func _grant_chapter_authority() -> void:
 	if options.is_empty():
 		return
 	_authority_choice.open(options)
+	# Same-frame HUD hide: the required pick pauses the tree, so a check taken
+	# before the next `_process` must already see the modal as the only layer.
+	_sync_hud_visibility()
 	var index: int = await _authority_choice.chosen
 	if not is_inside_tree():
 		return
 	var picked := options[clampi(index, 0, options.size() - 1)]
 	_authority.apply(picked, run_state)
+	_authority_granted_chapter = _chapter
 	hud.set_authority(picked.display_name, _authority.can_use())
 	hud.show_message("获得权柄：%s · %s" % [picked.display_name, picked.description])
 	save_run_now()
@@ -2158,21 +2300,26 @@ func _complete_chapter() -> void:
 		return
 	_apply_chapter_choice(chapter, picked)
 	_ending_pending = false
-	# Chapter 1 is the whole demo: stop here instead of walking into Chapter 2.
+	# Chapter 1 hands off to the Chapter 2 big-map campaign. The authored
+	# choice effects are unchanged; the demo flag still marks "Chapter 1 has
+	# been finished" because the Hub NPC personal events read it.
 	if _chapter == 0:
 		if Flow.profile != null:
 			Flow.profile.demo_cleared = true
-		_finish(true)
+			# `_finish(true)` used to persist this flag at the demo boundary;
+			# keep that parity now that the campaign continues into Chapter 2.
+			Flow.save_profile()
+		_start_chapter(1)
 		return
-	# Chapter 2 is the last authored chapter for now: stop at its boundary
-	# instead of loading the unimplemented Chapter 3.
+	# Chapter 2 hands off to the Chapter 3 big-map campaign. The authored choice
+	# effects are unchanged; no ending is recorded at this boundary.
 	if _chapter == 1:
-		_finish(true)
+		_start_chapter(2)
 		return
-	# Chapter 3 is authored but still unreachable: stop at its boundary too
-	# instead of auto-entering Chapter 4.
+	# Chapter 3 hands off to the Chapter 4 big-map campaign. The authored choice
+	# effects are unchanged; no ending is recorded at this boundary.
 	if _chapter == 2:
-		_finish(true)
+		_start_chapter(3)
 		return
 	# Chapter 4 is the final authored chapter: the campaign ends here instead of
 	# looking for a fifth chapter.

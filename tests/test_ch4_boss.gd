@@ -295,9 +295,9 @@ func _test_other_chapters_isolated(t: Callable) -> void:
 	ch3.free()
 
 
-## The plan is routed to its boss scene, but the plan itself is still not wired
-## into game.gd: slot 3 stays empty, the legacy Chapter 4 world is still used,
-## and the plan's clear target/waves/authority pool are unchanged.
+## The plan is routed to its boss scene and (since pass 91) into game.gd: slot 3
+## carries the plan, the big-map world is the one the campaign loads, and the
+## plan's clear target/waves/authority pool are unchanged.
 func _test_routing_locked(t: Callable) -> void:
 	var game_script := load(GAME_SCRIPT_PATH) as GDScript
 	t.call(game_script != null, true, "ch4_boss_game_script_loads")
@@ -306,16 +306,16 @@ func _test_routing_locked(t: Callable) -> void:
 		var plan_paths: Array = constants.get("CHAPTER_PLAN_PATHS", [])
 		var world_files: Array = constants.get("MDS_WORLD_FILES", [])
 		if plan_paths.size() == 4:
-			t.call(String(plan_paths[3]), "", "ch4_boss_pass_keeps_plan_slot_empty")
-			t.call(String(plan_paths[2]), "", "ch3_plan_slot_still_empty")
+			t.call(String(plan_paths[3]), PLAN_PATH, "ch4_boss_plan_slot_wired")
+			t.call(String(plan_paths[2]), CH3_PLAN_PATH, "ch3_plan_slot_wired")
 		if world_files.size() == 4:
-			t.call(String(world_files[3]).ends_with("chapter_4.mdsworld.json"), true,
-				"ch4_boss_pass_keeps_legacy_world")
-			t.call(String(world_files[2]).ends_with("chapter_3.mdsworld.json"), true,
-				"ch3_world_unchanged")
+			t.call(String(world_files[3]).ends_with("chapter_4_bigmap.mdsworld.json"), true,
+				"ch4_boss_loads_big_map_world")
+			t.call(String(world_files[2]).ends_with("chapter_3_bigmap.mdsworld.json"), true,
+				"ch3_world_is_big_map")
 	var game_source := FileAccess.get_file_as_string(GAME_SCRIPT_PATH)
-	t.call(game_source.contains("chapter_4_bigmap"), false,
-		"ch4_region_world_not_routed")
+	t.call(game_source.contains("chapter_4_bigmap"), true,
+		"ch4_region_world_is_routed")
 	t.call(game_source.contains("ch4_shortcut"), false,
 		"ch4_game_grants_no_shortcut")
 	t.call(FileAccess.file_exists("res://scenes/mds/chapter_4.mdsworld.json"), true,

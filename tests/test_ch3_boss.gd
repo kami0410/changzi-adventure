@@ -3,7 +3,7 @@ extends RefCounted
 ## Chapter 3 boss (最后的读者): the chapter plan owns its scene, the generic
 ## boss flow is reused, and the mirror barrage / read-page seal / blank-page
 ## burst window are authored only on this subclass. Chapters 1–2 stay untouched,
-## and the plan is still not routed into game.gd (slot 2 stays empty).
+## and pass 80 routes the plan into game.gd (slot 2).
 
 const PLAN_PATH := "res://resources/chapters/chapter_3_demo.tres"
 const SCENE_PATH := "res://scenes/bosses/last_reader.tscn"
@@ -334,8 +334,10 @@ func _test_other_chapters_isolated(t: Callable) -> void:
 		var plan_paths: Array = game_script.get_script_constant_map().get(
 			"CHAPTER_PLAN_PATHS", [])
 		if plan_paths.size() == 4:
-			t.call(plan_paths[2], "", "ch3_boss_pass_keeps_plan_slot_empty")
-			t.call(plan_paths[3], "", "ch3_boss_pass_keeps_ch4_plan_slot_empty")
+			t.call(plan_paths[2], PLAN_PATH, "ch3_boss_plan_slot_wired")
+			# Pass 91 routes the Chapter 4 plan as well.
+			t.call(plan_paths[3], "res://resources/chapters/chapter_4_demo.tres",
+				"ch3_boss_ch4_plan_slot_wired")
 
 
 func _children_of_type(parent: Node, type_name: String) -> Array:

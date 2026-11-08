@@ -521,6 +521,13 @@ func _run() -> void:
 	won_save["mds"]["room"] = "ch1_boss"
 	won_save["world"]["boss_defeated"] = true
 	won_save["authority"] = {}
+	# A real boss-death checkpoint is written while the player still stands in
+	# the arena (that is where the killing blow landed), so the saved position
+	# must be inside it. `ch1_boss` sits at world origin x=8960 and its Arena at
+	# room-local (640, 280), so this lands 210 px below the arena centre — inside
+	# its entry band. A checkpoint synthesised with the player elsewhere hides
+	# the lock pass re-arming a room whose boss is already down.
+	won_save["mds"]["position"] = [9600.0, 490.0]
 	check(RunSave.write(won_save, RUN_PATH), "run_save_aftermath_save_written")
 	flow.resume_requested = true
 	var won_resume = load("res://scenes/main.tscn").instantiate()
@@ -531,6 +538,17 @@ func _run() -> void:
 	check(won_resume._mds_world.current_room == "ch1_boss", "run_save_aftermath_room")
 	check(won_resume._boss == null, "run_save_aftermath_no_second_boss")
 	check(won_resume._boss_defeated, "run_save_aftermath_flag")
+	var ch1_objective := won_resume.hud.find_child("Objective", true, false) as Label
+	check(ch1_objective != null and ch1_objective.text == "墨骸史官已经倒下",
+		"run_save_aftermath_objective_uses_ch1_boss")
+	# Pass 97 regression: the restored player stands inside the dead boss's
+	# arena, and re-locking it would replay the entrance sting and replace the
+	# "已经倒下" objective with a fresh kill order.
+	var aftermath_arena: ArenaRoom = won_resume._mds_boss_arena
+	check(aftermath_arena != null and not aftermath_arena.is_locked(),
+		"run_save_aftermath_dead_boss_room_stays_open")
+	check(not won_resume._boss_entrance_started,
+		"run_save_aftermath_no_entrance_replay")
 	await create_timer(1.6).timeout
 	check(won_resume._authority_choice != null and won_resume._authority_choice.is_open(),
 		"run_save_aftermath_authority_opens")
@@ -546,10 +564,20 @@ func _run() -> void:
 	if won_resume._story.is_open() and won_resume._story._choice_mode:
 		won_resume._story.choose(0)
 	await create_timer(1.2).timeout
-	check(won_resume._finished, "run_save_aftermath_reaches_ending")
-	check(not flow.last_ending.is_empty(), "run_save_aftermath_ending_recorded")
-	check(flow.last_victory, "run_save_aftermath_victory_recorded")
-	check(not FileAccess.file_exists(RUN_PATH), "run_save_aftermath_clears_checkpoint")
+	# Chapter 1 now hands off into Chapter 2 instead of ending the campaign.
+	check(won_resume._chapter == 1, "run_save_aftermath_enters_chapter_2")
+	check(not won_resume._finished, "run_save_aftermath_does_not_finish")
+	check(won_resume._story.is_open() and not won_resume._story._choice_mode,
+		"run_save_aftermath_opens_chapter_2_intro")
+	check(not flow.last_victory, "run_save_aftermath_no_victory_recorded")
+	check(flow.profile != null and flow.profile.demo_cleared,
+		"run_save_aftermath_demo_cleared")
+	# The last safe checkpoint is still the Chapter 1 boss room: quitting during
+	# the Chapter 2 intro must replay the completion page, not skip content.
+	check(FileAccess.file_exists(RUN_PATH), "run_save_aftermath_keeps_checkpoint")
+	var aftermath_saved := RunSave.read(RUN_PATH)
+	check(int(aftermath_saved.get("run", {}).get("chapter", -1)) == 0,
+		"run_save_aftermath_checkpoint_still_chapter_1")
 	await _free_scene(won_resume)
 
 	# --- Boundary checkpoint: quit after the authority was already picked but
@@ -584,9 +612,12 @@ func _run() -> void:
 	if chosen_resume._story.is_open() and chosen_resume._story._choice_mode:
 		chosen_resume._story.choose(0)
 	await create_timer(1.2).timeout
-	check(chosen_resume._finished, "run_save_chosen_authority_reaches_ending")
-	check(not FileAccess.file_exists(RUN_PATH),
-		"run_save_chosen_authority_clears_checkpoint")
+	check(chosen_resume._chapter == 1, "run_save_chosen_authority_enters_chapter_2")
+	check(not chosen_resume._finished, "run_save_chosen_authority_does_not_finish")
+	check(chosen_resume._story.is_open() and not chosen_resume._story._choice_mode,
+		"run_save_chosen_authority_opens_chapter_2_intro")
+	check(FileAccess.file_exists(RUN_PATH),
+		"run_save_chosen_authority_keeps_checkpoint")
 	await _free_scene(chosen_resume)
 
 	# --- Main and backup both corrupt: discard the run once, say so, and start
@@ -943,13 +974,34 @@ func _run() -> void:
 	check(await _wait_mds(reward_run), "run_save_modal_reward_boots")
 	await reward_run._mds_world.load_room("ch1_02")
 	check(await _wait_room(reward_run, "ch1_02"), "run_save_modal_reward_room")
-	var modal_rewards: Array[Dictionary] = [
-		{"kind": &"rest", "title": "试炼奖励", "description": "测试"},
-	]
-	reward_run._reward_options = modal_rewards
-	reward_run._open_reward()
-	await process_frame
+	check(RunSave.has_save(RUN_PATH), "run_save_modal_reward_entry_checkpoint")
+	var modal_arena := reward_run._mds_world.room_node.get_node_or_null("Arena") as ArenaRoom
+	check(modal_arena != null, "run_save_modal_reward_arena")
+	# An enemy corpse is freed by a 0.35 s scene timer that keeps running while
+	# the tree is paused, so a page open inside that window can still be up when
+	# the room clears and the deferred reward arrives. The required reward must
+	# wait for gameplay instead of covering the page (closing the page would then
+	# unpause the world with an unpicked reward on screen), and the checkpoint
+	# must stay silent while it waits or the resume loses the unchosen reward.
+	if modal_arena != null:
+		reward_run._map_overlay.open()
+		reward_run._on_room_cleared(modal_arena, reward_run._chapter)
+		check(reward_run._reward_pending, "run_save_modal_reward_pending")
+		check(reward_run._cleared_encounters.has("ch1_02/Arena"),
+			"run_save_modal_reward_room_cleared")
+		await create_timer(0.2).timeout
+		check(not reward_run._reward_ui.visible,
+			"run_save_modal_reward_waits_for_map")
+		check(reward_run._map_overlay.is_open(), "run_save_modal_reward_map_kept")
+		check(not reward_run.save_run_now(), "run_save_modal_reward_pending_blocked")
+		reward_run._map_overlay.close()
+		var reward_wait := 0.0
+		while reward_wait < 2.0 and not reward_run._reward_ui.visible:
+			await create_timer(0.05).timeout
+			reward_wait += 0.05
 	check(reward_run._reward_ui.visible and paused, "run_save_modal_reward_open")
+	# The reward is still owed until it is picked, so the hold stays on.
+	check(reward_run._reward_pending, "run_save_modal_reward_pending_after_open")
 	check(not reward_run.save_run_now(), "run_save_modal_reward_blocked")
 	reward_run.save_run_on_exit()
 	var reward_file := RunSave.read(RUN_PATH)
@@ -1626,8 +1678,22 @@ func _run() -> void:
 		"run_save_complete_exit_resume_choice")
 	complete_resume._story.choose(0)
 	await create_timer(1.2).timeout
-	check(complete_resume.ending_screen.visible,
-		"run_save_complete_exit_resume_finishes")
+	check(complete_resume._chapter == 1, "run_save_complete_exit_resume_enters_chapter_2")
+	check(not complete_resume._finished, "run_save_complete_exit_resume_not_finished")
+	check(complete_resume._story.is_open() and not complete_resume._story._choice_mode,
+		"run_save_complete_exit_resume_opens_chapter_2_intro")
+	# Closing the Chapter 2 intro loads the big-map entry and moves the
+	# checkpoint into the new chapter.
+	complete_resume._story.close()
+	await create_timer(1.0).timeout
+	check(await _wait_mds(complete_resume), "run_save_complete_exit_resume_chapter_2_boots")
+	check(complete_resume._mds_world.current_room == "ch2_entry",
+		"run_save_complete_exit_resume_chapter_2_room")
+	var chapter_2_saved := RunSave.read(RUN_PATH)
+	check(int(chapter_2_saved.get("run", {}).get("chapter", -1)) == 1,
+		"run_save_complete_exit_resume_checkpoint_chapter_2")
+	check(String(chapter_2_saved.get("run", {}).get("room", "")) == "ch2_entry",
+		"run_save_complete_exit_resume_checkpoint_entry")
 	await _free_scene(complete_resume)
 
 	# --- Hub dialogue open when the game is closed: no run checkpoint is
@@ -1974,6 +2040,39 @@ func _run() -> void:
 			starter_names = true
 	check(not starter_names, "run_save_archive_skips_starter_weapons")
 
+	# The last enemy's corpse timer keeps running while the tree is paused, so
+	# killing the room's last wave and dying inside its 0.35 s delay clears the
+	# room behind the death archive pick. The deferred reward page must not
+	# stack on the required pick (taking it would unpause the world underneath).
+	# Hold the player still so stray contact damage cannot kill them before the
+	# scripted last-enemy-then-death sequence; take_damage still works.
+	archive_first.player.set_physics_process(false)
+	var death_arena: ArenaRoom = null
+	for room in archive_first._rooms:
+		if room is ArenaRoom:
+			death_arena = room
+			break
+	check(death_arena != null, "run_save_archive_room_arena")
+	if death_arena != null:
+		if not death_arena.is_locked():
+			death_arena.lock_until_cleared()
+		var race_rounds := 0
+		while race_rounds < 400:
+			race_rounds += 1
+			var alive: Array = []
+			for node in get_nodes_in_group("enemies"):
+				if is_instance_valid(node) and not node.dead:
+					alive.append(node)
+			if alive.is_empty():
+				await process_frame
+				continue
+			for enemy in alive:
+				enemy.take_damage(999999)
+			if death_arena._wave_queue.is_empty():
+				break
+			await process_frame
+		check(not death_arena.is_cleared(), "run_save_archive_room_delay_running")
+
 	archive_first.player.take_damage(999999)
 	check(archive_first._archive_choice.is_open(), "run_save_archive_pick_opens")
 	check(paused, "run_save_archive_pick_pauses")
@@ -1981,6 +2080,19 @@ func _run() -> void:
 	check(not RunSave.has_save(RUN_PATH),
 		"run_save_archive_clears_checkpoint_before_pick")
 	check(archive_first._death_committed, "run_save_archive_death_committed")
+	# Let the corpses finish freeing while the pick waits for input: the room
+	# clears, but death is final so the reward is dropped instead of covering
+	# the page.
+	if death_arena != null:
+		await create_timer(0.8).timeout
+		check(death_arena.is_cleared(), "run_save_archive_room_clears_behind_pick")
+		check(archive_first._archive_choice.is_open(),
+			"run_save_archive_pick_survives_room_clear")
+		check(not archive_first._reward_ui.visible,
+			"run_save_archive_no_reward_over_pick")
+		check(paused, "run_save_archive_room_clear_keeps_pause")
+		check(not archive_first.hud.visible,
+			"run_save_archive_room_clear_hides_hud")
 	await process_frame
 	check(not archive_first.hud.visible, "run_save_archive_hides_hud")
 	check(archive_first._archive_choice.get_option_count() == 2,
@@ -2229,10 +2341,10 @@ func _run() -> void:
 		"run_save_bench_resume_checkpoint")
 	await _free_scene(bench_resumed)
 
-	# --- Chapter 2 boundary (test-only start; the campaign still stops after
-	# Chapter 1). The checkpoint holds boss_defeated and the granted authority.
-	# Resuming must not spawn a second boss or pay the kill reward again, and the
-	# chapter end must stop at Chapter 2 instead of entering Chapter 3.
+	# --- Chapter 2 boundary (test-only start). The checkpoint holds boss_defeated
+	# and the granted authority. Resuming must not spawn a second boss or pay the
+	# kill reward again, and (since pass 80) the chapter end hands off into the
+	# Chapter 3 intro instead of stopping.
 	RunSave.clear(RUN_PATH)
 	flow.resume_requested = false
 	var ch2_run = load("res://scenes/main.tscn").instantiate()
@@ -2262,6 +2374,7 @@ func _run() -> void:
 	ch2_run._grant_chapter_authority.call_deferred()
 	await create_timer(1.6).timeout
 	check(ch2_run._authority_choice.is_open(), "run_save_ch2_authority_opens")
+	check(not ch2_run.hud.visible, "run_save_ch2_authority_hides_hud")
 	if ch2_run._authority_choice.is_open():
 		ch2_run._authority_choice._choose(0)
 	await create_timer(0.3).timeout
@@ -2281,6 +2394,8 @@ func _run() -> void:
 		"run_save_ch2_saved_boss")
 	check(String(ch2_saved.get("authority", {}).get("id", "")) == String(ch2_authority),
 		"run_save_ch2_saved_authority")
+	check(int(ch2_saved.get("authority", {}).get("chapter", -1)) == 1,
+		"run_save_ch2_saved_authority_chapter")
 	await _free_scene(ch2_run)
 
 	flow.resume_requested = true
@@ -2293,6 +2408,9 @@ func _run() -> void:
 		"run_save_ch2_resume_room")
 	check(ch2_resume._boss == null, "run_save_ch2_resume_no_second_boss")
 	check(ch2_resume._boss_defeated, "run_save_ch2_resume_boss_flag")
+	var ch2_objective := ch2_resume.hud.find_child("Objective", true, false) as Label
+	check(ch2_objective != null and ch2_objective.text == "肺钟守卫已经倒下",
+		"run_save_ch2_resume_objective_uses_ch2_boss")
 	check(ch2_resume.run_state.authority != null
 		and ch2_resume.run_state.authority.id == ch2_authority,
 		"run_save_ch2_resume_authority")
@@ -2300,6 +2418,8 @@ func _run() -> void:
 		"run_save_ch2_resume_pages_no_duplicate")
 	check(ch2_resume._kills == ch2_kills, "run_save_ch2_resume_kills_no_duplicate")
 	await create_timer(0.6).timeout
+	check(not ch2_resume._authority_choice.is_open(),
+		"run_save_ch2_resume_authority_not_reopened")
 	check(ch2_resume._story.is_open(), "run_save_ch2_resume_outro")
 	_close_story(ch2_resume)
 	await create_timer(0.5).timeout
@@ -2308,10 +2428,192 @@ func _run() -> void:
 	if ch2_resume._story.is_open() and ch2_resume._story._choice_mode:
 		ch2_resume._story.choose(0)
 	await create_timer(1.2).timeout
-	check(ch2_resume._chapter == 1, "run_save_ch2_resume_stops_at_chapter_2")
-	check(ch2_resume._finished, "run_save_ch2_resume_finishes")
-	check(not FileAccess.file_exists(RUN_PATH), "run_save_ch2_resume_clears_checkpoint")
+	# Pass 80: the Chapter 2 choice hands off into Chapter 3 instead of ending
+	# the campaign. The last safe checkpoint stays the Chapter 2 boss room until
+	# the Chapter 3 entrance loads and writes the new one.
+	check(ch2_resume._chapter == 2, "run_save_ch2_resume_enters_chapter_3")
+	check(not ch2_resume._finished, "run_save_ch2_resume_does_not_finish")
+	check(ch2_resume._story.is_open() and not ch2_resume._story._choice_mode,
+		"run_save_ch2_resume_opens_chapter_3_intro")
+	check(not ch2_resume.ending_screen.visible, "run_save_ch2_resume_no_end_screen")
+	check(FileAccess.file_exists(RUN_PATH), "run_save_ch2_resume_keeps_checkpoint")
+	var boundary_save := RunSave.read(RUN_PATH)
+	check(int(boundary_save.get("run", {}).get("chapter", -1)) == 1,
+		"run_save_ch2_resume_checkpoint_still_chapter_2")
+	# Closing the Chapter 3 intro loads the big-map entry and moves the
+	# checkpoint into the new chapter.
+	_close_story(ch2_resume)
+	await create_timer(1.0).timeout
+	check(await _wait_mds(ch2_resume), "run_save_ch2_resume_chapter_3_boots")
+	check(ch2_resume._mds_world.current_room == "ch3_entry",
+		"run_save_ch2_resume_chapter_3_room")
+	var chapter_3_saved := RunSave.read(RUN_PATH)
+	check(int(chapter_3_saved.get("run", {}).get("chapter", -1)) == 2,
+		"run_save_ch2_resume_checkpoint_chapter_3")
+	check(String(chapter_3_saved.get("run", {}).get("room", "")) == "ch3_entry",
+		"run_save_ch2_resume_checkpoint_entry")
 	await _free_scene(ch2_resume)
+
+	# --- Chapter 2 boss checkpoint written before its authority pick, with the
+	# Chapter 1 authority still in hand (the real-play case: every chapter boss
+	# hands out a pick). The boss-death save is written first, so resuming must
+	# offer this chapter's pick again instead of mistaking the carried-over
+	# authority for an already-spent one. ---
+	RunSave.clear(RUN_PATH)
+	flow.resume_requested = false
+	var ch2_owed = load("res://scenes/main.tscn").instantiate()
+	root.add_child(ch2_owed)
+	current_scene = ch2_owed
+	await create_timer(0.4).timeout
+	_close_story(ch2_owed)
+	check(await _wait_mds(ch2_owed), "run_save_ch2_owed_boots")
+	ch2_owed._finished = false
+	ch2_owed._ending_pending = false
+	ch2_owed.ending_screen.visible = false
+	paused = false
+	ch2_owed._start_chapter(1)
+	await create_timer(0.3).timeout
+	_close_story(ch2_owed)
+	await process_frame
+	check(await _wait_mds(ch2_owed), "run_save_ch2_owed_region_world")
+	await ch2_owed._mds_world.load_room("ch2_boss")
+	check(await _wait_room(ch2_owed, "ch2_boss"), "run_save_ch2_owed_boss_room")
+	var ch1_authority := ContentLibrary.authority_by_id(&"revive")
+	check(ch1_authority != null, "run_save_ch2_owed_authority_resource")
+	ch2_owed._authority.apply(ch1_authority, ch2_owed.run_state)
+	ch2_owed._authority_granted_chapter = 0
+	ch2_owed._boss_defeated = true
+	check(ch2_owed.save_run_now(), "run_save_ch2_owed_checkpoint")
+	var owed_saved := RunSave.read(RUN_PATH)
+	check(int(owed_saved.get("run", {}).get("chapter", -1)) == 1,
+		"run_save_ch2_owed_saved_chapter")
+	check(bool(owed_saved.get("world", {}).get("boss_defeated", false)),
+		"run_save_ch2_owed_saved_boss")
+	check(String(owed_saved.get("authority", {}).get("id", "")) == "revive",
+		"run_save_ch2_owed_saved_authority")
+	check(int(owed_saved.get("authority", {}).get("chapter", -1)) == 0,
+		"run_save_ch2_owed_saved_authority_chapter")
+	await _free_scene(ch2_owed)
+
+	flow.resume_requested = true
+	var ch2_owed_resume = load("res://scenes/main.tscn").instantiate()
+	root.add_child(ch2_owed_resume)
+	current_scene = ch2_owed_resume
+	check(await _wait_mds(ch2_owed_resume), "run_save_ch2_owed_resume_boots")
+	check(ch2_owed_resume._chapter == 1, "run_save_ch2_owed_resume_chapter")
+	check(ch2_owed_resume._mds_world.current_room == "ch2_boss",
+		"run_save_ch2_owed_resume_room")
+	check(ch2_owed_resume._boss == null, "run_save_ch2_owed_resume_no_second_boss")
+	await create_timer(2.0).timeout
+	check(ch2_owed_resume._authority_choice.is_open(),
+		"run_save_ch2_owed_authority_reoffered")
+	check(not ch2_owed_resume._story.is_open(),
+		"run_save_ch2_owed_outro_waits_for_pick")
+	if ch2_owed_resume._authority_choice.is_open():
+		ch2_owed_resume._authority_choice._choose(0)
+	await create_timer(0.4).timeout
+	check(ch2_owed_resume.run_state.authority != null,
+		"run_save_ch2_owed_authority_granted")
+	check(ch2_owed_resume._story.is_open(), "run_save_ch2_owed_outro_opens")
+	await _free_scene(ch2_owed_resume)
+
+	# --- Pre-pass-83 checkpoints carry no `authority.chapter` key. A Chapter 2
+	# boss checkpoint that already holds a picked authority must keep it and go
+	# straight to the outro. The legacy default is the chapter saved in the file
+	# (restore runs before `_start_chapter` applies it to `_chapter`). ---
+	var legacy_ch2_save: Dictionary = owed_saved.duplicate(true)
+	legacy_ch2_save["authority"]["id"] = "revive"
+	legacy_ch2_save["authority"].erase("chapter")
+	check(RunSave.write(legacy_ch2_save, RUN_PATH), "run_save_legacy_ch2_save_written")
+	flow.resume_requested = true
+	var legacy_ch2_resume = load("res://scenes/main.tscn").instantiate()
+	root.add_child(legacy_ch2_resume)
+	current_scene = legacy_ch2_resume
+	check(await _wait_mds(legacy_ch2_resume), "run_save_legacy_ch2_boots")
+	check(legacy_ch2_resume._chapter == 1, "run_save_legacy_ch2_chapter")
+	check(legacy_ch2_resume._mds_world.current_room == "ch2_boss", "run_save_legacy_ch2_room")
+	check(legacy_ch2_resume.run_state.authority != null
+		and legacy_ch2_resume.run_state.authority.id == &"revive",
+		"run_save_legacy_ch2_authority")
+	await create_timer(2.0).timeout
+	check(not legacy_ch2_resume._authority_choice.is_open(),
+		"run_save_legacy_ch2_authority_not_reopened")
+	check(legacy_ch2_resume._story.is_open(), "run_save_legacy_ch2_outro_opens")
+	await _free_scene(legacy_ch2_resume)
+
+	# --- 不朽档案's revive is once per run, not once per session. Spending it
+	# and then checkpointing used to boot the resume with the relic re-armed
+	# (`revive_used` lived only on RelicEffects), so a second death in the same
+	# run was saved again for free. ---
+	RunSave.clear(RUN_PATH)
+	flow.resume_requested = false
+	flow.profile.archived_item.clear()
+	flow.profile.stored_relics.clear()
+	flow.profile.pending_run_bonuses.clear()
+	var revive_first = load("res://scenes/main.tscn").instantiate()
+	root.add_child(revive_first)
+	current_scene = revive_first
+	await create_timer(0.4).timeout
+	_close_story(revive_first)
+	check(await _wait_mds(revive_first), "run_save_revive_boots")
+	var revive_relic := ContentLibrary.relic_by_id(&"immortal_archive")
+	check(revive_relic != null, "run_save_revive_relic_exists")
+	if revive_relic != null:
+		revive_first.run_state.inventory.add_relic(revive_relic)
+	revive_first.relic_effects.revive_used = false
+	check(await _wait_vulnerable(revive_first), "run_save_revive_vulnerable_before_first_death")
+	revive_first.player.health = 1
+	revive_first.player.take_damage(5)
+	check(revive_first.player.health == 40, "run_save_revive_first_heals_40")
+	check(revive_first.relic_effects.revive_used, "run_save_revive_first_marks_used")
+	check(await _wait_vulnerable(revive_first), "run_save_revive_vulnerable_after_first")
+	check(revive_first.save_run_now(), "run_save_revive_checkpoint")
+	var revive_saved := RunSave.read(RUN_PATH)
+	check(bool(revive_saved.get("world", {}).get("relic_revive_used", false)),
+		"run_save_revive_checkpoint_carries_flag")
+	var revive_health: int = revive_first.player.health
+	await _free_scene(revive_first)
+
+	flow.resume_requested = true
+	var revive_resume = load("res://scenes/main.tscn").instantiate()
+	root.add_child(revive_resume)
+	current_scene = revive_resume
+	await create_timer(0.4).timeout
+	_close_story(revive_resume)
+	check(await _wait_mds(revive_resume), "run_save_revive_resume_boots")
+	check(revive_resume.player.health == revive_health, "run_save_revive_resume_health")
+	check(revive_resume.relic_effects.revive_used, "run_save_revive_resume_flag_restored")
+	check(await _wait_vulnerable(revive_resume), "run_save_revive_vulnerable_before_second")
+	revive_resume.player.health = 1
+	revive_resume.player.take_damage(5)
+	check(revive_resume.player.health == 0, "run_save_revive_second_death_is_final")
+	await _free_scene(revive_resume)
+
+	# A checkpoint written before the key existed carries no flag and must keep
+	# loading; the in-memory default is unspent, which is the old behaviour.
+	flow.resume_requested = false
+	var legacy_revive = load("res://scenes/main.tscn").instantiate()
+	root.add_child(legacy_revive)
+	current_scene = legacy_revive
+	await create_timer(0.4).timeout
+	_close_story(legacy_revive)
+	check(await _wait_mds(legacy_revive), "run_save_legacy_revive_boots")
+	legacy_revive.run_state.inventory.add_relic(revive_relic)
+	check(legacy_revive.save_run_now(), "run_save_legacy_revive_checkpoint")
+	var legacy_revive_save := RunSave.read(RUN_PATH)
+	legacy_revive_save["world"].erase("relic_revive_used")
+	check(RunSave.write(legacy_revive_save, RUN_PATH), "run_save_legacy_revive_written")
+	await _free_scene(legacy_revive)
+	flow.resume_requested = true
+	var legacy_revive_resume = load("res://scenes/main.tscn").instantiate()
+	root.add_child(legacy_revive_resume)
+	current_scene = legacy_revive_resume
+	await create_timer(0.4).timeout
+	_close_story(legacy_revive_resume)
+	check(await _wait_mds(legacy_revive_resume), "run_save_legacy_revive_resume_boots")
+	check(not legacy_revive_resume.relic_effects.revive_used,
+		"run_save_legacy_revive_defaults_unspent")
+	await _free_scene(legacy_revive_resume)
 
 	_cleanup_files()
 	print("RUN SAVE INTEGRATION: %d checks, %d failures" % [assertions, failures])

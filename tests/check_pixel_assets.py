@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Pixel-art QA gate for the Chapter 1 demo (plan B2.4).
+"""Pixel-art QA gate for the demo (plan B2.4).
 
-Checks every demo-visible sprite against the pixel contract:
+Checks every demo-visible sprite against the pixel contract. Chapter 2 is
+reachable since pass 76–77, so its four pass-78 enemy paintings are part of
+the demo set too:
   - exact canvas size
   - alpha is binary (0 or 255)
   - all four corners transparent
@@ -43,6 +45,11 @@ DEMO_ENEMIES = [
     "typo_beast",
     "ink_bomber",
     "page_swarm",
+    # Chapter 2 enemies wired in pass 78.
+    "breath_hound",
+    "lung_moth",
+    "rust_whisperer",
+    "collapse_husk",
 ]
 
 # Per-category palette budget from plan B2.1/B2.2.

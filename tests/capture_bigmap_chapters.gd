@@ -8,11 +8,12 @@ extends SceneTree
 ##     --audio-driver Dummy -s tests/capture_bigmap_chapters.gd -- \
 ##     --out-dir=res://artifacts/screens
 ##
-## Chapters 2–4 are still unreachable, so this harness mounts the authored
-## chapter plan and big-map world on the live main scene exactly the way the
-## big-map acceptance suites do. It never touches `CHAPTER_PLAN_PATHS`, the
-## chapter routing or any gameplay value; it only positions the player and
-## resets the camera for framing. Screenshots stay out of git (`artifacts/`).
+## Chapters 2–4 are routed into the campaign since passes 80/91, but this
+## harness still mounts the authored chapter plan and big-map world on the live
+## main scene so a single run can frame all three chapters from their entrance.
+## It never touches `CHAPTER_PLAN_PATHS`, the chapter routing or any gameplay
+## value; it only positions the player and resets the camera for framing.
+## Screenshots stay out of git (`artifacts/`).
 
 var _dir := "res://artifacts/screens"
 

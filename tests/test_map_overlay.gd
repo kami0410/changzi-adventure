@@ -29,7 +29,7 @@ func _test_titles(t: Callable) -> void:
 	t.call(region, "呼吸废墟", "map_title_chapter_2_region_source")
 	t.call(chapter_2, "%s地图" % region, "map_title_uses_authored_region")
 	# Later chapters follow the same rule, so Chapter 3/4 do not fall back to
-	# the Chapter 1 label either (they stay unreachable in the campaign).
+	# the Chapter 1 label either.
 	t.call(map_overlay.map_title(2), "无光海地图", "map_title_chapter_3_region")
 	t.call(map_overlay.map_title(3), "笑面剧场地图", "map_title_chapter_4_region")
 	t.call(map_overlay.map_title(-1), ARCHIVE_TITLE, "map_title_negative_falls_back")

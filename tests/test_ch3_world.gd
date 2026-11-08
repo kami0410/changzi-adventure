@@ -1,12 +1,11 @@
 extends RefCounted
 
-## Chapter 3 big-map world, step 2: the real nine-region world and its room
-## scenes. Structure only — the plan already exists (step 1) but game.gd still
-## points Chapter 3 at the old linear world (plan slot 2 stays empty), so this
-## chapter remains unreachable and nothing here changes play. The fixture under
-## tests/fixtures is a test-only mirror and is never loaded. Vision compression
-## (status #14), the big-map sea motif (status #15) and the ch3_shortcut grant
-## (status #16) stay unauthored.
+## Chapter 3 big-map world: the real nine-region world and its room scenes.
+## Pass 80 points game.gd at this world together with the Chapter 3 plan, while
+## the old linear Chapter 3 world stays on disk. The fixture under tests/fixtures
+## is a test-only mirror and is never loaded. Vision compression (status #14),
+## the big-map sea motif (status #15) and the ch3_shortcut grant (status #16)
+## stay unauthored.
 
 const WORLD_PATH := "res://scenes/mds/chapter_3_bigmap.mdsworld.json"
 const WORLD_SCENE_PATH := "res://scenes/mds/chapter_3_bigmap_world.tscn"
@@ -39,7 +38,7 @@ func run(t: Callable) -> void:
 	_test_region_content(t)
 	_test_vertical_props(t)
 	_test_fixture_mirror(t)
-	_test_stays_unwired(t)
+	_test_game_wiring(t)
 	_test_old_worlds_kept(t)
 
 
@@ -463,7 +462,7 @@ func _test_fixture_mirror(t: Callable) -> void:
 	t.call(game_source.contains("tests/fixtures"), false, "ch3_game_never_loads_test_fixtures")
 
 
-func _test_stays_unwired(t: Callable) -> void:
+func _test_game_wiring(t: Callable) -> void:
 	var game_script := load(GAME_SCRIPT_PATH) as GDScript
 	t.call(game_script != null, true, "ch3_world_game_script_loads")
 	if game_script == null:
@@ -476,24 +475,25 @@ func _test_stays_unwired(t: Callable) -> void:
 	t.call(chapter_scenes.size(), 4, "ch3_world_game_has_four_world_scenes")
 	t.call(plan_paths.size(), 4, "ch3_world_game_has_four_plan_slots")
 	if world_files.size() == 4:
-		t.call(world_files[2], OLD_CH3_WORLD_PATH, "ch3_world_game_still_uses_the_old_world")
+		t.call(world_files[2], WORLD_PATH, "ch3_world_game_uses_the_big_map_world")
 	if chapter_scenes.size() == 4:
-		t.call((chapter_scenes[2] as PackedScene).resource_path, OLD_CH3_SCENE_PATH,
-			"ch3_world_game_still_uses_the_old_world_scene")
+		t.call((chapter_scenes[2] as PackedScene).resource_path, WORLD_SCENE_PATH,
+			"ch3_world_game_uses_the_big_map_world_scene")
 	if plan_paths.size() == 4:
-		t.call(plan_paths[2], "", "ch3_world_game_plan_slot_stays_empty")
+		t.call(plan_paths[2], PLAN_PATH, "ch3_world_game_plan_slot_wired")
 
 	var game_source := FileAccess.get_file_as_string(GAME_SCRIPT_PATH)
-	t.call(game_source.contains("chapter_3_bigmap"), false,
-		"ch3_world_is_not_referenced_by_the_game")
+	t.call(game_source.contains("chapter_3_bigmap"), true,
+		"ch3_world_is_referenced_by_the_game")
+	# Region scenes are resolved by the world file, never hard-coded in game.gd.
 	t.call(game_source.contains("ch3_bigmap"), false,
 		"ch3_region_scenes_are_not_referenced_by_the_game")
 	# Status #16: no gameplay source grants the shortcut ability yet.
 	t.call(game_source.contains("ch3_shortcut"), false,
 		"ch3_world_grants_no_shortcut")
 
-	# The plan owns its wave content now (content layer step 2), but the world is
-	# still unwired, so nothing spawns from those tables yet.
+	# The plan owns its wave content and the world now spawns from it through the
+	# campaign route.
 	var plan := _plan()
 	t.call(plan != null, true, "ch3_world_plan_still_loads")
 	if plan != null:

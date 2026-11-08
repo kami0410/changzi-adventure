@@ -102,8 +102,9 @@ static func _has_valid_shape(saved: Dictionary) -> bool:
 			return false
 
 	var world: Dictionary = saved.get("world", {})
-	if world.has("boss_defeated") and not world["boss_defeated"] is bool:
-		return false
+	for key in ["boss_defeated", "relic_revive_used"]:
+		if world.has(key) and not world[key] is bool:
+			return false
 	for key in [
 		"claimed_stele_ids", "claimed_steles", "opened_chest_ids", "opened_chests",
 		"example_phrases",

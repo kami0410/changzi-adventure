@@ -5,11 +5,11 @@ extends SceneTree
 ## two-arena region, the event page, the shortcut barrier, a world-level save /
 ## resume, the Last Reader boss and the chapter-3 boundary.
 ##
-## The campaign still loads the legacy chapter-3 world and stops before chapter
-## 4. This suite attaches the chapter-3 plan and the big-map world to the live
-## main scene for the checks only (the same test hook integration_playability
-## uses for the chapter-3 event/boss passes); it never touches
-## `CHAPTER_PLAN_PATHS`, chapter routing or reachability.
+## The campaign loads this big-map world for Chapter 3 (pass 80); since pass 91
+## the chapter-3 boundary hands off into the Chapter 4 big map instead of ending.
+## This suite attaches the chapter-3 plan and the big-map world to the live main
+## scene for the checks only; it never touches `CHAPTER_PLAN_PATHS` or chapter
+## routing.
 
 var failures: int = 0
 var assertions: int = 0
@@ -646,8 +646,8 @@ func _wave_ids(wave: Array) -> PackedStringArray:
 
 
 ## One spawned enemy's shared-path art. A wired enemy renders its own PNG at
-## white; one without dedicated art keeps the Chapter 1 painting and the
-## fallback tint. No art is added or changed here.
+## white; a fallback enemy keeps the Chapter 1 painting and the fallback tint.
+## Pass 78 closed the Chapter 3 gap, so every call here now expects white.
 func _check_enemy_art(arena: ArenaRoom, id: StringName, sprite_suffix: String,
 		tint: Color) -> void:
 	var found: Enemy = null
@@ -732,23 +732,30 @@ func _run() -> void:
 		_finish(scene)
 		return
 
-	# --- The campaign route is untouched: the plan slot stays empty, the game
-	# keeps loading the legacy chapter-3 world, and the plan content the earlier
-	# passes authored is unchanged. This suite only mounts a test world.
+	# --- Pass 80 routes this plan and world into the campaign; pass 91 routes the
+	# Chapter 4 pair too, and the legacy chapter-3/4 worlds stay on disk.
 	var game_script := load("res://scripts/game.gd") as GDScript
 	var constants: Dictionary = game_script.get_script_constant_map() if game_script != null else {}
 	var plan_paths: Array = constants.get("CHAPTER_PLAN_PATHS", [])
 	var world_files: Array = constants.get("MDS_WORLD_FILES", [])
+	var chapter_scenes: Array = constants.get("MDS_CHAPTER_SCENES", [])
 	check(plan_paths.size() == 4, "game_keeps_four_plan_slots")
 	if plan_paths.size() == 4:
-		check(String(plan_paths[2]) == "", "chapter_3_plan_slot_stays_empty")
-		check(String(plan_paths[3]) == "", "chapter_4_plan_slot_stays_empty")
+		check(String(plan_paths[2]).ends_with("chapter_3_demo.tres"),
+			"chapter_3_plan_slot_wired")
+		check(String(plan_paths[3]).ends_with("chapter_4_demo.tres"),
+			"chapter_4_plan_slot_wired")
 	check(world_files.size() == 4, "game_keeps_four_world_files")
 	if world_files.size() == 4:
-		check(String(world_files[2]).ends_with("chapter_3.mdsworld.json"),
-			"chapter_3_still_loads_legacy_world")
-		check(String(world_files[3]).ends_with("chapter_4.mdsworld.json"),
-			"chapter_4_still_loads_legacy_world")
+		check(String(world_files[2]).ends_with("chapter_3_bigmap.mdsworld.json"),
+			"chapter_3_loads_big_map_world")
+		check(String(world_files[3]).ends_with("chapter_4_bigmap.mdsworld.json"),
+			"chapter_4_loads_big_map_world")
+	check(chapter_scenes.size() == 4, "game_keeps_four_world_scenes")
+	if chapter_scenes.size() == 4:
+		check((chapter_scenes[2] as PackedScene).resource_path
+			== "res://scenes/mds/chapter_3_bigmap_world.tscn",
+			"chapter_3_uses_big_map_world_scene")
 	check(FileAccess.file_exists("res://scenes/mds/chapter_3.mdsworld.json"),
 		"legacy_chapter_3_world_exists")
 	check(FileAccess.file_exists("res://scenes/mds/chapter_3_world.tscn"),
@@ -1046,6 +1053,12 @@ func _run() -> void:
 	check(await _wait_room(scene, "ch3_branch_b"), "lift_room_loads")
 	await process_frame
 	_check_region(scene, "ch3_branch_b")
+	# Pass 78 wired the collapse husk's own painting; this real wave is the one
+	# Chapter 3 encounter that spawns it.
+	var branch_b_arena := mds.room_node.get_node_or_null("Arena") as ArenaRoom
+	if branch_b_arena != null:
+		_check_enemy_art(branch_b_arena, &"collapse_husk",
+			"assets/sprites/enemies/collapse_husk.png", Color.WHITE)
 	var lift := mds.room_node.get_node_or_null("Lift") as MovingPlatform
 	check(lift != null, "branch_b_lift_present")
 	if lift != null:
@@ -1316,9 +1329,9 @@ func _run() -> void:
 			if enemy is Node2D:
 				check((enemy as Node2D).global_position.y < ground,
 					"arena_a_enemy_above_ground")
-		# Chapter 3 mixes dedicated art and Chapter 1 fallbacks. This arena's
-		# wave is two wired enemies: both must use their own PNG at white (the
-		# same rule the Chapter 2 audit locked).
+		# Since pass 78 every Chapter 3 enemy is wired. This arena's wave is two
+		# wired enemies: both must use their own PNG at white (the same rule the
+		# Chapter 2 audit locked).
 		_check_enemy_art(arena_a, &"mirror_sniper",
 			"assets/sprites/enemies/mirror_sniper.png", Color.WHITE)
 		_check_enemy_art(arena_a, &"hanging_scribe",
@@ -1328,12 +1341,12 @@ func _run() -> void:
 		check(_enemy_ids(arena_b) == _wave_ids(
 			plan.wave_for("ch3_branch_a", "ch3_branch_a/Arena2")),
 			"arena_b_uses_own_plan_wave")
-		# The two without dedicated art keep the tinted Chapter 1 painting; this
-		# locks the documented gap, it does not add art.
+		# Pass 78 gave the Chapter 2 borrows their own paintings, so the Chapter 3
+		# reuse now renders at white like every other wired enemy.
 		_check_enemy_art(arena_b, &"rust_whisperer",
-			"assets/sprites/enemies/scribe_bug.png", Color("c8e1cd"))
+			"assets/sprites/enemies/rust_whisperer.png", Color.WHITE)
 		_check_enemy_art(arena_b, &"lung_moth",
-			"assets/sprites/enemies/hanging_scribe.png", Color("c8e1cd"))
+			"assets/sprites/enemies/lung_moth.png", Color.WHITE)
 	if arena_a != null and arena_b != null:
 		scene.player._invulnerable_left = 100
 		scene.player.global_position = arena_a.global_position + Vector2(0, -120)
@@ -1590,7 +1603,7 @@ func _run() -> void:
 			== "%s · 第 2 阶段：%s" % [chapter["boss_name"], phase_line],
 			"boss_phase_uses_chapter_3_copy")
 	# Defeat through the real flow: authority pick from the plan's pool, the
-	# chapter-3 outro and choice, then `_finish(true)` at the boundary.
+	# chapter-3 outro and choice, then (pass 91) the Chapter 4 intro.
 	if boss != null:
 		boss.take_damage(100000)
 		check(await _wait_authority_choice(scene), "boss_authority_choice_opens")
@@ -1610,30 +1623,43 @@ func _run() -> void:
 		scene._story.close()
 		await process_frame
 		check(scene._story.is_open(), "boss_choice_opens")
+		check(scene._cleared_in_chapter == 7, "chapter_3_clears_unchanged_at_end")
 		scene._story.choose(0)
 		await create_timer(1.6).timeout
-		check(scene._chapter == 2, "chapter_3_stops_at_its_boundary")
-		check(scene._finished, "chapter_3_finishes_without_chapter_4")
-		check(scene.ending_screen.visible, "chapter_3_end_screen_visible")
-		check(scene._boss_defeated, "chapter_3_boss_recorded_defeated")
-		check(scene._mds_world == mds, "chapter_3_keeps_its_world")
-		check(mds.world_file == CH3_WORLD_FILE, "chapter_3_did_not_load_chapter_4")
-		check(plan_paths.size() == 4 and String(plan_paths[3]) == "",
-			"chapter_4_has_no_plan_slot")
-		check(scene._cleared_in_chapter == 7, "chapter_3_clears_unchanged_at_end")
+		# Pass 91: the chapter-3 choice hands off into the Chapter 4 intro in
+		# place. The authored effects are unchanged and no ending is recorded at
+		# this boundary; the new chapter resets its own clear counter.
+		check(scene._chapter == 3, "chapter_3_hands_off_to_chapter_4")
+		check(not scene._finished, "chapter_3_does_not_finish_campaign")
+		check(not scene.ending_screen.visible, "chapter_3_no_end_screen")
+		check(scene._story.is_open() and not scene._story._choice_mode,
+			"chapter_3_opens_chapter_4_intro")
+		check(scene._story._eyebrow.text.contains("第 4 章"),
+			"chapter_3_handoff_eyebrow")
+		check(scene._chapter_plan != null and scene._chapter_plan.big_map
+			and String(scene._chapter_plan.resource_path).ends_with("chapter_4_demo.tres"),
+			"chapter_3_handoff_loads_chapter_4_plan")
+
 		# A defeated boss stays down on reload; the resume guard is
-		# chapter-agnostic. The ending paused the tree, so unpause first.
+		# chapter-agnostic. The handoff moved the campaign on to Chapter 4, so
+		# re-mount a chapter-3 world by hand in the post-boss resume state (boss
+		# recorded dead, aftermath already spent) and re-enter the boss region.
+		scene._story.close()
+		await process_frame
 		paused = false
+		check(await _mount_chapter_3(scene, "ch3_entry", {}, false),
+			"boss_reload_world_mounts")
 		scene._finished = true
 		scene._boss_defeated = true
+		scene._boss_aftermath_started = true
 		if is_instance_valid(scene._boss):
 			scene._boss.queue_free()
 		scene._boss = null
-		await mds.load_room("ch3_boss")
+		await scene._mds_world.load_room("ch3_boss")
 		check(await _wait_room(scene, "ch3_boss"), "boss_room_reloads")
 		await create_timer(0.3).timeout
 		check(scene._boss == null, "boss_no_second_spawn")
-		var reloaded := mds.room_node as MDSBigRoom
+		var reloaded := scene._mds_world.room_node as MDSBigRoom
 		if reloaded != null:
 			var reloaded_arena := reloaded.get_node_or_null("Arena") as ArenaRoom
 			var bosses := 0
