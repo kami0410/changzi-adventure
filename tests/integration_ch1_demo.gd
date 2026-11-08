@@ -57,6 +57,10 @@ func _run() -> void:
 	flow.auto_save = false
 	flow.title_shown_this_session = true
 	var scene = load("res://scenes/main.tscn").instantiate()
+	# The demo baseline keeps encounter variation but not the 1.0 chapter
+	# mutators (their effects are pinned by test_run_mutators): a random seed
+	# would otherwise change damage, corruption gain and enemy count per run.
+	scene.mutators_enabled = false
 	root.add_child(scene)
 	current_scene = scene
 	await create_timer(0.5).timeout
@@ -75,7 +79,14 @@ func _run() -> void:
 	# Jump with the real jump action. Roaming enemies are live (0.15), so one
 	# may have bumped the player into the air on the walk: settle first.
 	scene.player._invulnerable_left = 3.0
-	for _settle in 60:
+	# Chapter mutators can add enemies or widen their aggro; hold them still so
+	# the jump check measures the jump, not a shove from a passing enemy.
+	var held: Array[Node] = []
+	for node in get_nodes_in_group("enemies"):
+		if node.is_physics_processing():
+			node.set_physics_process(false)
+			held.append(node)
+	for _settle in 180:
 		if scene.player.is_on_floor():
 			break
 		await physics_frame
@@ -86,6 +97,9 @@ func _run() -> void:
 	Input.action_release("jump")
 	await create_timer(0.08).timeout
 	check(scene.player.global_position.y < start_y - 4.0 or scene.player.velocity.y < -100.0, "demo_jump")
+	for node in held:
+		if is_instance_valid(node):
+			node.set_physics_process(true)
 
 	# Attack whatever came to meet us; the input drives the swing.
 	var arena := scene._mds_world.room_node.get_node_or_null("Arena") as ArenaRoom
@@ -384,6 +398,9 @@ func _run() -> void:
 	var devour_authority := load("res://resources/authorities/devour.tres") as AuthorityData
 	check(devour_authority != null, "demo_devour_authority_present")
 	if devour_authority != null:
+		# Pin the authority alone: a 狂信 chapter mutator would also scale damage.
+		scene._mutator = RunMutators.NONE
+		scene._apply_corruption_penalties()
 		scene._authority.apply(devour_authority, scene.run_state)
 		scene.run_state.corruption = 0
 		await process_frame

@@ -108,8 +108,8 @@ Boss 战后从权柄池中选择一个，带进本局余下的流程：
 ## 开发状态
 
 - Godot 4.7.2 stable、纯 GDScript、2D / GL Compatibility；不使用 3D、.NET 或第三方运行时依赖。MDS 与 Aseprite Wizard 是 MIT 插件。
-- 游戏脚本 155 个 `.gd`、约 2.7 万行（`scripts/`，不含插件与测试）。
-- 单元测试 13,774 条断言；11 套无头集成共 14,799 条断言（含第 2/3/4 章大图验收 2,335 / 4,258 / 5,023 与全流程 1→4 通关链路），除 `integration_ui_prompts` 的 2 条 AI 提示文案断言受本机 AI 设置影响外全部通过（0.15.0-demo，2026-11-08，Windows 本机复跑）。
+- 游戏脚本约 165 个 `.gd`、约 2.9 万行（`scripts/`，不含插件与测试）。
+- 单元测试 14,430 条断言；11 套无头集成共 14,799 条断言（含第 2/3/4 章大图验收 2,335 / 4,258 / 5,023 与全流程 1→4 通关链路），全部通过（1.0.0，2026-11-08，Windows 本机复跑）。
 - 在仓库根目录用 Godot 4.7.2 的 headless 可执行文件复跑：
   ```bash
   godot --headless --path . --script res://tests/run_tests.gd
