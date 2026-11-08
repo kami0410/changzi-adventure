@@ -27,7 +27,7 @@ platforms = Array[Dictionary]([{
 "x": 1600, "y": 1504, "width": 640
 }])
 tile_set = ExtResource("2_tiles")
-backdrop_path = "res://assets/backgrounds/breathing_ruins.png"
+backdrop_path = "res://assets/backgrounds/regions/ch2_well.webp"
 backdrop_pixel_art = false
 backdrop_modulate = Color(0.8, 0.9, 0.9, 1)
 ambient_kind = &"embers"

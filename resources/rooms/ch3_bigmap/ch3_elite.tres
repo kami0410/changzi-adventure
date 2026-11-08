@@ -31,7 +31,7 @@ platforms = Array[Dictionary]([{
 "x": 3480, "y": 1744, "width": 320
 }])
 tile_set = ExtResource("2_tiles")
-backdrop_path = "res://assets/backgrounds/lightless_sea.png"
+backdrop_path = "res://assets/backgrounds/regions/ch3_elite.webp"
 backdrop_pixel_art = false
 backdrop_modulate = Color(0.95, 0.85, 0.95, 1)
 ambient_kind = &"motes"

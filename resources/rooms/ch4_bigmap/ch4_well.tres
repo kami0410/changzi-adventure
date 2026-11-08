@@ -27,7 +27,7 @@ platforms = Array[Dictionary]([{
 "x": 1600, "y": 1504, "width": 640
 }])
 tile_set = ExtResource("2_tiles")
-backdrop_path = "res://assets/backgrounds/smiling_theater.png"
+backdrop_path = "res://assets/backgrounds/regions/ch4_well.webp"
 backdrop_pixel_art = false
 backdrop_modulate = Color(0.92, 0.86, 0.9, 1)
 ambient_kind = &"embers"

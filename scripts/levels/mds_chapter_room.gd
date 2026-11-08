@@ -84,6 +84,7 @@ func _ready() -> void:
 		_build_arena()
 	_build_interactables()
 	_build_gates()
+	_build_dressing()
 	if _game_flow != null and not _game_flow.input_device_changed.is_connected(_on_input_device_changed):
 		_game_flow.input_device_changed.connect(_on_input_device_changed)
 	if _game_flow != null and not _game_flow.keybinds_changed.is_connected(_on_keybinds_changed):
@@ -94,6 +95,34 @@ func _ready() -> void:
 		save_point.position = Vector2(40, FLOOR_Y) if room_index == 0 else Vector2(WIDTH * 0.5, FLOOR_Y)
 		save_point.add_to_group(&"save_point")
 		add_child(save_point)
+
+
+## Archive floor props (books, candles, urns...) placed from the room and
+## run seed so each Chapter 1 room is dressed differently; purely visual.
+func _build_dressing() -> void:
+	if chapter_index != 0:
+		return
+	var active := _active_layout()
+	var dressing := RoomDressing.new()
+	dressing.name = "Dressing"
+	add_child(dressing)
+	var run_seed := layout_seed
+	if run_seed == 0 and _game_flow != null and _game_flow.current_run != null:
+		run_seed = _game_flow.current_run.run_seed
+	dressing.chapter = 1
+	dressing.room_id = "ch1_%02d_%d" % [room_index, run_seed]
+	var surfaces: Array[Rect2] = [Rect2(40, FLOOR_Y, WIDTH - 80, 16)]
+	if active != null:
+		for platform in _platform_specs(active):
+			surfaces.append(Rect2(float(platform[0]) - 110.0, float(platform[1]) * TILE_SIZE, 220.0, 16.0))
+	var avoid: Array[Vector2] = [Vector2(120, FLOOR_Y), Vector2(WIDTH - 120, FLOOR_Y)]
+	for child in get_children():
+		if child is Node2D and child != dressing and not child is TileMapLayer:
+			var node := child as Node2D
+			if node.name.begins_with("Background"):
+				continue
+			avoid.append(Vector2(node.position.x, FLOOR_Y))
+	dressing.place_props(surfaces, avoid)
 
 
 func _build_backdrop() -> void:

@@ -71,6 +71,7 @@ func build() -> void:
 	_notify_child_surfaces()
 	_build_ambient()
 	_build_gates()
+	_build_dressing()
 	_publish_fall_plane()
 
 
@@ -164,7 +165,11 @@ func _resolve_area_info() -> Dictionary:
 	info.weather = MDSEnvironment.spec_for_room(world, room_id)
 	info.background = MDSEnvironment.background_for_room(world, room_id)
 	info.parallax = MDSEnvironment.parallax_for_room(world, room_id)
-	if info.backdrop_source == "texture":
+	# A room's own backdrop (texture or data path) wins over the world's room /
+	# area / world image, as the BigRoomData docs promise. Before 0.14 an area
+	# image silently replaced the per-room path, so Chapter 2 regions all
+	# showed the area painting.
+	if info.backdrop_source == "texture" or info.backdrop_source == "data":
 		return info
 	var lookups: Array = [
 		["room", str(world.get_room_value(room_id, "backdrop_image", ""))],
@@ -518,6 +523,45 @@ func _notify_child_bounds() -> void:
 	for child in get_children():
 		if child.has_method(&"set_room_bounds"):
 			child.call(&"set_room_bounds", room_bounds)
+
+
+## Region dressing (parallax + floor props). Only rooms whose data path
+## names a chapter region get props and a mid layer; test rooms with inline
+## textures still get the parallax margin so nothing regresses visually.
+var dressing: RoomDressing
+
+
+func _build_dressing() -> void:
+	var holder := get_node_or_null("Backdrop") as Node2D
+	var info := RoomDressing.parse_room(data.resource_path if data != null else "")
+	if holder == null and info.is_empty():
+		return
+	dressing = RoomDressing.new()
+	dressing.name = "Dressing"
+	add_child(dressing)
+	_track(dressing)
+	var tile_size := Vector2.ZERO
+	if not backdrop_tiles.is_empty() and backdrop_tiles[0].texture != null:
+		tile_size = backdrop_tiles[0].texture.get_size() * backdrop_tiles[0].scale
+	dressing.setup(room_bounds, holder, tile_size, info)
+	if info.is_empty():
+		return
+	var avoid: Array[Vector2] = []
+	for child in get_children():
+		if child == dressing or not child is Node2D:
+			continue
+		if child is TileMapLayer or child.name in ["Backdrop", "Ambient", "GroundCollision", "PlatformCollision", "GroundVisual", "PlatformVisual"]:
+			continue
+		avoid.append((child as Node2D).position)
+		if child is MovingPlatform:
+			var lift := child as MovingPlatform
+			for stop in 2:
+				avoid.append(lift.panel_local(stop))
+			avoid.append(lift.position + Vector2(lift.size.x * 0.5, 0))
+	var surfaces: Array[Rect2] = []
+	surfaces.append_array(built_ground_surfaces)
+	surfaces.append_array(built_platform_surfaces)
+	dressing.place_props(surfaces, avoid)
 
 
 ## Called elevators place their call panels next to a real floor at each

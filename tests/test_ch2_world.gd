@@ -243,7 +243,7 @@ func _test_region_scenes(t: Callable) -> void:
 				"ch2_region_geometry_valid_%s" % room_id)
 			t.call(big.data.tile_set != null and big.data.tile_set.resource_path == TILES_PATH,
 				true, "ch2_region_tiles_%s" % room_id)
-			t.call(big.data.backdrop_path, BACKDROP_PATH, "ch2_region_backdrop_%s" % room_id)
+			t.call(big.data.backdrop_path, "res://assets/backgrounds/regions/%s.webp" % room_id, "ch2_region_backdrop_%s" % room_id)
 			t.call(big.data.backdrop_pixel_art, false, "ch2_region_backdrop_scaled_%s" % room_id)
 			t.call(big.data.ambient_kind in [&"motes", &"embers"], true,
 				"ch2_region_ambient_%s" % room_id)

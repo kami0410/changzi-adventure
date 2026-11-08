@@ -289,7 +289,7 @@ func _check_backdrop(room: MDSBigRoom, room_id: String) -> void:
 	var texture: Texture2D = room.backdrop_tiles[0].texture
 	check(texture != null, "region_backdrop_texture_%s" % room_id)
 	if texture != null:
-		check(texture.resource_path.ends_with("assets/backgrounds/smiling_theater.png"),
+		check(texture.resource_path.ends_with("assets/backgrounds/regions/%s.webp" % room_id),
 			"region_backdrop_smiling_theater_%s" % room_id)
 		var tile_size := Vector2(texture.get_width(), texture.get_height())
 		var columns := maxi(1, int(ceilf(room.room_bounds.size.x / tile_size.x)))
