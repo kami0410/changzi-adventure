@@ -6,6 +6,15 @@
 - 仓库：https://github.com/kami0410/changzi-adventure
 - 设计文档：[GDD](docs/GDD.md) · [剧情圣经](docs/story-bible.md) · [记忆索引](docs/memory/MEMORY.md)
 
+## 官方渠道与防骗声明
+
+- 唯一官方仓库：https://github.com/kami0410/changzi-adventure
+- 唯一官方下载：[Releases](https://github.com/kami0410/changzi-adventure/releases)
+- 当前版本免费提供，无内购、无众筹、无付费激活；作者不通过私聊、群聊或第三方页面收取任何费用。
+- 本项目以 MIT 许可开源，允许他人自由分发甚至转售，但作者未授权任何第三方以官方名义发布、代售或代收费用。
+- 除上述仓库与 Releases 外，任何要求付款、填写账号或下载额外“启动器／安装器”的页面都与作者无关。
+- 日后如有付费发行，只会在本 README 与 Releases 公布。发现冒充或诈骗，请在本仓库提 Issue。
+
 ## 1.0 正式版
 
 可玩完整的第 1–4 章战役与五个结局：从标题页进入 Hub，完成教学后出发，依次打通第一章「墨雨档案馆」、第二章「呼吸废墟」、第三章「无光海」与第四章「笑面剧场」。每章章末各有一次选择；第一、二、三章结束后直接接续下一章的开场，第四章章末选择后战役结束、进入结局屏，按 R 回到 Hub 继续挑战。
