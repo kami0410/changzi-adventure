@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"echo_bat"
+display_name = "回声蝠"
+max_health = 14
+speed = 180.0
+contact_damage = 6
+behavior = &"swarm"

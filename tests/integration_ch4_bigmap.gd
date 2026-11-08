@@ -788,6 +788,7 @@ func _run() -> void:
 
 	# This suite checks the authored waves enemy by enemy.
 	(root.get_node("Flow") as GameFlow).encounter_variation = false
+	(root.get_node("Flow") as GameFlow).roaming_encounters = false
 	var scene = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
 	current_scene = scene

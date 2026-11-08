@@ -38,6 +38,16 @@ const ELITE_PAGES := 4
 const SWIFT_SPEED := 1.25
 const HORDE_HEALTH := 0.6
 const ELITE_TINT := Color(1.35, 1.12, 0.62)
+## Share of substitutions/extras drawn from the chapter's featured creatures,
+## and the chance a fight adds one of them on top.
+const FEATURED_SHARE := 0.5
+const FEATURED_CHANCE := 0.45
+
+
+static func _pick(rng: RandomNumberGenerator, pool: Array[StringName], featured: Array[StringName]) -> StringName:
+	if not featured.is_empty() and rng.randf() < FEATURED_SHARE:
+		return featured[rng.randi_range(0, featured.size() - 1)]
+	return pool[rng.randi_range(0, pool.size() - 1)]
 
 
 ## Deterministic RNG for one encounter of one run.
@@ -63,7 +73,7 @@ static func roster(waves: Array) -> Array[StringName]:
 ## Rolls the variation. Returns {first, rest, modifier, elite, offsets_sign,
 ## spacing, start}. `elite` indexes the combined first+rest list (-1 = none).
 static func roll(first: Array, rest: Array, pool: Array[StringName], run_seed: int,
-		key: String, chapter: int) -> Dictionary:
+		key: String, chapter: int, featured: Array[StringName] = []) -> Dictionary:
 	var rng := rng_for(run_seed, key)
 	var out_first: Array = first.duplicate()
 	var out_rest: Array = rest.duplicate()
@@ -71,9 +81,12 @@ static func roll(first: Array, rest: Array, pool: Array[StringName], run_seed: i
 		for list in [out_first, out_rest]:
 			for i in list.size():
 				if rng.randf() < SUBSTITUTE_CHANCE:
-					list[i] = pool[rng.randi_range(0, pool.size() - 1)]
+					list[i] = _pick(rng, pool, featured)
 		if rng.randf() < EXTRA_BASE_CHANCE + EXTRA_PER_CHAPTER * float(clampi(chapter, 0, 3)):
-			out_rest.append(pool[rng.randi_range(0, pool.size() - 1)])
+			out_rest.append(_pick(rng, pool, featured))
+		# The chapter's own creatures turn up in about half of the fights.
+		if not featured.is_empty() and rng.randf() < FEATURED_CHANCE:
+			out_rest.append(featured[rng.randi_range(0, featured.size() - 1)])
 	var modifier: StringName = NONE
 	if rng.randf() < MODIFIER_CHANCE:
 		modifier = MODIFIERS[rng.randi_range(0, MODIFIERS.size() - 1)]

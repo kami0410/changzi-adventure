@@ -1,0 +1,650 @@
+{
+ "source": "pixelfx 0.3.0 (MIT) - https://github.com/patch-gg/pixelfx; sim adapted from Sprite Fusion pixel-art VFX (MIT)",
+ "effects": {
+  "slash_light": {
+   "source": "melee/sword-slash",
+   "frames": 13,
+   "fps": 30,
+   "loop": false,
+   "columns": 3,
+   "frame_size": [
+    121,
+    77
+   ],
+   "pivot": [
+    44,
+    69
+   ]
+  },
+  "slash_heavy": {
+   "source": "melee/heavy-cleave",
+   "frames": 30,
+   "fps": 30,
+   "loop": false,
+   "columns": 5,
+   "frame_size": [
+    145,
+    101
+   ],
+   "pivot": [
+    41,
+    81
+   ]
+  },
+  "slash_spin": {
+   "source": "melee/spin-slash",
+   "frames": 15,
+   "fps": 30,
+   "loop": false,
+   "columns": 3,
+   "frame_size": [
+    188,
+    91
+   ],
+   "pivot": [
+    84,
+    72
+   ]
+  },
+  "smash": {
+   "source": "melee/hammer-smash",
+   "frames": 34,
+   "fps": 30,
+   "loop": false,
+   "columns": 5,
+   "frame_size": [
+    156,
+    102
+   ],
+   "pivot": [
+    56,
+    83
+   ]
+  },
+  "whip": {
+   "source": "melee/whip-crack",
+   "frames": 27,
+   "fps": 30,
+   "loop": false,
+   "columns": 4,
+   "frame_size": [
+    155,
+    65
+   ],
+   "pivot": [
+    -1,
+    56
+   ]
+  },
+  "flurry": {
+   "source": "melee/dagger-flurry",
+   "frames": 27,
+   "fps": 30,
+   "loop": false,
+   "columns": 5,
+   "frame_size": [
+    108,
+    87
+   ],
+   "pivot": [
+    18,
+    72
+   ]
+  },
+  "thrust": {
+   "source": "melee/thrust",
+   "frames": 14,
+   "fps": 30,
+   "loop": false,
+   "columns": 3,
+   "frame_size": [
+    145,
+    65
+   ],
+   "pivot": [
+    8,
+    54
+   ]
+  },
+  "claw": {
+   "source": "melee/claw-swipe",
+   "frames": 16,
+   "fps": 30,
+   "loop": false,
+   "columns": 4,
+   "frame_size": [
+    64,
+    58
+   ],
+   "pivot": [
+    0,
+    48
+   ]
+  },
+  "hit_spark": {
+   "source": "impacts/hit-spark",
+   "frames": 9,
+   "fps": 30,
+   "loop": false,
+   "columns": 3,
+   "frame_size": [
+    98,
+    60
+   ],
+   "pivot": [
+    27,
+    47
+   ]
+  },
+  "hit_crit": {
+   "source": "impacts/crit-hit",
+   "frames": 13,
+   "fps": 30,
+   "loop": false,
+   "columns": 4,
+   "frame_size": [
+    171,
+    120
+   ],
+   "pivot": [
+    65,
+    91
+   ]
+  },
+  "hit_blunt": {
+   "source": "impacts/blunt-hit",
+   "frames": 26,
+   "fps": 30,
+   "loop": false,
+   "columns": 5,
+   "frame_size": [
+    82,
+    75
+   ],
+   "pivot": [
+    38,
+    60
+   ]
+  },
+  "hit_player": {
+   "source": "impacts/hit-flash",
+   "frames": 11,
+   "fps": 30,
+   "loop": false,
+   "columns": 4,
+   "frame_size": [
+    63,
+    56
+   ],
+   "pivot": [
+    26,
+    53
+   ]
+  },
+  "parry": {
+   "source": "impacts/parry",
+   "frames": 18,
+   "fps": 30,
+   "loop": false,
+   "columns": 4,
+   "frame_size": [
+    158,
+    92
+   ],
+   "pivot": [
+    78,
+    78
+   ]
+  },
+  "land_heavy": {
+   "source": "impacts/heavy-landing",
+   "frames": 30,
+   "fps": 30,
+   "loop": false,
+   "columns": 4,
+   "frame_size": [
+    144,
+    46
+   ],
+   "pivot": [
+    77,
+    30
+   ]
+  },
+  "enemy_die": {
+   "source": "spawn/poof",
+   "frames": 34,
+   "fps": 30,
+   "loop": false,
+   "columns": 6,
+   "frame_size": [
+    95,
+    92
+   ],
+   "pivot": [
+    39,
+    80
+   ]
+  },
+  "elite_die": {
+   "source": "explosions/implosion",
+   "frames": 21,
+   "fps": 15,
+   "loop": false,
+   "columns": 5,
+   "frame_size": [
+    170,
+    160
+   ],
+   "pivot": [
+    85,
+    80
+   ]
+  },
+  "boss_die": {
+   "source": "shadow/dark-explosion",
+   "frames": 56,
+   "fps": 15,
+   "loop": false,
+   "columns": 8,
+   "frame_size": [
+    251,
+    243
+   ],
+   "pivot": [
+    126,
+    203
+   ]
+  },
+  "enemy_spawn": {
+   "source": "spawn/summon-rise",
+   "frames": 30,
+   "fps": 15,
+   "loop": false,
+   "columns": 5,
+   "frame_size": [
+    144,
+    90
+   ],
+   "pivot": [
+    61,
+    68
+   ]
+  },
+  "respawn": {
+   "source": "holy/holy-pillar",
+   "frames": 35,
+   "fps": 15,
+   "loop": false,
+   "columns": 7,
+   "frame_size": [
+    192,
+    227
+   ],
+   "pivot": [
+    96,
+    204
+   ]
+  },
+  "soul_rise": {
+   "source": "spawn/soul-rise",
+   "frames": 46,
+   "fps": 15,
+   "loop": false,
+   "columns": 9,
+   "frame_size": [
+    76,
+    128
+   ],
+   "pivot": [
+    38,
+    115
+   ]
+  },
+  "chest_open": {
+   "source": "pickups/collect-burst",
+   "frames": 27,
+   "fps": 30,
+   "loop": false,
+   "columns": 6,
+   "frame_size": [
+    79,
+    88
+   ],
+   "pivot": [
+    38,
+    82
+   ]
+  },
+  "heal": {
+   "source": "holy/heal-aoe",
+   "frames": 30,
+   "fps": 15,
+   "loop": false,
+   "columns": 4,
+   "frame_size": [
+    228,
+    105
+   ],
+   "pivot": [
+    114,
+    74
+   ]
+  },
+  "cast_circle": {
+   "source": "arcane/magic-circle-cast",
+   "frames": 25,
+   "fps": 15,
+   "loop": false,
+   "columns": 6,
+   "frame_size": [
+    166,
+    220
+   ],
+   "pivot": [
+    83,
+    192
+   ]
+  },
+  "mana_burst": {
+   "source": "arcane/mana-burst",
+   "frames": 21,
+   "fps": 15,
+   "loop": false,
+   "columns": 5,
+   "frame_size": [
+    161,
+    139
+   ],
+   "pivot": [
+    80,
+    114
+   ]
+  },
+  "spell_fire": {
+   "source": "explosions/small-explosion",
+   "frames": 40,
+   "fps": 30,
+   "loop": false,
+   "columns": 6,
+   "frame_size": [
+    212,
+    187
+   ],
+   "pivot": [
+    106,
+    143
+   ]
+  },
+  "spell_lightning": {
+   "source": "lightning/zap-hit",
+   "frames": 26,
+   "fps": 30,
+   "loop": false,
+   "columns": 5,
+   "frame_size": [
+    123,
+    94
+   ],
+   "pivot": [
+    76,
+    47
+   ]
+  },
+  "spell_ice": {
+   "source": "ice/frost-nova",
+   "frames": 25,
+   "fps": 15,
+   "loop": false,
+   "columns": 4,
+   "frame_size": [
+    252,
+    130
+   ],
+   "pivot": [
+    127,
+    92
+   ]
+  },
+  "spell_shadow": {
+   "source": "shadow/dark-explosion",
+   "frames": 40,
+   "fps": 15,
+   "loop": false,
+   "columns": 7,
+   "frame_size": [
+    251,
+    236
+   ],
+   "pivot": [
+    126,
+    198
+   ]
+  },
+  "spell_holy": {
+   "source": "holy/smite",
+   "frames": 30,
+   "fps": 15,
+   "loop": false,
+   "columns": 6,
+   "frame_size": [
+    183,
+    176
+   ],
+   "pivot": [
+    92,
+    148
+   ]
+  },
+  "spell_poison": {
+   "source": "nature/acid-splash",
+   "frames": 40,
+   "fps": 30,
+   "loop": false,
+   "columns": 7,
+   "frame_size": [
+    97,
+    98
+   ],
+   "pivot": [
+    42,
+    82
+   ]
+  },
+  "status_burning": {
+   "source": "status/burning",
+   "frames": 36,
+   "fps": 30,
+   "loop": true,
+   "columns": 8,
+   "frame_size": [
+    47,
+    71
+   ],
+   "pivot": [
+    23,
+    66
+   ]
+  },
+  "status_slowed": {
+   "source": "status/slowed",
+   "frames": 36,
+   "fps": 15,
+   "loop": true,
+   "columns": 7,
+   "frame_size": [
+    61,
+    70
+   ],
+   "pivot": [
+    30,
+    66
+   ]
+  },
+  "status_stunned": {
+   "source": "status/stunned",
+   "frames": 30,
+   "fps": 15,
+   "loop": true,
+   "columns": 5,
+   "frame_size": [
+    54,
+    35
+   ],
+   "pivot": [
+    28,
+    56
+   ]
+  },
+  "status_poisoned": {
+   "source": "status/poisoned",
+   "frames": 48,
+   "fps": 30,
+   "loop": true,
+   "columns": 7,
+   "frame_size": [
+    55,
+    47
+   ],
+   "pivot": [
+    28,
+    40
+   ]
+  },
+  "boss_phase": {
+   "source": "lightning/thunderclap",
+   "frames": 44,
+   "fps": 30,
+   "loop": false,
+   "columns": 5,
+   "frame_size": [
+    254,
+    136
+   ],
+   "pivot": [
+    126,
+    105
+   ]
+  },
+  "creature_eye": {
+   "source": "critters/eyeball",
+   "frames": 48,
+   "fps": 15,
+   "loop": true,
+   "columns": 9,
+   "frame_size": [
+    62,
+    83
+   ],
+   "pivot": [
+    31,
+    76
+   ]
+  },
+  "creature_skull": {
+   "source": "critters/flying-skull",
+   "frames": 36,
+   "fps": 15,
+   "loop": true,
+   "columns": 8,
+   "frame_size": [
+    90,
+    125
+   ],
+   "pivot": [
+    45,
+    115
+   ]
+  },
+  "creature_wisp": {
+   "source": "critters/wisp",
+   "frames": 48,
+   "fps": 15,
+   "loop": true,
+   "columns": 7,
+   "frame_size": [
+    121,
+    92
+   ],
+   "pivot": [
+    61,
+    85
+   ]
+  },
+  "creature_jelly": {
+   "source": "critters/jellyfish",
+   "frames": 48,
+   "fps": 15,
+   "loop": true,
+   "columns": 9,
+   "frame_size": [
+    83,
+    111
+   ],
+   "pivot": [
+    39,
+    36
+   ]
+  },
+  "creature_slime": {
+   "source": "critters/slime",
+   "frames": 54,
+   "fps": 30,
+   "loop": true,
+   "columns": 8,
+   "frame_size": [
+    83,
+    76
+   ],
+   "pivot": [
+    42,
+    60
+   ]
+  },
+  "creature_snake": {
+   "source": "critters/snake",
+   "frames": 36,
+   "fps": 15,
+   "loop": true,
+   "columns": 3,
+   "frame_size": [
+    94,
+    22
+   ],
+   "pivot": [
+    46,
+    17
+   ]
+  },
+  "creature_bat": {
+   "source": "critters/bat",
+   "frames": 36,
+   "fps": 15,
+   "loop": true,
+   "columns": 5,
+   "frame_size": [
+    95,
+    61
+   ],
+   "pivot": [
+    48,
+    29
+   ]
+  },
+  "creature_crow": {
+   "source": "critters/bird",
+   "frames": 36,
+   "fps": 15,
+   "loop": true,
+   "columns": 6,
+   "frame_size": [
+    52,
+    41
+   ],
+   "pivot": [
+    36,
+    19
+   ]
+  }
+ }
+}

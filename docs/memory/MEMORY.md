@@ -6,7 +6,7 @@
 
 - **昌子大冒险**（slug：`changzi-adventure`）
 - 2D 横版动作 Roguelite；核心是道具/构筑，语言同时作为构筑与叙事核心。
-- 版本 `0.14.0-demo`（第 1–4 章可玩；0.14 加翻滚/召唤电梯/每局随机/四章地块）；1.0 仅指用户确认的最终完整版（[版本策略](decisions/2026-11-02-versioning.md)）。
+- 版本 `0.15.0-demo`（第 1–4 章可玩；0.14 翻滚/召唤电梯/每局随机/地块，0.15 游荡战斗/新怪/像素特效）；1.0 仅指用户确认的最终完整版（[版本策略](decisions/2026-11-02-versioning.md)）。
 - 目标：Chapter 1 demo（Windows 优先）；范围见 [Chapter 1 demo ADR](decisions/2026-11-03-chapter1-demo.md)。
 - 昌子：失忆的宇宙史官，被克苏鲁式污染侵蚀，在破碎末日世界找回权柄与记忆。
 - [GDD 与 0.11 规则](../GDD.md) · [剧情圣经](../story-bible.md) · [素材许可](../../ASSETS.md) · [角色像素概念](../../assets/concept/characters/README.md)。
@@ -174,3 +174,4 @@
 - 2026-11-08 第 101 程：[全游戏例行扫描](sessions/2026-11-08-routine-scan-pass101.md)（brief107，第 100 程的第四次接力；前三次会启动即死）：先收尾第 100 程中断留下的在途修复——不灭档案的复活是每局一次，但 `revive_used` 只活在 `RelicEffects` 上、不进 run save，复活后存检查点续玩会被重新武装再免费救一次；现写入 `world.relic_revive_used` 并在 `_restore_run_save` 恢复（旧档缺键按 false），`test_run_save` 82→90、`integration_run_save` 675→695，回退修复复现 3 条失败（提交 `93bb2b8`）。六面扫描另修三处：① 暂停菜单「返回档案馆」确认取消后动作仍武装，再确认「重新开始」会同时执行两个动作、玩家被送回 Hub 且本局作废（第 73 程记「当前不可见」，实测可见；改为单一待执行槽 `_confirm_action`，`integration_gamepad` 207→212、`test_demo_onboarding` +6，提交 `fb41db8`）；② 死亡复活横幅 8 句写「不灭档案」，而资源名/背包/奖励卡/货架/GDD 都是「不朽档案」（`test_death_hints` 163→183，逐句校验提示名 == `RelicData.display_name`，提交 `55231c7`）；③ 档案馆页关闭不还焦点（Hub 轮询按键、当前玩家不可见，按一致性补齐，`integration_menus` 458→459，提交 `e988541`）。收尾基线单元 **13,575/0**、十一套集成 **15,009**（1,475/109/695/212/113/73/459/45/2,331/4,364/5,133）、退出 10/10、像素 40/0；性能只记录（Boss 帧 8.33 ms、门过渡 225.7 ms，与基线同量级）。第 11–16 项未碰；未推送/未更新网页版/未创建 Release。
 - 2026-11-08 0.14.0-demo：[翻滚、召唤电梯、地图随机性、地块美术](sessions/2026-11-08-roll-lift-variety-0.14.md)（从 GitHub `c76d6c4` 接手；旧本地历史在 `legacy-local`）：翻滚 + 完美闪避 + 空中冲刺、15 台召唤式电梯、到达枢纽开捷径（第 16 项结案）、第 1 章 8×2 种随机布局、四章遭遇变数（替换/加人/精英·迅潮·群潮）、四章程序化地块、背景压暗、HUD 底部留白；修 `cancel_dodge` 吞无敌。单元 13,671/0、集成 15,015。见 [ADR](decisions/2026-11-08-roll-lift-variety.md)。
 - 2026-11-08 0.14 第二轮：[区域美术与每局跳台](sessions/2026-11-08-roll-lift-variety-0.14.md#第二轮同日用户反馈地图美术好怪一直一样主动发现其他问题)：第 2–4 章 27 区独立背景 + 视差 + 中景 + 纵井井壁 + 地面道具（Magpie 403，程序化派生）、每局额外跳台（石台/塌落朽木/滑动吊架）、普通敌人章节成长、第 3 章黑暗（第 14 项）、标题页 720p 溢出、Hub 地板、房间背景优先级 bug。
+- 2026-11-08 0.15.0-demo：[游荡战斗、新怪物、像素特效、美术需求 PDF](sessions/2026-11-08-roaming-creatures-vfx-0.15.md)：死亡细胞式游荡（精英/Boss 仍锁门，`Flow.roaming_encounters`）、6 种新怪（`CreatureArt` + 3 新行为）、素材库 pixelfx 渲染 35 特效（`VFX`）、音高随机 + 4 音效、`docs/art/昌子大冒险-美术需求清单.pdf` 与 `art_inbox/`。单元 13,774/0、集成 14,799。

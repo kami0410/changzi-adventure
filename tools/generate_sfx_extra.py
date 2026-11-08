@@ -63,6 +63,61 @@ def elevator_call() -> list[float]:
     return out
 
 
+def noise_burst(seconds, decay, lowpass, seed):
+    rng = random.Random(seed)
+    n = int(RATE * seconds)
+    out, prev = [], 0.0
+    for i in range(n):
+        t = i / RATE
+        prev += (rng.random() * 2 - 1 - prev) * lowpass
+        out.append(prev * math.exp(-t * decay))
+    return out
+
+
+def enemy_die():
+    # Wet ink splat: low-passed noise + a falling blip.
+    out = noise_burst(0.45, 9.0, 0.18, 11)
+    for i in range(len(out)):
+        t = i / RATE
+        out[i] += 0.5 * math.sin(2 * math.pi * (220 - 160 * t) * t) * math.exp(-t * 12.0)
+    return out
+
+
+def elite_die():
+    # Cracked bell: inharmonic partials with a long tail over a thump.
+    n = int(RATE * 1.4)
+    out = []
+    for i in range(n):
+        t = i / RATE
+        s = sum(a * math.sin(2 * math.pi * 196 * r * t) for r, a in ((1, 1), (2.41, 0.6), (3.77, 0.35), (5.9, 0.2)))
+        out.append(s * math.exp(-t * 2.6) + 0.8 * math.sin(2 * math.pi * 55 * t) * math.exp(-t * 14))
+    return out
+
+
+def wisp_blast():
+    out = noise_burst(0.6, 6.0, 0.35, 23)
+    for i in range(len(out)):
+        t = i / RATE
+        out[i] += 0.6 * math.sin(2 * math.pi * (90 - 40 * t) * t) * math.exp(-t * 8.0)
+    return out
+
+
+def jelly_pulse():
+    rng = random.Random(5)
+    n = int(RATE * 0.7)
+    out = []
+    for i in range(n):
+        t = i / RATE
+        buzz = math.sin(2 * math.pi * 120 * t) * (1 if math.sin(2 * math.pi * 31 * t) > 0 else -0.3)
+        crackle = (rng.random() * 2 - 1) * (0.6 if rng.random() < 0.08 else 0.05)
+        out.append((buzz * 0.6 + crackle) * math.exp(-t * 5.0) * min(1.0, t * 40))
+    return out
+
+
 if __name__ == "__main__":
     write("perfect_dodge", perfect_dodge())
     write("elevator_call", elevator_call())
+    write("enemy_die", enemy_die())
+    write("elite_die", elite_die())
+    write("wisp_blast", wisp_blast())
+    write("jelly_pulse", jelly_pulse())

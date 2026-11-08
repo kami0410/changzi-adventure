@@ -2096,6 +2096,7 @@ func _run() -> void:
 	# Checks authored waves and exact player state; per-run encounter
 	# variation (EncounterVariation) is covered by test_map_variety.
 	(root.get_node("Flow") as GameFlow).encounter_variation = false
+	(root.get_node("Flow") as GameFlow).roaming_encounters = false
 	var flow := root.get_node("Flow") as GameFlow
 	flow.auto_save = false
 	# Production-line fixture first: it owns its own MDS world and player, and

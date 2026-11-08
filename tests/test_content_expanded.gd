@@ -140,10 +140,10 @@ func _test_weapons(t: Callable) -> void:
 
 func _test_enemy_resources(t: Callable) -> Dictionary:
 	var enemies := _load_all("res://resources/enemies")
-	t.call(enemies.size(), 14, "expanded_enemy_count")
+	t.call(enemies.size(), 20, "expanded_enemy_count")
 
 	var enemy_ids: Dictionary = {}
-	var allowed_behaviors := [&"melee", &"ranged", &"charger", &"flyer", &"elite", &"bomber", &"summoner", &"beam", &"swarm"]
+	var allowed_behaviors := [&"melee", &"ranged", &"charger", &"flyer", &"elite", &"bomber", &"summoner", &"beam", &"swarm", &"ranged_flyer", &"kamikaze", &"pulse"]
 	for resource in enemies:
 		var data := resource as EnemyData
 		t.call(data != null, true, "expanded_enemy_type")
@@ -160,13 +160,13 @@ func _test_enemy_resources(t: Callable) -> Dictionary:
 			true,
 			"expanded_enemy_behavior_%s" % data.id
 		)
-	t.call(enemy_ids.size(), 14, "expanded_enemy_unique_ids")
+	t.call(enemy_ids.size(), 20, "expanded_enemy_unique_ids")
 	return enemy_ids
 
 
 func _test_enemy_scenes(t: Callable, enemy_ids: Dictionary) -> void:
 	var scene_paths := _list_files("res://scenes/enemies", ".tscn")
-	t.call(scene_paths.size(), 15, "expanded_enemy_scene_count")
+	t.call(scene_paths.size(), 21, "expanded_enemy_scene_count")
 
 	for path in scene_paths:
 		var packed := load(path) as PackedScene

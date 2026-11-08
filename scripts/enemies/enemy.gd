@@ -74,6 +74,13 @@ var _number_fx: CombatFX
 var _number_fx_at: int = 0
 var _stun_left: float = 0.0
 var _jump_cooldown_left: float = 0.0
+## Roaming (0.15): wander around `home` while idle; 0 keeps the old stand-still.
+var patrol_radius: float = 0.0
+## Only notice targets within this height difference (INF = any).
+var aggro_vertical: float = INF
+var home: Vector2 = Vector2.INF
+var _patrol_dir: float = 1.0
+var _patrol_wait: float = 0.0
 
 
 func _process(_delta: float) -> void:
@@ -272,9 +279,43 @@ func is_dead() -> bool:
 
 ## 子类可覆盖的 AI 钩子。
 func _idle_behavior(delta: float) -> void:
-	velocity.x = move_toward(velocity.x, 0.0, get_move_speed() * 4.0 * delta)
+	if patrol_radius > 0.0 and apply_gravity:
+		_patrol(delta)
+	else:
+		velocity.x = move_toward(velocity.x, 0.0, get_move_speed() * 4.0 * delta)
 	if _has_valid_target() and _in_aggro_range():
 		change_state(STATE_CHASE)
+
+
+## Walks back and forth around `home`, pausing at each end and turning at
+## walls and ledges, so a roaming enemy reads as alive before it notices you.
+func _patrol(delta: float) -> void:
+	if home == Vector2.INF:
+		home = global_position
+	if _patrol_wait > 0.0:
+		_patrol_wait -= delta
+		velocity.x = move_toward(velocity.x, 0.0, get_move_speed() * 4.0 * delta)
+		return
+	var offset := global_position.x - home.x
+	var turn := (offset > patrol_radius and _patrol_dir > 0.0) or (offset < -patrol_radius and _patrol_dir < 0.0)
+	if is_on_wall() or (is_on_floor() and not _ground_ahead(_patrol_dir)):
+		turn = true
+	if turn:
+		_patrol_dir = -_patrol_dir
+		_patrol_wait = randf_range(0.5, 1.4)
+		velocity.x = 0.0
+		return
+	velocity.x = _patrol_dir * get_move_speed() * 0.4
+	_face_direction(_patrol_dir)
+
+
+func _ground_ahead(direction: float) -> bool:
+	if not is_inside_tree():
+		return true
+	var from := global_position + Vector2(direction * 28.0, 0.0)
+	var query := PhysicsRayQueryParameters2D.create(from, from + Vector2(0, 48.0), 1)
+	query.exclude = [get_rid()]
+	return not get_world_2d().direct_space_state.intersect_ray(query).is_empty()
 
 
 func _chase_behavior(_delta: float) -> void:
@@ -411,7 +452,9 @@ func _distance_to_target() -> float:
 
 
 func _in_aggro_range() -> bool:
-	return _distance_to_target() <= aggro_range
+	if _distance_to_target() > aggro_range:
+		return false
+	return aggro_vertical == INF or absf(target.global_position.y - global_position.y) <= aggro_vertical
 
 
 func _move_toward_target(speed: float) -> void:

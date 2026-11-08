@@ -26,6 +26,23 @@ var _emitted_cleared: bool = false
 var _tracked_enemies: Dictionary = {}
 var _wave_queue: Array[Callable] = []
 var _suppress_events: bool = false
+## Roaming encounter (0.15): enemies are spread through the region and wander;
+## no doors close, and the encounter settles when its last enemy dies.
+var roaming: bool = false
+
+
+## Switches to roaming: the encounter is live without locking, and clears as
+## soon as every tracked enemy is gone.
+func start_roaming() -> void:
+	if _suppress_events:
+		return
+	roaming = true
+	_locked = false
+	_cleared = false
+	_emitted_cleared = false
+	_set_doors_locked(false)
+	if _tracked_enemies.is_empty():
+		_finish_room()
 
 
 func queue_wave(callback: Callable) -> void:
@@ -95,6 +112,9 @@ func _on_enemy_tree_exited(instance_id: int) -> void:
 	if _suppress_events:
 		return
 	if not _tracked_enemies.erase(instance_id):
+		return
+	if roaming and not _cleared and _tracked_enemies.is_empty():
+		_finish_room()
 		return
 	if _locked and _tracked_enemies.is_empty():
 		if not _wave_queue.is_empty():

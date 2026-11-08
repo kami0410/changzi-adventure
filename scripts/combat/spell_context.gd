@@ -259,7 +259,41 @@ func _enemy_of(target: Dictionary) -> Enemy:
 	return entry as Enemy if SpellTargets.alive(entry) else null
 
 
+## Impact sprite per spell shape (assets/vfx). Shapes without an entry keep
+## only their drawn SpellVFX. Throttled so a big volley does not stack dozens.
+const HIT_FX := {
+	&"flame": [&"spell_fire", 0.5],
+	&"meteor": [&"spell_fire", 0.7],
+	&"chain": [&"spell_lightning", 0.8],
+	&"void": [&"spell_shadow", 0.45],
+	&"beam": [&"spell_holy", 0.5],
+	&"quake": [&"smash", 1.0],
+	&"blood": [&"claw", 1.0],
+	&"vortex": [&"spell_ice", 0.5],
+	&"domain": [&"mana_burst", 0.5],
+	&"missile": [&"hit_spark", 1.0],
+	&"blade": [&"hit_spark", 1.0],
+}
+static var _hit_fx_frame := -1
+static var _hit_fx_count := 0
+
+
+func _hit_fx(enemy: Enemy) -> void:
+	if not can_draw() or not SpellTargets.alive(enemy):
+		return
+	var frame := Engine.get_process_frames()
+	if frame != _hit_fx_frame:
+		_hit_fx_frame = frame
+		_hit_fx_count = 0
+	if _hit_fx_count >= 3:
+		return
+	_hit_fx_count += 1
+	var entry: Array = HIT_FX.get(shape, [&"hit_spark", 1.0])
+	VFX.spawn(fx_host, entry[0], enemy.global_position + Vector2(0, -24), direction.x < 0.0, float(entry[1]))
+
+
 func _hurt(enemy: Enemy, amount: float) -> int:
+	_hit_fx(enemy)
 	var amount_dealt := SpellTargets.damage(enemy, amount)
 	var tally := _tally()
 	tally.dealt = mini(tally.dealt + amount_dealt, 2000000000)
@@ -268,8 +302,10 @@ func _hurt(enemy: Enemy, amount: float) -> int:
 	if SpellTargets.alive(enemy):
 		if burn > 0:
 			BurnStatus.apply(enemy, burn, burn_ticks)
+			VFX.attach(enemy, &"status_burning", 0.5 * float(maxi(burn_ticks, 1)), Vector2(0, 10))
 		if slow > 0.0:
 			enemy.apply_slow(StatusEffects.slow_multiplier(slow), slow_duration)
+			VFX.attach(enemy, &"status_slowed", slow_duration, Vector2(0, -70))
 	return amount_dealt
 
 

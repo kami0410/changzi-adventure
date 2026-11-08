@@ -87,6 +87,18 @@ var damage_dealt_multiplier: float = 1.0
 
 ## Local y of the player's feet: the bottom of the collision capsule.
 const FOOT_Y := 16.0
+## Melee swing sprite per weapon (assets/vfx); unlisted melee weapons use the
+## light slash, and every finisher uses the heavy one unless listed here.
+const SWING_FX := {
+	&"archive_hammer": [&"smash", &"smash"],
+	&"ink_axe": [&"smash", &"smash"],
+	&"blood_vein_whip": [&"whip", &"whip"],
+	&"chain_blade": [&"flurry", &"slash_heavy"],
+	&"breath_cleaver": [&"slash_heavy", &"slash_heavy"],
+}
+const HEAVY_WEAPONS: Array[StringName] = [&"archive_hammer", &"ink_axe", &"breath_cleaver"]
+var _last_swing_heavy := false
+var _fall_peak := 0.0
 
 var health: int = 0
 var is_dodging: bool = false
@@ -253,8 +265,14 @@ func _physics_process(delta: float) -> void:
 		velocity.x = facing.x * (240.0 if _combo_index >= 3 else 135.0)
 	else:
 		velocity.x = move_toward(velocity.x, direction * move_speed * _haste, 2400.0 * delta)
+	var fall_speed := velocity.y
 	move_and_slide()
+	if not grounded:
+		_fall_peak = maxf(_fall_peak, fall_speed)
 	if not grounded and is_on_floor():
+		if _fall_peak > 820.0 and is_inside_tree():
+			VFX.spawn(get_parent(), &"land_heavy", global_position + Vector2(0, FOOT_Y))
+		_fall_peak = 0.0
 		if _motion != null:
 			_motion.play(&"land", 0.15)
 		_effect(&"dust", Color("9fbfb9"), 22)
@@ -527,12 +545,33 @@ func _on_attack_requested() -> void:
 	if is_inside_tree():
 		var slash_color := Color("a5efdd") if _combo_index < 3 else Color("f3cf87")
 		var slash_size := minf(weapon.data.attack_range, 95.0) * (1.0 if _combo_index < 3 else 1.35)
-		CombatFX.spawn(get_parent(), global_position + Vector2(0, -30), &"slash" if weapon is MeleeWeapon else &"cast", slash_color, facing.x, slash_size)
+		var swing := _swing_fx(weapon, _combo_index >= 3)
+		_last_swing_heavy = _combo_index >= 3 or HEAVY_WEAPONS.has(weapon.data.id)
+		if swing != &"" and VFX.spawn(get_parent(), swing, global_position + Vector2(0, FOOT_Y), facing.x < 0.0) != null:
+			pass
+		else:
+			CombatFX.spawn(get_parent(), global_position + Vector2(0, -30), &"slash" if weapon is MeleeWeapon else &"cast", slash_color, facing.x, slash_size)
 		if _combo_index >= 3:
 			CombatFX.spawn(get_parent(), global_position + Vector2(0, -18), &"ring", Color("f3cf87"), facing.x, 54)
 
-func _on_weapon_hit(_target: Node) -> void:
+## Swing sprite for a melee weapon; ranged weapons keep their own muzzle art.
+func _swing_fx(weapon: Weapon, finisher: bool) -> StringName:
+	if not weapon is MeleeWeapon or weapon.data == null:
+		return &""
+	var pair: Array = SWING_FX.get(weapon.data.id, [&"slash_light", &"slash_heavy"])
+	return pair[1] if finisher else pair[0]
+
+
+func _on_weapon_hit(target: Node) -> void:
 	_shake = minf(_shake + 0.18, 0.5)
+	if target is Node2D and is_inside_tree():
+		var at := (target as Node2D).global_position + Vector2(0, -28)
+		var id := &"hit_spark"
+		if _combo_index >= 3:
+			id = &"hit_crit"
+		elif _last_swing_heavy:
+			id = &"hit_blunt"
+		VFX.spawn(get_parent(), id, at, facing.x < 0.0)
 	hit_landed.emit()
 
 
@@ -562,6 +601,8 @@ func take_damage(amount: int, source_position: Vector2 = Vector2.INF) -> void:
 	if _motion != null:
 		_motion.play(&"hit", 0.2)
 	_effect(&"hit", Color("f49287"), 35)
+	if actual > 0 and is_inside_tree():
+		VFX.spawn(get_parent(), &"hit_player", global_position + Vector2(0, -26))
 	_play_sfx(&"hit")
 	damaged.emit(actual)
 	health_changed.emit(health, max_health)
@@ -579,6 +620,7 @@ func _perfect_dodge() -> void:
 	_roll_strike_left = maxf(_roll_strike_left, roll_strike_window + _dodge_left)
 	if is_inside_tree():
 		CombatFX.spawn(get_parent(), global_position + Vector2(0, -24), &"ring", Color("f3cf87"), facing.x, 64)
+		VFX.spawn(get_parent(), &"parry", global_position + Vector2(0, -20), facing.x < 0.0)
 		spawn_afterimage()
 	_play_sfx(&"perfect_dodge")
 	perfect_dodged.emit()
@@ -587,6 +629,8 @@ func _perfect_dodge() -> void:
 func heal(amount: int) -> void:
 	if amount <= 0 or health <= 0:
 		return
+	if amount >= 8 and health < max_health and is_inside_tree():
+		VFX.spawn(get_parent(), &"heal", global_position + Vector2(0, FOOT_Y))
 	health = mini(health + amount, max_health)
 	health_changed.emit(health, max_health)
 

@@ -24,6 +24,10 @@ var auto_save: bool = true
 ## big-map platforms (RoomVariety). Acceptance suites that check the authored
 ## waves and layouts switch it off.
 var encounter_variation: bool = true
+## Dead Cells-style roaming encounters (0.15): ordinary fights spread their
+## enemies through the region instead of locking an arena and spawning waves.
+## Acceptance suites that walk the authored lock/wave flow switch it off.
+var roaming_encounters: bool = true
 var last_victory: bool = false
 var last_reward: int = 0
 var last_ending: Dictionary = {}

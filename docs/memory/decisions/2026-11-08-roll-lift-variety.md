@@ -32,3 +32,9 @@
 7. **每局额外跳台**：`RoomVariety.plan` 纯函数、`run_seed + 区域` 决定；只加不删、全部可选；`Flow.encounter_variation` 同时控制遭遇变数与额外跳台。
 8. **章节成长**：普通敌人生命每章 +35%、伤害 +15%（`game.gd` `CHAPTER_HEALTH_STEP/CHAPTER_DAMAGE_STEP`）。
 9. **第 3 章黑暗**：区域 `darkness` 0.5、Boss 0.3，`chapter_3_bigmap_world.tscn` 开 `room_darkness`。
+
+## 补充决策（0.15）
+
+10. **游荡战斗**：普通战斗用 `ArenaRoom.start_roaming()`，敌人一次性分布在区域内巡逻；精英/Boss 保留锁门。奖励与清房计数仍按「一战全灭」结算。
+11. **新怪物美术来源**：素材库 pixelfx 小生物换色作为过渡美术，可爱画风的不采用；正式美术见 `docs/art/昌子大冒险-美术需求清单.pdf`。
+12. **特效**：pixelfx（MIT）离线渲染为序列帧随仓库提交，源码不进仓库；重新导出用 `tools/export_vfx.mjs <pixelfx 路径>`。

@@ -72,7 +72,13 @@ func _run() -> void:
 	Input.action_release("move_right")
 	check(scene.player.global_position.x > start_x + 100.0, "demo_move_right")
 
-	# Jump with the real jump action.
+	# Jump with the real jump action. Roaming enemies are live (0.15), so one
+	# may have bumped the player into the air on the walk: settle first.
+	scene.player._invulnerable_left = 3.0
+	for _settle in 60:
+		if scene.player.is_on_floor():
+			break
+		await physics_frame
 	await create_timer(0.15).timeout
 	var start_y: float = scene.player.global_position.y
 	Input.action_press("jump")
@@ -88,6 +94,11 @@ func _run() -> void:
 		scene.player.global_position = arena.global_position
 		scene._update_room_locks()
 		await create_timer(0.4).timeout
+		# 0.15 roaming: ordinary fights never lock, and their enemies are live
+		# (a disabled Enemies root froze them and made them unhittable).
+		check(arena.roaming and not arena.is_locked(), "demo_arena_roams_unlocked")
+		check(arena.get_node("Enemies").process_mode != Node.PROCESS_MODE_DISABLED,
+			"demo_roaming_enemies_live")
 		var enemies := arena.get_node("Enemies").get_children()
 		var first_enemy: Enemy = null
 		for enemy in enemies:
@@ -98,6 +109,10 @@ func _run() -> void:
 		var before: Dictionary = {}
 		if first_enemy != null:
 			first_enemy.global_position = scene.player.global_position + Vector2(40, 0)
+			# Encounters can roll creatures that keep their distance (血瞳) or
+			# blow up (墨火); hold the target so the swing is what is tested.
+			first_enemy.apply_stun(3.0)
+			first_enemy.velocity = Vector2.ZERO
 			before[first_enemy] = first_enemy.health
 			scene.player.facing = Vector2.RIGHT
 		Input.action_press("attack")

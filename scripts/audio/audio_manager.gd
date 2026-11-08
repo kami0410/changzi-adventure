@@ -37,6 +37,9 @@ func _ensure_players() -> void:
 		_voice.finished.connect(_restore_music)
 
 
+const SFX_PITCH_JITTER := 0.07
+
+
 func play_sfx(id: StringName, bus: StringName = &"SFX") -> void:
 	var path := "res://assets/audio/%s.wav" % id
 	if not ResourceLoader.exists(path):
@@ -51,6 +54,10 @@ func play_sfx(id: StringName, bus: StringName = &"SFX") -> void:
 	var player := AudioStreamPlayer.new()
 	player.stream = stream
 	player.bus = String(bus)
+	# Small random pitch per play so repeated hits and steps do not sound
+	# machine-identical (UI clicks stay exact).
+	if not String(id).begins_with("ui_"):
+		player.pitch_scale = randf_range(1.0 - SFX_PITCH_JITTER, 1.0 + SFX_PITCH_JITTER)
 	add_child(player)
 	_sfx_players.append(player)
 	player.finished.connect(func() -> void:

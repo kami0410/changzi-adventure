@@ -17,7 +17,21 @@ const ENEMY_SCENES: Dictionary = {
 	&"choir_summoner": preload("res://scenes/enemies/choir_summoner.tscn"),
 	&"mirror_sniper": preload("res://scenes/enemies/mirror_sniper.tscn"),
 	&"page_swarm": preload("res://scenes/enemies/page_swarm.tscn"),
+	&"watcher_eye": preload("res://scenes/enemies/watcher_eye.tscn"),
+	&"ink_wisp": preload("res://scenes/enemies/ink_wisp.tscn"),
+	&"skull_lantern": preload("res://scenes/enemies/skull_lantern.tscn"),
+	&"abyss_jelly": preload("res://scenes/enemies/abyss_jelly.tscn"),
+	&"name_snake": preload("res://scenes/enemies/name_snake.tscn"),
+	&"echo_bat": preload("res://scenes/enemies/echo_bat.tscn"),
 }
+## 0.15 creatures (CreatureArt), not part of the authored waves: each chapter
+## mixes its own into ordinary encounters through EncounterVariation.
+const CHAPTER_CREATURES: Array = [
+	[&"ink_wisp", &"watcher_eye"],
+	[&"skull_lantern", &"name_snake", &"ink_wisp"],
+	[&"abyss_jelly", &"watcher_eye", &"echo_bat"],
+	[&"skull_lantern", &"echo_bat", &"name_snake"],
+]
 const BOSS_SCENE = preload("res://scenes/bosses/ink_archivist.tscn")
 const SMILING_SCENE = preload("res://scenes/bosses/smiling_archivist.tscn")
 const READER_SCENE = preload("res://scenes/bosses/last_reader.tscn")
@@ -692,6 +706,7 @@ func _process(delta: float) -> void:
 		# perfect dodge and cancel the fall damage.
 		player.cancel_dodge()
 		player.take_damage(15)
+		VFX.spawn(player.get_parent(), &"respawn", player.global_position + Vector2(0, Player.FOOT_Y))
 
 func _input(event: InputEvent) -> void:
 	# The keybind page owns every press until it commits or cancels.
@@ -1141,6 +1156,19 @@ func _populate_room(room: ArenaRoom, ids: Array, wave_ids: Array = []) -> void:
 	_last_variation = variation
 	var first: Array = variation.get("first", ids)
 	var rest: Array = variation.get("rest", wave_ids)
+	if _roaming_for(room):
+		# Dead Cells-style: the whole encounter is already in the region,
+		# spread over its floors and ledges, wandering until it notices you.
+		var everyone: Array = first + rest
+		_spawn_group(room, everyone, -140.0, variation, 0, _roaming_spots(room, everyone.size()))
+		room.start_roaming()
+		var roaming_root := room.get_node_or_null(ArenaRoom.ENEMIES_NODE)
+		if roaming_root != null:
+			roaming_root.process_mode = Node.PROCESS_MODE_PAUSABLE
+		var roaming_modifier: StringName = variation.get("modifier", EncounterVariation.NONE)
+		if roaming_modifier != EncounterVariation.NONE and hud != null:
+			hud.show_message(EncounterVariation.modifier_hint(roaming_modifier))
+		return
 	_spawn_group(room, first, -140.0, variation, 0)
 	if not rest.is_empty():
 		var base := first.size()
@@ -1155,12 +1183,17 @@ func _roll_variation(room: ArenaRoom, ids: Array, wave_ids: Array) -> Dictionary
 			or run_state == null or run_state.run_seed == 0:
 		return {}
 	var key := "%d/%s" % [_chapter, String(room.get_meta(&"encounter_id", room.name))]
-	var pool := EncounterVariation.roster(ROOM_WAVES[clampi(_chapter, 0, ROOM_WAVES.size() - 1)])
+	var chapter_index := clampi(_chapter, 0, ROOM_WAVES.size() - 1)
+	var pool := EncounterVariation.roster(ROOM_WAVES[chapter_index])
 	var usable: Array[StringName] = []
 	for id in pool:
 		if ENEMY_SCENES.has(id):
 			usable.append(id)
-	return EncounterVariation.roll(ids, wave_ids, usable, run_state.run_seed, key, _chapter)
+	var featured: Array[StringName] = []
+	for id in CHAPTER_CREATURES[chapter_index]:
+		if ENEMY_SCENES.has(id):
+			featured.append(id)
+	return EncounterVariation.roll(ids, wave_ids, usable, run_state.run_seed, key, _chapter, featured)
 
 
 ## Legacy linear arenas sit 250 px above their ground and keep the historical
@@ -1172,8 +1205,93 @@ func _enemy_spawn_y() -> float:
 	return 250.0
 
 
+## Roaming applies to ordinary fights in a live run; elite and boss arenas keep
+## the locked showdown.
+## Objective line for a region whose fights are roaming: the live total.
+func _refresh_roaming_objective() -> void:
+	var alive := 0
+	var any := false
+	for room in _rooms:
+		if is_instance_valid(room) and room.roaming and not room.is_cleared():
+			any = true
+			alive += room.enemy_count()
+	if any and alive > 0:
+		hud.set_objective("游荡的敌人 · 还剩 %d" % alive)
+
+
+func _roaming_for(room: ArenaRoom) -> bool:
+	if not Flow.roaming_encounters or run_state == null or not _mds_active:
+		return false
+	if _is_boss_room(room):
+		return false
+	var room_type := String(_current_plan_room().get("type", ""))
+	return room_type != "elite" and room_type != "boss"
+
+
+## Global feet positions for a roaming encounter: sampled along the region's
+## floors and ledges, away from the player's arrival and the gates, biased to
+## the arena's part of the region, then spread with farthest-point sampling.
+func _roaming_spots(room: ArenaRoom, count: int) -> Array:
+	var spots: Array = []
+	if count <= 0 or _mds_world == null or not is_instance_valid(_mds_world.room_node):
+		return spots
+	var room_node := _mds_world.room_node as Node2D
+	var surfaces: Array[Rect2] = []
+	if room_node is MDSBigRoom:
+		var big := room_node as MDSBigRoom
+		for rect in big.built_ground_surfaces + big.built_platform_surfaces:
+			surfaces.append(Rect2(room_node.to_global(rect.position), rect.size))
+	elif room_node is MDSChapterRoom:
+		var chapter_room := room_node as MDSChapterRoom
+		surfaces.append(Rect2(room_node.to_global(Vector2(40, MDSChapterRoom.FLOOR_Y)), Vector2(1200, 16)))
+		var layout := chapter_room._active_layout()
+		if layout != null:
+			for spec in chapter_room._platform_specs(layout):
+				surfaces.append(Rect2(room_node.to_global(Vector2(float(spec[0]) - 110.0,
+					float(spec[1]) * MDSChapterRoom.TILE_SIZE)), Vector2(220, 16)))
+	var gates: Array[Vector2] = []
+	for gate in room_node.find_children("*", "MDSGate", true, false):
+		gates.append((gate as Node2D).global_position)
+	var candidates: Array[Vector2] = []
+	for rect in surfaces:
+		var x := rect.position.x + 48.0
+		while x <= rect.end.x - 48.0:
+			var point := Vector2(x, rect.position.y)
+			var clear := point.distance_to(player.global_position) > 420.0
+			for gate in gates:
+				if point.distance_to(gate) < 170.0:
+					clear = false
+			if clear:
+				candidates.append(point)
+			x += 56.0
+	var near: Array[Vector2] = []
+	for point in candidates:
+		if point.distance_to(room.global_position) < 1100.0:
+			near.append(point)
+	if near.size() >= count * 2:
+		candidates = near
+	if candidates.is_empty():
+		return spots
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("roam|%d|%s" % [run_state.run_seed, String(room.get_meta(&"encounter_id", room.name))])
+	spots.append(candidates[rng.randi_range(0, candidates.size() - 1)])
+	while spots.size() < count:
+		var best := candidates[0]
+		var best_score := -1.0
+		for point in candidates:
+			var nearest := INF
+			for chosen in spots:
+				nearest = minf(nearest, point.distance_to(chosen))
+			var score := nearest + rng.randf() * 40.0
+			if score > best_score:
+				best_score = score
+				best = point
+		spots.append(best)
+	return spots
+
+
 func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
-		variation: Dictionary = {}, base_index: int = 0) -> void:
+		variation: Dictionary = {}, base_index: int = 0, spots: Array = []) -> void:
 	var offset := start_offset
 	var spawn_y := _enemy_spawn_y()
 	var modifier: StringName = variation.get("modifier", EncounterVariation.NONE)
@@ -1186,12 +1304,21 @@ func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
 		if not variation.is_empty():
 			at_x = clampf(EncounterVariation.spawn_offset(variation, index,
 				start_offset + 140.0), -480.0, 480.0)
-		var enemy := room.spawn_enemy(ENEMY_SCENES[id], Vector2(at_x, spawn_y)) as Enemy
+		var local := Vector2(at_x, spawn_y)
+		var roaming := index < spots.size()
+		if roaming:
+			local = room.to_local((spots[index] as Vector2) - Vector2(0, ENEMY_FOOT_Y + 2.0))
+		var enemy := room.spawn_enemy(ENEMY_SCENES[id], local) as Enemy
 		if enemy == null:
 			continue
-		var art_id: StringName = ENEMY_ART_FALLBACK.get(id, id)
-		var tint := ENEMY_FALLBACK_TINT if ENEMY_ART_FALLBACK.has(id) else Color.WHITE
-		_apply_art(enemy, ENEMY_ART[art_id], float(ENEMY_ART_SCALE.get(id, 1.0)), tint)
+		if not roaming:
+			VFX.spawn(enemy.get_parent(), &"enemy_spawn", enemy.global_position + Vector2(0, ENEMY_FOOT_Y))
+		if CreatureArt.has(id):
+			_apply_creature_art(enemy, id)
+		else:
+			var art_id: StringName = ENEMY_ART_FALLBACK.get(id, id)
+			var tint := ENEMY_FALLBACK_TINT if ENEMY_ART_FALLBACK.has(id) else Color.WHITE
+			_apply_art(enemy, ENEMY_ART[art_id], float(ENEMY_ART_SCALE.get(id, 1.0)), tint)
 		var health_scale := Difficulty.enemy_health(Flow.difficulty) * chapter_health_scale(_chapter)
 		var damage_scale := chapter_damage_scale(_chapter)
 		var speed_scale := 1.0
@@ -1221,6 +1348,16 @@ func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
 			enemy.attack_cooldown *= 0.85
 		enemy.deaggro_range = 1150
 		enemy.aggro_range = 600
+		if roaming:
+			# Wanders around its spot and only notices a player who comes close
+			# on roughly the same level; fliers perch above their floor.
+			if not enemy.apply_gravity:
+				enemy.position.y -= 130.0
+			enemy.home = enemy.global_position
+			enemy.patrol_radius = randf_range(90.0, 170.0)
+			enemy.aggro_range = 430.0
+			enemy.aggro_vertical = 240.0
+			enemy.deaggro_range = 900.0
 		enemy.set_target(player)
 		enemy.died.connect(_on_enemy_died)
 		enemy.damaged.connect(relic_effects.on_damage)
@@ -1298,6 +1435,42 @@ func _apply_art(enemy: Enemy, texture: Texture2D, art_scale: float, tint: Color,
 		var node := enemy.get_node_or_null(node_name)
 		if node != null:
 			node.hide()
+
+## Frame-animated creature art: same Sprite2D + ActorMotion path as painted
+## enemies, with a CreatureArt child swapping the frames. The collider follows
+## the drawn size (a snake stays low enough to jump over).
+func _apply_creature_art(enemy: Enemy, id: StringName) -> void:
+	var sheet := CreatureArt.sheet_for(id)
+	var frames := CreatureArt.frames_for(sheet)
+	if frames.is_empty():
+		return
+	var scale_factor := CreatureArt.display_scale(id)
+	var sprite := Sprite2D.new()
+	sprite.name = "Sprite"
+	PixelSprite.setup(sprite, frames[0], scale_factor, ENEMY_FOOT_Y)
+	enemy.add_child(sprite)
+	enemy.sprite_visual = sprite
+	enemy.sprite_base_modulate = Color.WHITE
+	var animator := CreatureArt.new()
+	animator.name = "CreatureArt"
+	animator.sprite = sprite
+	animator.frames = frames
+	animator.fps = CreatureArt.frame_rate(sheet)
+	enemy.add_child(animator)
+	var rect := PixelSprite.opaque_rect(frames[0])
+	var visual := Vector2(rect.size) * scale_factor
+	var collider := enemy.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if collider != null:
+		var shape := CapsuleShape2D.new()
+		shape.radius = clampf(minf(visual.x, visual.y) * 0.32, 10.0, 30.0)
+		shape.height = clampf(visual.y * 0.7, shape.radius * 2.0, 160.0)
+		collider.shape = shape
+		collider.position.y = ENEMY_FOOT_Y - shape.height * 0.5
+	for node_name in ["Body", "Eye"]:
+		var node := enemy.get_node_or_null(node_name)
+		if node != null:
+			node.hide()
+
 
 func _start_chapter(index: int) -> void:
 	_chapter = clampi(index, 0, CampaignData.chapter_count() - 1)
@@ -1508,7 +1681,9 @@ func _on_mds_room_loaded(room_id: String) -> void:
 			if not arena.cleared.is_connected(cleared_handler):
 				arena.cleared.connect(cleared_handler)
 			var enemies_root := arena.get_node_or_null(ArenaRoom.ENEMIES_NODE)
-			if enemies_root != null:
+			# Locked arenas wake their enemies on entry; roaming ones are live
+			# from the start (they wander and notice the player on their own).
+			if enemies_root != null and not arena.roaming:
 				enemies_root.process_mode = Node.PROCESS_MODE_DISABLED
 			# Event pages are routed per chapter by `_event_data`. Chapter 1 keeps
 			# its original primary-arena trigger; big-map event regions are
@@ -1578,6 +1753,7 @@ func _on_mds_room_loaded(room_id: String) -> void:
 		else:
 			hud.set_objective("事件 · 读或不读")
 			_open_event_after_transition.call_deferred(room_id)
+	_refresh_roaming_objective()
 	_fall_limit_local = _resolve_fall_limit(room_id)
 	_last_checkpoint = player.global_position
 	hud.set_progress(_cleared_in_chapter, _chapter_progress_total())
@@ -1928,7 +2104,7 @@ func _chapter_level() -> Node2D:
 
 func _update_room_locks() -> void:
 	for room in _rooms:
-		if room.is_locked() or room.is_cleared():
+		if room.is_locked() or room.is_cleared() or room.roaming:
 			continue
 		# A defeated boss stays down. A boss-death checkpoint restores the player
 		# inside the arena, so re-locking it would replay the entrance sting over
@@ -2114,6 +2290,8 @@ func _discover_phrase(phrase: ResolvedPhrase) -> void:
 
 func _on_boss_phase(chapter: Dictionary, phase: int) -> void:
 	# Keep the mechanical phase banner; only the trailing flavor rotates.
+	if _boss != null and is_instance_valid(_boss):
+		VFX.spawn(_boss.get_parent(), &"boss_phase", _boss.global_position + Vector2(0, ENEMY_FOOT_Y))
 	var phase_text := "%s · 第 %d 阶段" % [chapter["boss_name"], phase]
 	var flavor := BossPhaseData.pick(run_state.run_seed, phase, _chapter)
 	if not flavor.is_empty():
@@ -2277,6 +2455,10 @@ func _on_phrase_purified(amount: int) -> void:
 func _on_cast_succeeded(slot: int) -> void:
 	if slot < 0 or slot >= run_state.inventory.phrases.size():
 		return
+	if player != null and is_inside_tree():
+		var circle := VFX.spawn(player.get_parent(), &"cast_circle", player.global_position + Vector2(0, Player.FOOT_Y), false, 0.7)
+		if circle != null:
+			circle.modulate = Color(1, 1, 1, 0.8)
 	var phrase := run_state.inventory.phrases[slot]
 	if phrase == null:
 		return
@@ -2295,6 +2477,11 @@ func _on_cast_succeeded(slot: int) -> void:
 
 func _on_enemy_died(enemy: Node) -> void:
 	_kills += 1
+	if enemy is Node2D and is_inside_tree():
+		var elite := enemy.has_meta(&"elite")
+		VFX.spawn((enemy as Node2D).get_parent(), &"elite_die" if elite else &"enemy_die",
+			(enemy as Node2D).global_position + Vector2(0, ENEMY_FOOT_Y))
+		Audio.play_sfx(&"elite_die" if elite else &"enemy_die")
 	if enemy != null and enemy.has_meta(&"elite"):
 		run_state.add_pages(EncounterVariation.ELITE_PAGES)
 	run_state.add_pages(maxi(1, int(round((1 + Flow.difficulty * 0.5) * Difficulty.reward_multiplier(Flow.difficulty)))))
@@ -2307,18 +2494,30 @@ func _on_enemy_died(enemy: Node) -> void:
 			# Flying enemies die in the air; bring the page down to floor reach.
 			var drop_at := Vector2(enemy_position.x, maxf(enemy_position.y, 540.0))
 			_drop_weapon(dropped, drop_at)
+	var roaming_alive := -1
 	for room in _rooms:
-		if room.is_locked():
+		if room.roaming and not room.is_cleared():
+			roaming_alive = maxi(roaming_alive, 0)
+			var group := room.get_node_or_null("Enemies")
+			if group != null:
+				for child in group.get_children():
+					if child is Enemy and not child.dead:
+						roaming_alive += 1
+		elif room.is_locked():
 			var alive := 0
 			for child in room.get_node("Enemies").get_children():
 				if child is Enemy and not child.dead:
 					alive += 1
 			hud.set_objective("肃清此房间 · 敌人 %d" % alive)
+	if roaming_alive > 0:
+		hud.set_objective("游荡的敌人 · 还剩 %d" % roaming_alive)
 
 func _on_boss_died(_enemy: Node, chapter_index: int) -> void:
 	if chapter_index != _chapter or _ended():
 		return
 	_boss_defeated = true
+	if _boss != null and is_instance_valid(_boss):
+		VFX.spawn(_boss.get_parent(), &"boss_die", _boss.global_position + Vector2(0, ENEMY_FOOT_Y))
 	var progress_total := _chapter_progress_total()
 	hud.set_progress(progress_total, progress_total)
 	run_state.add_pages(maxi(1, int(round((8 + Flow.difficulty * 4) * Difficulty.reward_multiplier(Flow.difficulty)))))
@@ -2539,6 +2738,7 @@ func _try_open_chest() -> bool:
 func _open_chest(chest: TreasureChest) -> void:
 	if chest == null or not chest.open():
 		return
+	VFX.spawn(chest.get_parent(), &"chest_open", chest.global_position)
 	var reward := RunLoot.chest_loot(run_state, Flow.profile, _chapter)
 	var kind := StringName(reward.get("kind", &"pages"))
 	match kind:

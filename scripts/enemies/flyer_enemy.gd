@@ -25,7 +25,15 @@ func _ready() -> void:
 
 func _idle_behavior(delta: float) -> void:
 	_bob_time += delta * bob_speed
-	velocity = Vector2(0.0, sin(_bob_time) * bob_amplitude)
+	var drift := 0.0
+	if patrol_radius > 0.0:
+		if home == Vector2.INF:
+			home = global_position
+		var goal_x := home.x + sin(_bob_time * 0.35) * patrol_radius
+		drift = clampf(goal_x - global_position.x, -1.0, 1.0) * get_move_speed() * 0.35
+		if absf(drift) > 4.0:
+			_face_direction(drift)
+	velocity = Vector2(drift, sin(_bob_time) * bob_amplitude)
 	if _has_valid_target() and _in_aggro_range():
 		change_state(STATE_CHASE)
 

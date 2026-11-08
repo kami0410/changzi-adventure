@@ -11,6 +11,17 @@ var lifetime := 4.0
 var tint := Color("f3a57a")
 var friendly := false
 var _spent := false
+## Optional homing: turns toward the target at `_turn_rate` rad/s for a short
+## time, so a sidestep or roll still shakes it off.
+var _home_target: Node2D
+var _turn_rate := 0.0
+var _home_left := 0.0
+
+
+func set_homing(target_node: Node2D, turn_rate: float, seconds: float = 1.4) -> void:
+	_home_target = target_node
+	_turn_rate = turn_rate
+	_home_left = seconds
 
 static func launch(host: Node, origin: Vector2, heading: Vector2, amount: int, velocity: float = 260.0, is_friendly: bool = false) -> HostileBolt:
 	var bolt := HostileBolt.new()
@@ -42,6 +53,11 @@ func _physics_process(delta: float) -> void:
 	if lifetime <= 0:
 		queue_free()
 		return
+	if _home_left > 0.0 and _home_target != null and is_instance_valid(_home_target):
+		_home_left -= delta
+		var want := global_position.direction_to(_home_target.global_position + Vector2(0, -24))
+		var angle := direction.angle_to(want)
+		direction = direction.rotated(clampf(angle, -_turn_rate * delta, _turn_rate * delta))
 	position += direction * speed * delta
 	rotation = direction.angle()
 	queue_redraw()

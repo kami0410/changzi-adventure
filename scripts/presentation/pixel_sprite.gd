@@ -14,6 +14,16 @@ static var _rects: Dictionary = {}
 static var _material: ShaderMaterial
 
 
+## Pins the opaque bounds used for [param texture]. Animated actors give every
+## frame the union of all frames, so grounding and centring do not jitter as
+## the silhouette changes.
+static func set_opaque_rect(texture: Texture2D, rect: Rect2i) -> void:
+	if texture == null:
+		return
+	var key := texture.resource_path if texture.resource_path != "" else str(texture.get_instance_id())
+	_rects[key] = rect
+
+
 ## Opaque bounds of the texture in texel coordinates (cached per texture).
 static func opaque_rect(texture: Texture2D) -> Rect2i:
 	if texture == null:

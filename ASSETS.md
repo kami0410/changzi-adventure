@@ -15,6 +15,10 @@
 - `addons/AsepriteWizard/`：MIT，保留其 LICENSE。
 - `assets/fonts/`：Fusion Pixel / Ark Pixel，OFL，保留其 LICENSE 文件。
 - `.claude/skills/_licenses/`：技能来源与许可记录。
+- `assets/vfx/`：战斗特效与 6 种新怪物的动画序列帧，由 `tools/export_vfx.mjs` 从 **pixelfx 0.3.0**（MIT，
+  https://github.com/patch-gg/pixelfx ，其模拟核心改编自 Sprite Fusion pixel-art VFX，MIT）渲染并换成本作调色；
+  许可见 `assets/vfx/LICENSE-pixelfx.txt`。源码快照来自工作室素材库（`素材库-素材包-2026-11-08/sources/pixelfx`）。
+- `assets/backgrounds/regions/`、`assets/backgrounds/layers/`：由本项目四张背景插画程序化派生（`tools/build_region_backdrops.py`、`tools/build_dressing.py`）。
 
 ## 音频
 
