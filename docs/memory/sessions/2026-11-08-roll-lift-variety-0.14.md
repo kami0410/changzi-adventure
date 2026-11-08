@@ -31,3 +31,10 @@
 - 翻滚仍复用跳跃蜷身帧旋转，没有专门的翻滚逐帧图。
 - 第 2–4 章大图几何本身仍固定，随机性只来自遭遇变数；可考虑区域级道具/危险物随机。
 - 精英残页、完美闪避回墨的数值需试玩再调。
+
+## 测试数字（Windows 本机，提交 `3e48acd` + `a35486f`）
+
+- 单元 **13,671 / 0**（新增 `test_roll` 19、`test_elevator_call` 24、`test_map_variety` 53）。
+- 集成：playability 1,475、ch1_demo 109、run_save 695（连跑 3 次）、gamepad 212、ui_prompts 113（2 条环境性失败，原版同样）、ch1_event 73、menus 459、ai_settings 45、ch2 2,333、ch3 4,366、ch4 5,135，合计 15,015。
+- 导出：`scripts/export_game.ps1 -Platform All` → Windows exe 136.9 MB、Android apk 62.7 MB；exe `--headless --quit-after 400` 启动无脚本错误。
+- 截图：`tests/capture_polish_013.gd`（翻滚、电梯面板/乘坐、四章地块、第 1 章随机布局），输出在 `artifacts/screens/polish013/`（不提交）。
