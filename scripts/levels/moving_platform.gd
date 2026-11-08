@@ -491,21 +491,41 @@ func _draw_elevator(rect: Rect2) -> void:
 	draw_line(Vector2(mid, top_y - 40.0), Vector2(mid, -38.0), Color(0.55, 0.6, 0.55, 0.5), 2.0)
 	draw_circle(Vector2(mid, top_y - 44.0), 9.0, Color("1b262a"))
 	draw_arc(Vector2(mid, top_y - 44.0), 9.0, 0.0, TAU, 16, Color(edge_color, 0.5), 2.0)
-	var frame := Color("2a3b40")
-	draw_rect(Rect2(Vector2(0, -36), Vector2(3, 36)), frame)
-	draw_rect(Rect2(Vector2(rect.size.x - 3.0, -36), Vector2(3, 36)), frame)
-	draw_rect(Rect2(Vector2(0, -38), Vector2(rect.size.x, 3)), frame)
-	draw_line(Vector2(3, -35), Vector2(rect.size.x * 0.5, 0), Color(frame, 0.6), 1.0)
-	draw_line(Vector2(rect.size.x - 3.0, -35), Vector2(rect.size.x * 0.5, 0), Color(frame, 0.6), 1.0)
+	# Cage car: a translucent back panel with lattice so the car reads as a
+	# volume against busy backdrops, a heavy outlined frame, and a hazard-striped
+	# floor edge.
+	var w := rect.size.x
+	var cage := Rect2(Vector2(0, -44), Vector2(w, 44))
+	draw_rect(cage, Color(0.04, 0.06, 0.07, 0.55))
+	for gx in range(16, int(w), 16):
+		draw_line(Vector2(gx, -42), Vector2(gx, 0), Color(edge_color, 0.12), 1.0)
+	draw_line(Vector2(2, -22), Vector2(w - 2, -22), Color(edge_color, 0.12), 1.0)
+	var outline := Color("0c1216")
+	var frame := Color("33494f")
+	for x in [0.0, w - 5.0]:
+		draw_rect(Rect2(Vector2(x, -46), Vector2(5, 46)), outline)
+		draw_rect(Rect2(Vector2(x + 1.0, -45), Vector2(3, 45)), frame)
+		draw_rect(Rect2(Vector2(x + 1.0, -45), Vector2(1, 45)), Color(edge_color, 0.6))
+	draw_rect(Rect2(Vector2(0, -48), Vector2(w, 5)), outline)
+	draw_rect(Rect2(Vector2(1, -47), Vector2(w - 2, 3)), frame)
+	draw_rect(Rect2(Vector2(1, -47), Vector2(w - 2, 1)), Color(edge_color, 0.7))
+	# Cable hook.
+	draw_rect(Rect2(Vector2(rect.size.x * 0.5 - 4.0, -54), Vector2(8, 7)), outline)
+	draw_rect(Rect2(Vector2(rect.size.x * 0.5 - 3.0, -53), Vector2(6, 5)), frame)
+	draw_rect(rect.grow(1.0), outline)
 	draw_rect(rect, color)
-	draw_rect(Rect2(rect.position, Vector2(rect.size.x, minf(3.0, rect.size.y))), edge_color)
-	for i in int(rect.size.x / 20.0):
-		draw_rect(Rect2(Vector2(10.0 + i * 20.0, 8.0), Vector2(2, 2)), Color(edge_color, 0.55))
+	draw_rect(Rect2(rect.position, Vector2(w, minf(3.0, rect.size.y))), edge_color)
+	# Hazard stripes along the floor's front face.
+	for i in int(w / 12.0):
+		var sx := 2.0 + i * 12.0
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(sx, 6), Vector2(sx + 6, 6), Vector2(sx + 2, rect.size.y - 1), Vector2(sx - 4, rect.size.y - 1)]),
+			Color(0.95, 0.75, 0.3, 0.55))
 	var moving := is_moving()
 	var lamp := Color("f3cf87") if moving else Color("8fe8a8")
 	var pulse := 0.6 + 0.4 * sin(_time * 8.0) if moving else 1.0
-	draw_circle(Vector2(mid, -44.0), 3.0, Color(lamp, pulse))
-	draw_circle(Vector2(mid, -44.0), 7.0, Color(lamp, 0.18 * pulse))
+	draw_circle(Vector2(mid, -40.0), 3.0, Color(lamp, pulse))
+	draw_circle(Vector2(mid, -40.0), 8.0, Color(lamp, 0.22 * pulse))
 	for stop in 2:
 		if has_panel(stop):
 			_draw_panel(panel_local(stop) - position, stop)
