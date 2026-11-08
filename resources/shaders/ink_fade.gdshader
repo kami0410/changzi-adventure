@@ -83,7 +83,10 @@ void fragment() {
 		float wisp = 1.0 - smoothstep(0.0, 0.08, abs(fbm(sq * 2.0 + 5.0 * w2) - 0.5));
 		float soft = smoothstep(-feather, 0.0, fs) * (0.35 + 0.4 * wisp);
 		float haze = 0.35 * wisp * (1.0 - smoothstep(0.0, 0.1, -fs));
-		float cover = max(inside, max(soft, haze));
+		// The wispy haze must not linger at the very start/end of a fade (the
+		// MDS tween passes through tiny alphas); it grows in with progress.
+		float cover = max(inside, max(soft, haze) * smoothstep(0.0, 0.15, p));
+		cover = mix(cover, 1.0, smoothstep(0.9, 1.0, p));
 		// A thin verdigris glint rides the front of the ink.
 		float edge = (1.0 - smoothstep(0.0, rim_w, f)) * inside;
 		vec3 color = mix(ink.rgb, rim_color.rgb, 0.35 * edge * (1.0 - p));

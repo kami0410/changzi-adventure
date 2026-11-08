@@ -69,6 +69,8 @@ static func _has_valid_shape(saved: Dictionary) -> bool:
 			return false
 	if run_data.has("burned_final") and not run_data["burned_final"] is bool:
 		return false
+	if run_data.has("daily") and not run_data["daily"] is bool:
+		return false
 
 	var inventory: Variant = saved.get("inventory", {})
 	if not inventory is Dictionary:

@@ -137,7 +137,7 @@ func _build() -> void:
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(tagline)
 	var version := Label.new()
-	version.text = String(ProjectSettings.get_setting("application/config/version", "0.15.0-demo"))
+	version.text = String(ProjectSettings.get_setting("application/config/version", "1.0.0"))
 	version.add_theme_font_size_override("font_size", 12)
 	version.add_theme_color_override("font_color", UIPalette.BONE_DIM)
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -173,6 +173,13 @@ func _build() -> void:
 		resume.pressed.connect(_resume_run)
 		column.add_child(resume)
 		resume_button = resume
+	var daily := Button.new()
+	daily.name = "DailyButton"
+	daily.text = GameFlow.daily_label()
+	daily.tooltip_text = "今天所有人共用同一个种子：同样的异象、遭遇与掉落"
+	daily.custom_minimum_size = Vector2(280, 40)
+	daily.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	daily.pressed.connect(_start_daily)
 	var start := Button.new()
 	start.name = "StartButton"
 	start.text = "继续旅程" if has_progress else "开始旅程"
@@ -180,6 +187,7 @@ func _build() -> void:
 	start.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	start.pressed.connect(_start)
 	column.add_child(start)
+	column.add_child(daily)
 	if has_progress:
 		_new_game_button = Button.new()
 		_new_game_button.name = "NewGameButton"
@@ -270,6 +278,12 @@ func _resume_run() -> void:
 	if _flow == null or not _flow.has_run_save():
 		return
 	_flow.resume_requested = true
+	_start()
+
+
+func _start_daily() -> void:
+	if _flow != null:
+		_flow.daily_run = true
 	_start()
 
 

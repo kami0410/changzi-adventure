@@ -66,6 +66,8 @@ const WEAPON_DROP_CHANCE := 0.04
 ## 章节异象 (RunMutators) for the current chapter; NONE in the fixed-content
 ## acceptance suites, which turn Flow.encounter_variation off.
 var _mutator: StringName = RunMutators.NONE
+## This run was started from the title's 每日挑战 (seed from the date).
+var daily_run := false
 var mutators_enabled := true
 const BOSS_DATA = preload("res://resources/bosses/ink_archivist.tres")
 const ENEMY_ART: Dictionary = {
@@ -230,7 +232,13 @@ const CORRUPTION_FRENZY_HEALTH_RATIO := 0.4
 func _ready() -> void:
 	get_tree().paused = false
 	var corrupt_resume := _prepare_resume()
-	run_state = Flow.start_run(_resume_run_value("seed", 0))
+	var seed_value := int(_resume_run_value("seed", 0))
+	daily_run = bool(_resume_run_value("daily", false))
+	if seed_value == 0 and Flow.daily_run:
+		seed_value = GameFlow.daily_seed()
+		daily_run = true
+	Flow.daily_run = false
+	run_state = Flow.start_run(seed_value)
 	_authority = AuthorityController.new()
 	run_state.corruption_gain_multiplier = Difficulty.corruption_multiplier(Flow.difficulty)
 	_apply_archive_upgrades()
@@ -582,6 +590,7 @@ func _build_run_save() -> Dictionary:
 		"version": RunSave.SAVE_VERSION,
 		"run": {
 			"seed": run_state.run_seed,
+			"daily": daily_run,
 			"rng_state": run_state.rng.state,
 			"difficulty": Flow.difficulty,
 			"chapter": _chapter,
@@ -1601,6 +1610,8 @@ func _start_mds_chapter(index: int) -> void:
 	var region_text := "%s · %s" % [chapter["region"], Difficulty.display_name(Flow.difficulty)]
 	if _mutator != RunMutators.NONE:
 		region_text += " · 异象：%s" % RunMutators.display_name(_mutator)
+	if daily_run:
+		region_text += " · 每日挑战"
 	hud.set_region(region_text)
 	hud.set_progress(_cleared_in_chapter if resume else 0, _chapter_progress_total())
 	hud.set_objective(chapter["objective"])

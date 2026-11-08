@@ -19,6 +19,9 @@ var profile_path: String = DEFAULT_PROFILE_PATH
 var run_save_path: String = RunSave.DEFAULT_PATH
 ## Set by the title screen's "continue run" button and consumed by game.gd.
 var resume_requested := false
+## 每日挑战 (1.0): the next run uses today's shared seed (same anomalies,
+## encounters and loot for everyone on that day). Consumed when the run starts.
+var daily_run := false
 var auto_save: bool = true
 ## Per-run variety: encounter variation (EncounterVariation) and the extra
 ## big-map platforms (RoomVariety). Acceptance suites that check the authored
@@ -395,6 +398,18 @@ static func first_pressable_button(root: Node) -> Button:
 		if button != null and not button.disabled and button.is_visible_in_tree():
 			return button
 	return null
+
+
+## Today's challenge seed, from the local calendar date.
+static func daily_seed(date: Dictionary = {}) -> int:
+	var d := date if not date.is_empty() else Time.get_date_dict_from_system()
+	var value := hash("changzi-daily-%04d-%02d-%02d" % [int(d.get("year", 0)), int(d.get("month", 0)), int(d.get("day", 0))])
+	return absi(value) if value != 0 else 1
+
+
+static func daily_label(date: Dictionary = {}) -> String:
+	var d := date if not date.is_empty() else Time.get_date_dict_from_system()
+	return "每日挑战 · %d月%d日" % [int(d.get("month", 0)), int(d.get("day", 0))]
 
 
 func start_run(seed_value: int = 0) -> RunState:

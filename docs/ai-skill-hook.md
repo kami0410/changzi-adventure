@@ -7,7 +7,9 @@
 - AI 返回**意图**：名称、描述、形态、词义标签、可选组件；本地只做技术校验（有限数、非负、可渲染），**不再钳制数值上限**。玩家想得越夸张，AI 可以给得越强；代价由 AI 的 `ink_cost`、`cooldown`、`corruption_gain` 和“深渊污染”承担。
 - AI 无法理解/`confidence` 很低时，本地把这句话当作**深渊污染**：仍然可以很强，但污染极高。
 - AI 返回非法形态、空词义、非有限数值时，客户端拒绝该结果，保留离线推演。
-- Hub 的五个 NPC 也可以调用 AI；AI 用角色口吻回复，并可返回 `effect` 改变 NPC 的职能（折扣、神铸、起始残页/污染、情报、信任）。未配置时使用 `NPCProfiles` 的离线回应。
+- Hub 的五个 NPC 也可以调用 AI；AI 用角色口吻回复，并可返回 `effect` 改变 NPC 的职能（折扣、神铸、起始残页/污染、情报、信任），1.0 起还可以送出下一局起始生命 `start_health` / 墨量 `start_ink` / 遗物 `start_relics` 与武器伤害永久加成 `weapon_damage`。AI 给出的数值不受离线上限约束（折扣仍 ≤ 0.35）；离线关键词回应保留原上限。未配置时使用 `NPCProfiles` 的离线回应。
+- **言灵权能（1.0）**：除了伤害类组件，AI 与离线推演都可以给出改写世界的组件：`time_stop` 时停秒数、`execute` 处决线、`charm` 改写敌名（为你而战）、`blink` 瞬移距离、`invulnerable` 无敌秒数、`terrain` 墨阶级数、`reveal` 揭图、`unlock` 破封、`conjure` 写出残页、`purify` 净化。数值不设上限，见 `scripts/combat/world_powers.gd`。
+- **言灵法典（1.0）**：推演或 AI 解读后的句子可「收入法典」（`Profile.grimoire`，最多 12 句，存 `[codex] grimoire`）；AI 句子连同意图 JSON 一起保存，重铸时不再请求 AI。
 - 结果不会自动装备；玩家看过预览后自己点“装备到 Q/F”。
 - 密钥只保存在本机 `user://ai_config.cfg`，**不会打进 PCK/APK**。导出的游戏可以被人检查，因此共享版本应使用自建代理而不是把主密钥塞进客户端。
 

@@ -39,3 +39,20 @@ func run(t: Callable) -> void:
 	run.mutator_corruption_scale = RunMutators.value(RunMutators.CORRUPTION_GAIN, RunMutators.FOG)
 	run.add_corruption(10)
 	t.call(run.corruption, 6, "mutator_fog_slows_corruption")
+	daily_seed(t)
+
+
+## 每日挑战: one seed per calendar day, stable within the day.
+static func daily_seed(t: Callable) -> void:
+	var day := {"year": 2026, "month": 11, "day": 8}
+	var next := {"year": 2026, "month": 11, "day": 9}
+	t.call(GameFlow.daily_seed(day), GameFlow.daily_seed(day.duplicate()), "daily_seed_stable")
+	t.call(GameFlow.daily_seed(day) != GameFlow.daily_seed(next), true, "daily_seed_changes_daily")
+	t.call(GameFlow.daily_seed(day) > 0, true, "daily_seed_nonzero")
+	t.call(GameFlow.daily_label(day), "每日挑战 · 11月8日", "daily_label")
+	var run := RunState.new()
+	run.reset_for_new_run(GameFlow.daily_seed(day))
+	t.call(run.run_seed, GameFlow.daily_seed(day), "daily_seed_reaches_run")
+	t.call(RunMutators.for_chapter(run.run_seed, 0), RunMutators.for_chapter(GameFlow.daily_seed(day), 0), "daily_same_mutators")
+	var bad := {"run": {"room": "ch1_01", "daily": "yes"}, "inventory": {}}
+	t.call(RunSave._has_valid_shape(bad), false, "daily_flag_must_be_bool")
