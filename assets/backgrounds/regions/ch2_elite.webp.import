@@ -15,9 +15,9 @@ dest_files=["res://.godot/imported/ch2_elite.webp-10d67c3909f1cb078e98a1e86c4e0a
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.82
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
