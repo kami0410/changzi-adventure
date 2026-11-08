@@ -28,6 +28,72 @@ func _ready() -> void:
 
 var _was_paused := false
 
+const KEY_ART := "res://assets/backgrounds/title_keyart.webp"
+var key_art: TextureRect
+
+
+## Full-screen key art (art pack) with a slow push-in, drifting pages and a
+## left-side shade that keeps the menu readable.
+func _build_key_art() -> void:
+	if not ResourceLoader.exists(KEY_ART):
+		return
+	var holder := Control.new()
+	holder.name = "KeyArt"
+	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.clip_contents = true
+	_root.add_child(holder)
+	key_art = TextureRect.new()
+	key_art.texture = load(KEY_ART)
+	key_art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	key_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	key_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	key_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(key_art)
+	key_art.resized.connect(func(): key_art.pivot_offset = key_art.size * Vector2(0.72, 0.45))
+	var push := key_art.create_tween().set_loops()
+	push.tween_property(key_art, "scale", Vector2(1.05, 1.05), 18.0).set_trans(Tween.TRANS_SINE)
+	push.tween_property(key_art, "scale", Vector2.ONE, 18.0).set_trans(Tween.TRANS_SINE)
+	var pages := CPUParticles2D.new()
+	pages.name = "Pages"
+	pages.amount = 26
+	pages.lifetime = 9.0
+	pages.preprocess = 9.0
+	pages.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	pages.emission_rect_extents = Vector2(40, 360)
+	pages.position = Vector2(-60, 360)
+	pages.direction = Vector2(1, -0.25)
+	pages.spread = 18.0
+	pages.gravity = Vector2(0, -4)
+	pages.initial_velocity_min = 50.0
+	pages.initial_velocity_max = 110.0
+	pages.angular_velocity_min = -90.0
+	pages.angular_velocity_max = 90.0
+	pages.scale_amount_min = 2.0
+	pages.scale_amount_max = 4.0
+	pages.color = Color(0.91, 0.86, 0.77, 0.55)
+	holder.add_child(pages)
+	var fade := TextureRect.new()
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(UIPalette.INK_NIGHT, 0.94))
+	gradient.set_color(1, Color(UIPalette.INK_NIGHT, 0.0))
+	gradient.add_point(0.55, Color(UIPalette.INK_NIGHT, 0.7))
+	var ramp := GradientTexture2D.new()
+	ramp.gradient = gradient
+	ramp.fill_from = Vector2(0, 0)
+	ramp.fill_to = Vector2(1, 0)
+	ramp.width = 256
+	ramp.height = 4
+	fade.texture = ramp
+	fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fade.anchor_right = 0.62
+	fade.offset_right = 0.0
+	fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fade.stretch_mode = TextureRect.STRETCH_SCALE
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(fade)
+
+
 func _build() -> void:
 	if _built:
 		return
@@ -39,18 +105,22 @@ func _build() -> void:
 	_root.theme = preload("res://resources/ui/ink_theme.tres")
 	add_child(_root)
 	var shade := ColorRect.new()
-	shade.color = Color(UIPalette.INK_NIGHT, 0.97)
+	shade.color = UIPalette.INK_NIGHT
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(shade)
+	_build_key_art()
+	# The key art leaves its left 40% dark for the menu.
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.anchor_right = 0.42
+	center.offset_right = 0.0
 	_root.add_child(center)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	center.add_child(column)
 	var emblem := TextureRect.new()
 	emblem.texture = load("res://assets/branding/logo_pixel.png")
-	emblem.custom_minimum_size = Vector2(176, 176)
+	emblem.custom_minimum_size = Vector2(128, 128)
 	emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	emblem.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

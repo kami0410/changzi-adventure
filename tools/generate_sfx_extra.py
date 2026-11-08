@@ -114,6 +114,48 @@ def jelly_pulse():
     return out
 
 
+def bell_toll():
+    # Rusted bell struck once: detuned low partials, a metallic clank, long hum.
+    n = int(RATE * 1.6)
+    rng = random.Random(41)
+    out = []
+    for i in range(n):
+        t = i / RATE
+        s = sum(a * math.sin(2 * math.pi * 147 * r * t + r) for r, a in ((1, 1), (1.98, 0.5), (2.63, 0.45), (4.11, 0.25), (5.47, 0.12)))
+        clank = (rng.random() * 2 - 1) * math.exp(-t * 60.0) * 0.9
+        out.append(s * math.exp(-t * 1.9) * (1 + 0.15 * math.sin(2 * math.pi * 4.5 * t)) + clank)
+    return out
+
+
+def page_fan():
+    # Wet paper flung: three soggy flaps.
+    out = [0.0] * int(RATE * 0.5)
+    for k, start in enumerate((0.0, 0.07, 0.14)):
+        burst = noise_burst(0.18, 28.0, 0.22, 60 + k)
+        off = int(start * RATE)
+        for i, v in enumerate(burst):
+            if off + i < len(out):
+                out[off + i] += v * (1.0 - k * 0.2)
+    return out
+
+
+def puppet_slam():
+    # Wooden joints clatter, then a hollow stage-floor thud.
+    rng = random.Random(77)
+    n = int(RATE * 0.8)
+    out = []
+    for i in range(n):
+        t = i / RATE
+        thud = math.sin(2 * math.pi * (70 - 30 * t) * t) * math.exp(-t * 9.0)
+        clatter = 0.0
+        for c in (0.0, 0.035, 0.08, 0.12):
+            if t >= c:
+                lt = t - c
+                clatter += math.sin(2 * math.pi * (900 + c * 4000) * lt) * math.exp(-lt * 90.0) * 0.35
+        out.append(thud + clatter + (rng.random() * 2 - 1) * math.exp(-t * 30.0) * 0.2)
+    return out
+
+
 if __name__ == "__main__":
     write("perfect_dodge", perfect_dodge())
     write("elevator_call", elevator_call())
@@ -121,3 +163,6 @@ if __name__ == "__main__":
     write("elite_die", elite_die())
     write("wisp_blast", wisp_blast())
     write("jelly_pulse", jelly_pulse())
+    write("bell_toll", bell_toll())
+    write("page_fan", page_fan())
+    write("puppet_slam", puppet_slam())

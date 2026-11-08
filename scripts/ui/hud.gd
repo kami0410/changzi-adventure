@@ -242,18 +242,41 @@ func bind_run_state(run: RunState) -> void:
 	_refresh()
 
 
-func show_message(text: String) -> void:
+func show_message(text: String, icon: Texture2D = null) -> void:
 	_pending_message = text
 	_ensure_nodes()
 	if message_label != null:
 		message_label.text = text
 		message_label.modulate.a = 1.0
+		_place_message_icon(text, icon)
 		if _toast != null:
 			_toast.kill()
 		if is_inside_tree():
 			_toast = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_STOP)
 			_toast.tween_interval(3.0)
 			_toast.tween_property(message_label, "modulate:a", 0.0, 0.4)
+
+
+## Optional 32 px icon (encounter affixes) just left of the centred message.
+func _place_message_icon(text: String, icon: Texture2D) -> void:
+	var holder := message_label.get_node_or_null("Icon") as TextureRect
+	if icon == null:
+		if holder != null:
+			holder.visible = false
+		return
+	if holder == null:
+		holder = TextureRect.new()
+		holder.name = "Icon"
+		holder.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		message_label.add_child(holder)
+	holder.texture = icon
+	holder.visible = true
+	holder.size = Vector2(32, 32)
+	var font := message_label.get_theme_font("font")
+	var font_size := message_label.get_theme_font_size("font_size")
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x if font != null else 0.0
+	holder.position = Vector2((message_label.size.x - width) * 0.5 - 40.0, (message_label.size.y - 32.0) * 0.5)
 
 
 func show_boss(title: String, current: int, maximum: int) -> void:

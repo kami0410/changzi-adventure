@@ -86,3 +86,7 @@ func _attack_behavior(delta: float) -> void:
 				enemy_target.take_damage(maxi(get_attack_damage() / 2, 1))
 	if _charge_left <= 0.0:
 		_finish_attack()
+
+
+func creature_phase() -> StringName:
+	return &"windup" if _charge_windup_left > 0.0 else &"attack"

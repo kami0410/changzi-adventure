@@ -483,58 +483,51 @@ func _draw() -> void:
 	draw_line(near, far, Color(edge_color, 0.22), 1.0)
 
 
-## Called elevator art: guide rails and cable up the shaft, a cage car with a
-## status lamp, and a call panel at both stops. Drawn in the car's local
-## space, so the fixed parts subtract the car's current offset.
+## Called elevator art (art pack): iron guide rails and cable up the shaft,
+## the wrought-iron cage car and a brass call panel at both stops (red lamp
+## idle, gold while the car is coming). Drawn in the car's local space, so the
+## fixed parts subtract the car's current offset.
+const LIFT_CAR := preload("res://assets/sprites/props/lift_car.png")
+const LIFT_RAIL := preload("res://assets/sprites/props/lift_rail.png")
+const LIFT_PANEL_IDLE := preload("res://assets/sprites/props/lift_panel_idle.png")
+const LIFT_PANEL_ACTIVE := preload("res://assets/sprites/props/lift_panel_active.png")
+## Width of the car art's end caps; the middle stretch repeats.
+const CAR_CAP := 40.0
+
+
 func _draw_elevator(rect: Rect2) -> void:
 	var offset := position - _home
 	var top_y := -offset.y + minf(effective_travel.y, 0.0)
 	var bottom_y := -offset.y + maxf(effective_travel.y, 0.0)
-	var rail := Color(0.05, 0.08, 0.09, 0.6)
-	var rail_hi := Color(edge_color, 0.18)
-	var shaft_h := bottom_y - top_y + 56.0
-	for x in [6.0, rect.size.x - 10.0]:
-		draw_rect(Rect2(Vector2(x, top_y - 40.0), Vector2(4.0, shaft_h)), rail)
-		draw_rect(Rect2(Vector2(x, top_y - 40.0), Vector2(1.0, shaft_h)), rail_hi)
-	var mid := rect.size.x * 0.5
-	draw_line(Vector2(mid, top_y - 40.0), Vector2(mid, -38.0), Color(0.55, 0.6, 0.55, 0.5), 2.0)
-	draw_circle(Vector2(mid, top_y - 44.0), 9.0, Color("1b262a"))
-	draw_arc(Vector2(mid, top_y - 44.0), 9.0, 0.0, TAU, 16, Color(edge_color, 0.5), 2.0)
-	# Cage car: a translucent back panel with lattice so the car reads as a
-	# volume against busy backdrops, a heavy outlined frame, and a hazard-striped
-	# floor edge.
 	var w := rect.size.x
-	var cage := Rect2(Vector2(0, -44), Vector2(w, 44))
-	draw_rect(cage, Color(0.04, 0.06, 0.07, 0.55))
-	for gx in range(16, int(w), 16):
-		draw_line(Vector2(gx, -42), Vector2(gx, 0), Color(edge_color, 0.12), 1.0)
-	draw_line(Vector2(2, -22), Vector2(w - 2, -22), Color(edge_color, 0.12), 1.0)
-	var outline := Color("0c1216")
-	var frame := Color("33494f")
-	for x in [0.0, w - 5.0]:
-		draw_rect(Rect2(Vector2(x, -46), Vector2(5, 46)), outline)
-		draw_rect(Rect2(Vector2(x + 1.0, -45), Vector2(3, 45)), frame)
-		draw_rect(Rect2(Vector2(x + 1.0, -45), Vector2(1, 45)), Color(edge_color, 0.6))
-	draw_rect(Rect2(Vector2(0, -48), Vector2(w, 5)), outline)
-	draw_rect(Rect2(Vector2(1, -47), Vector2(w - 2, 3)), frame)
-	draw_rect(Rect2(Vector2(1, -47), Vector2(w - 2, 1)), Color(edge_color, 0.7))
-	# Cable hook.
-	draw_rect(Rect2(Vector2(rect.size.x * 0.5 - 4.0, -54), Vector2(8, 7)), outline)
-	draw_rect(Rect2(Vector2(rect.size.x * 0.5 - 3.0, -53), Vector2(6, 5)), frame)
-	draw_rect(rect.grow(1.0), outline)
-	draw_rect(rect, color)
-	draw_rect(Rect2(rect.position, Vector2(w, minf(3.0, rect.size.y))), edge_color)
-	# Hazard stripes along the floor's front face.
-	for i in int(w / 12.0):
-		var sx := 2.0 + i * 12.0
-		draw_colored_polygon(PackedVector2Array([
-			Vector2(sx, 6), Vector2(sx + 6, 6), Vector2(sx + 2, rect.size.y - 1), Vector2(sx - 4, rect.size.y - 1)]),
-			Color(0.95, 0.75, 0.3, 0.55))
+	var rail_top := top_y - 72.0
+	var rail_bottom := bottom_y + rect.size.y
+	for x in [-14.0, w - 2.0]:
+		var y := rail_top
+		while y < rail_bottom:
+			var h := minf(64.0, rail_bottom - y)
+			draw_texture_rect_region(LIFT_RAIL, Rect2(Vector2(x, y), Vector2(16, h)), Rect2(0, 0, 16, h), Color(0.85, 0.88, 0.92))
+			y += 64.0
+	var mid := w * 0.5
+	draw_line(Vector2(mid, top_y - 64.0), Vector2(mid, -46.0), Color(0.55, 0.6, 0.55, 0.6), 2.0)
+	draw_circle(Vector2(mid, top_y - 68.0), 9.0, Color("1b262a"))
+	draw_arc(Vector2(mid, top_y - 68.0), 9.0, 0.0, TAU, 16, Color(edge_color, 0.5), 2.0)
+	# The car art's floor is its bottom 16 px; it sits on the collision rect.
+	var car_top := rect.size.y - 64.0
+	var tex_w := float(LIFT_CAR.get_width())
+	draw_texture_rect_region(LIFT_CAR, Rect2(Vector2(0, car_top), Vector2(CAR_CAP, 64)), Rect2(0, 0, CAR_CAP, 64))
+	var x := CAR_CAP
+	var mid_src := tex_w - CAR_CAP * 2.0
+	while x < w - CAR_CAP:
+		var seg := minf(mid_src, w - CAR_CAP - x)
+		draw_texture_rect_region(LIFT_CAR, Rect2(Vector2(x, car_top), Vector2(seg, 64)), Rect2(CAR_CAP, 0, seg, 64))
+		x += seg
+	draw_texture_rect_region(LIFT_CAR, Rect2(Vector2(w - CAR_CAP, car_top), Vector2(CAR_CAP, 64)), Rect2(tex_w - CAR_CAP, 0, CAR_CAP, 64))
 	var moving := is_moving()
 	var lamp := Color("f3cf87") if moving else Color("8fe8a8")
 	var pulse := 0.6 + 0.4 * sin(_time * 8.0) if moving else 1.0
-	draw_circle(Vector2(mid, -40.0), 3.0, Color(lamp, pulse))
-	draw_circle(Vector2(mid, -40.0), 8.0, Color(lamp, 0.22 * pulse))
+	draw_circle(Vector2(mid, car_top + 10.0), 3.0, Color(lamp, pulse))
+	draw_circle(Vector2(mid, car_top + 10.0), 9.0, Color(lamp, 0.2 * pulse))
 	for stop in 2:
 		if has_panel(stop):
 			_draw_panel(panel_local(stop) - position, stop)
@@ -543,18 +536,19 @@ func _draw_elevator(rect: Rect2) -> void:
 func _draw_panel(feet: Vector2, stop: int) -> void:
 	var here := is_equal_approx(progress, float(stop)) and not is_moving()
 	var coming := is_moving() and target_stop == stop
-	draw_rect(Rect2(feet + Vector2(-3, -44), Vector2(6, 44)), Color("1f2b2f"))
-	draw_rect(Rect2(feet + Vector2(-10, -62), Vector2(20, 22)), Color("2a3b40"))
-	draw_rect(Rect2(feet + Vector2(-10, -62), Vector2(20, 2)), edge_color)
-	var light := Color("f3cf87") if coming else (Color("8fe8a8") if here else Color("c86b5a"))
-	var glow := 0.55 + 0.45 * sin(_time * 9.0) if coming else 1.0
-	draw_circle(feet + Vector2(0, -51), 3.5, Color(light, glow))
+	var art := LIFT_PANEL_ACTIVE if coming else LIFT_PANEL_IDLE
+	var glow := 0.75 + 0.25 * sin(_time * 9.0) if coming else 1.0
+	draw_texture(art, feet + Vector2(-16, -72), Color(glow, glow, glow))
+	var lamp_at := feet + Vector2(0, -60)
+	if here:
+		draw_circle(lamp_at, 5.0, Color("8fe8a8", 0.85))
 	if _near_stop == stop:
-		draw_circle(feet + Vector2(0, -51), 11.0, Color(light, 0.22))
+		var light := Color("f3cf87") if coming else (Color("8fe8a8") if here else Color("c86b5a"))
+		draw_circle(lamp_at, 13.0, Color(light, 0.22))
 	# The bottom panel's arrow points up, the top one down.
 	var stop_is_top := (stop == 1) == (effective_travel.y < 0.0)
 	var dir := 1.0 if stop_is_top else -1.0
-	var tip := feet + Vector2(0, -74.0 if not stop_is_top else -66.0)
+	var tip := feet + Vector2(0, -86.0 if not stop_is_top else -78.0)
 	tip.y += 0.0
 	var a := tip + Vector2(-5, -dir * 6.0)
 	var b := tip + Vector2(5, -dir * 6.0)

@@ -4,7 +4,7 @@ extends Node2D
 ## Visual dressing that gives every big-map region its own look (0.14).
 ##
 ## - Parallax: the painted backdrop holder drifts at [constant BACKDROP_FACTOR]
-##   of the camera and a mid-ground band (cut from another painting) at
+##   of the camera and the region theme's transparent mid layer (art pack) at
 ##   [constant MID_FACTOR], so the room reads in depth instead of as a flat
 ##   wall. Extra mirrored tiles around the backdrop keep the edges covered.
 ## - Props: chapter floor props placed from the room id seed on ground and
@@ -15,17 +15,33 @@ extends Node2D
 const BACKDROP_FACTOR := Vector2(0.3, 0.55)
 const MID_FACTOR := Vector2(0.62, 0.8)
 const MID_Z := -16
+## The painted mid layers are as detailed as the foreground; pushed back a
+## step (dimmer, cooler) so platforms, enemies and the hero stay readable.
+const MID_TINT := Color(0.64, 0.66, 0.74)
 const PROP_Z := -3
 const PROP_SIZE := 64
-## Atlas slot -> glow colour for props that emit light, per chapter.
+## Atlas slot -> glow colour for props that emit light, per chapter. Slots
+## follow the art pack: ch1 candelabra, ch3 anemone + lantern, ch4 spotlight
+## and the mirror's bulbs.
 const GLOWS := {
 	1: {1: Color(1.0, 0.75, 0.4)},
-	2: {4: Color(1.0, 0.7, 0.35)},
-	3: {3: Color(0.4, 1.0, 0.9), 4: Color(0.5, 1.0, 0.85)},
-	4: {0: Color(1.0, 0.8, 0.5)},
+	3: {3: Color(0.4, 1.0, 0.9), 4: Color(1.0, 0.85, 0.6)},
+	4: {0: Color(1.0, 0.8, 0.5), 7: Color(1.0, 0.85, 0.55)},
 }
-## Atlas slots that sway (kelp).
-const SWAY := {2: [5], 3: [2]}
+## Atlas slots that sway (ch3 kelp).
+const SWAY := {3: [2]}
+## Region -> painted theme (see tools/build_region_backdrops.py).
+const REGION_THEMES := {
+	"ch2_entry": "ruins", "ch2_branch_a": "ruins", "ch2_branch_b": "vault",
+	"ch2_hub": "vault", "ch2_well": "well", "ch2_vault": "vault",
+	"ch2_event": "ruins", "ch2_elite": "boss", "ch2_boss": "boss",
+	"ch3_entry": "shore", "ch3_branch_a": "shore", "ch3_branch_b": "library",
+	"ch3_hub": "library", "ch3_well": "well", "ch3_vault": "library",
+	"ch3_event": "shore", "ch3_elite": "boss", "ch3_boss": "boss",
+	"ch4_entry": "stage", "ch4_branch_a": "seats", "ch4_branch_b": "seats",
+	"ch4_hub": "stage", "ch4_well": "fly", "ch4_vault": "seats",
+	"ch4_event": "stage", "ch4_elite": "boss", "ch4_boss": "boss",
+}
 
 var chapter := 0
 var room_id := ""
@@ -60,7 +76,6 @@ func setup(room_bounds: Rect2, backdrop: Node2D, tile_size: Vector2, info: Dicti
 		_add_backdrop_margin()
 	if chapter >= 2:
 		_build_mid_layer()
-		_build_shaft_walls()
 
 
 ## Extra mirrored tiles on both sides and one row below the backdrop grid, so
@@ -109,9 +124,9 @@ func _clone(tile: Sprite2D, shift: Vector2, mirror_h: bool, mirror_v: bool) -> S
 
 
 func _build_mid_layer() -> void:
-	var variant := "a" if absi(hash(room_id)) % 2 == 0 else "b"
-	var path := "res://assets/backgrounds/layers/ch%d_mid_%s.png" % [chapter, variant]
-	if not ResourceLoader.exists(path):
+	var theme := theme_for(room_id)
+	var path := "res://assets/backgrounds/layers/ch%d_mid_%s.png" % [chapter, theme]
+	if theme.is_empty() or not ResourceLoader.exists(path):
 		return
 	var texture := load(path) as Texture2D
 	if texture == null:
@@ -128,109 +143,18 @@ func _build_mid_layer() -> void:
 		sprite.texture = texture
 		sprite.centered = false
 		sprite.position = Vector2(start + i * size.x, _bounds.end.y - size.y + 40.0)
+		# Neighbouring tiles mirror each other so the band never shows a seam.
 		sprite.flip_h = flip != (i % 2 == 1)
 		sprite.z_index = MID_Z
+		sprite.modulate = MID_TINT
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		mid_holder.add_child(sprite)
-		# Tall shafts also hang the band from the ceiling, so the upper part of
-		# the climb has structure instead of an empty haze.
-		if _bounds.size.y > 1500.0:
-			var hanging := sprite.duplicate() as Sprite2D
-			hanging.flip_v = true
-			hanging.flip_h = not sprite.flip_h
-			hanging.position = Vector2(sprite.position.x + size.x * 0.37, _bounds.position.y - 40.0)
-			hanging.modulate = Color(0.8, 0.8, 0.85)
-			mid_holder.add_child(hanging)
 
 
-## Distant masonry walls down both sides of a tall shaft, textured with the
-## chapter's deep fill tile and pushed back (dark, parallax with the mid
-## layer), so a climb always has structure beside it.
-func _build_shaft_walls() -> void:
-	# Only the vertical-shaft regions; tall boss/elite arenas keep the open
-	# painting behind the fight.
-	if _bounds.size.y <= 1500.0 or mid_holder == null or not room_id.ends_with("_well"):
-		return
-	var atlas_path := "res://assets/tiles/ch%d/tiles.png" % chapter
-	if not ResourceLoader.exists(atlas_path):
-		return
-	var atlas := load(atlas_path) as Texture2D
-	if atlas == null:
-		return
-	var image := atlas.get_image()
-	if image == null:
-		return
-	var tile := ImageTexture.create_from_image(image.get_region(Rect2i(16, 0, 16, 16)))
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash("shaft|" + room_id)
-	_add_shaft_pillars(tile, rng)
-	for side in [-1.0, 1.0]:
-		var points := PackedVector2Array()
-		var outer := _bounds.position.x - 400.0 if side < 0 else _bounds.end.x + 400.0
-		var top := _bounds.position.y - 200.0
-		var bottom := _bounds.end.y + 200.0
-		points.append(Vector2(outer, top))
-		var y := top
-		while y < bottom:
-			var depth := rng.randf_range(160.0, 380.0)
-			var edge := _bounds.position.x + depth if side < 0 else _bounds.end.x - depth
-			points.append(Vector2(edge, y))
-			y += rng.randf_range(90.0, 220.0)
-			points.append(Vector2(edge, y))
-		points.append(Vector2(outer, bottom))
-		var wall := Polygon2D.new()
-		wall.polygon = points
-		wall.texture = tile
-		wall.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-		wall.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		wall.texture_scale = Vector2(0.5, 0.5)
-		wall.color = Color(0.78, 0.8, 0.86)
-		wall.z_index = MID_Z - 1
-		mid_holder.add_child(wall)
-		# A pale rim along the inner edge catches the shaft's light.
-		var rim := Line2D.new()
-		for i in range(1, points.size() - 1):
-			rim.add_point(points[i])
-		rim.width = 2.0
-		rim.default_color = Color(0.75, 0.85, 0.85, 0.3)
-		rim.z_index = MID_Z - 1
-		mid_holder.add_child(rim)
-
-
-## Background pillars and cross beams through the full shaft height.
-func _add_shaft_pillars(tile: Texture2D, rng: RandomNumberGenerator) -> void:
-	var x := _bounds.position.x + rng.randf_range(420.0, 640.0)
-	var pillars: Array[float] = []
-	while x < _bounds.end.x - 380.0:
-		var w := rng.randf_range(70.0, 130.0)
-		var pillar := Polygon2D.new()
-		pillar.polygon = PackedVector2Array([
-			Vector2(x, _bounds.position.y - 200.0), Vector2(x + w, _bounds.position.y - 200.0),
-			Vector2(x + w, _bounds.end.y + 200.0), Vector2(x, _bounds.end.y + 200.0)])
-		pillar.texture = tile
-		pillar.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-		pillar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pillar.texture_scale = Vector2(0.5, 0.5)
-		pillar.color = Color(0.5, 0.52, 0.58)
-		pillar.z_index = MID_Z - 2
-		mid_holder.add_child(pillar)
-		pillars.append(x + w * 0.5)
-		x += w + rng.randf_range(520.0, 900.0)
-	var y := _bounds.position.y + rng.randf_range(200.0, 400.0)
-	while y < _bounds.end.y - 500.0:
-		var beam := Polygon2D.new()
-		var h := rng.randf_range(26.0, 44.0)
-		beam.polygon = PackedVector2Array([
-			Vector2(_bounds.position.x - 200.0, y), Vector2(_bounds.end.x + 200.0, y),
-			Vector2(_bounds.end.x + 200.0, y + h), Vector2(_bounds.position.x - 200.0, y + h)])
-		beam.texture = tile
-		beam.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-		beam.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		beam.texture_scale = Vector2(0.5, 0.5)
-		beam.color = Color(0.42, 0.44, 0.5)
-		beam.z_index = MID_Z - 2
-		mid_holder.add_child(beam)
-		y += rng.randf_range(420.0, 640.0)
+## Painted theme (art pack) of a big-map region: picks the region's transparent
+## mid layer. Matches tools/build_region_backdrops.py REGIONS.
+static func theme_for(region: String) -> String:
+	return String(REGION_THEMES.get(region, ""))
 
 
 ## Places floor props on [param surfaces] (room-local rects; y = walkable

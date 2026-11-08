@@ -63,3 +63,7 @@ func _explode() -> void:
 					and (node as Enemy).global_position.distance_to(global_position) <= blast_radius:
 				(node as Enemy).take_damage(maxi(get_attack_damage(), 1))
 	take_damage(health)
+
+
+func creature_phase() -> StringName:
+	return &"windup"

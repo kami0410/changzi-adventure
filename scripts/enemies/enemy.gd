@@ -58,6 +58,9 @@ var dead: bool = false
 var speed_multiplier: float = 1.0
 var sprite_visual: Sprite2D = null
 var sprite_base_modulate: Color = Color.WHITE
+## True when a CreatureArt child plays drawn action strips (death included),
+## so the generic dark-red collapse is skipped.
+var frame_animated: bool = false
 
 var _data: EnemyData = null
 var _attack_cooldown_left: float = 0.0
@@ -410,6 +413,12 @@ func _spawn_telegraph() -> void:
 	pulse.amount = _attack_variant
 
 
+## Attack pose for frame-animated creatures: the windup strip until the hit
+## lands, then the attack strip. Subclasses with their own timers override it.
+func creature_phase() -> StringName:
+	return &"windup" if _attack_windup_left > 0.0 else &"attack"
+
+
 ## 当前攻击变体（从 1 开始，每次进入攻击状态递增）。
 func get_attack_variant() -> int:
 	return _attack_variant + 1
@@ -545,9 +554,9 @@ func _die() -> void:
 		health_bar.visible = false
 	if body_visual != null:
 		body_visual.modulate = Color(0.35, 0.12, 0.14, 0.8)
-	if sprite_visual != null and is_instance_valid(sprite_visual):
+	if sprite_visual != null and is_instance_valid(sprite_visual) and not frame_animated:
 		sprite_visual.modulate = Color(0.35, 0.12, 0.14, 0.8)
-	if _motion != null:
+	if _motion != null and not frame_animated:
 		_motion.play(&"death", death_delay)
 	if is_inside_tree():
 		CombatFX.spawn(get_parent(), global_position + Vector2(0, -30), &"death", sprite_base_modulate, _facing, 70)

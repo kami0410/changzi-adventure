@@ -1,0 +1,492 @@
+[
+  {
+    "id": "player_roll",
+    "prompt": "Use case: stylized-concept. Asset type: production 2D pixel-art animation sprite strip for Changzi Adventure. Reference image 1 is the hero identity and pixel technique ONLY. Draw a NEW combat roll matching that young male archivist: short black hair, glasses, black long coat with dried-blood red lining, black trousers and boots, teal enchanted book in left arm. Output EXACTLY eight animation cells in ONE horizontal row, each equal 96x96 pixels, total 768x96, genuinely transparent background. No labels, text, UI, grids, border, watermarks, ground shadow, or glow. Frame 1 crouch, 2 dive and tuck, frames 3-6 rolling curled ball at successive 90-degree orientations with coat hem curling, 7 landing half-crouch, 8 rise. Readable distinct silhouette each frame, centered inside its own cell, no cropping or crossing cell boundary, lowest opaque pixel touches cell bottom. Facing right. Native hand-placed 1-pixel art, no smooth antialiasing, no soft edges or gradients. 1px #0b0f14 outline, #141c2c and #23324a shadows, #93222a coat accents, #e8dcc4 skin/book pages, #8fe8dc upper-right rim light, only 16-32 solid colors. NO rescaled high-definition illustration.",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-6599c3f0-4696-4212-b7e8-88b23fa2941c.png",
+    "type": "atlas",
+    "w": 96,
+    "h": 96,
+    "cols": 8,
+    "rows": 1,
+    "count": 8
+  },
+  {
+    "id": "enemy_watcher_eye",
+    "type": "atlas",
+    "w": 96,
+    "h": 96,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "name": "血瞳",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nReference image is STYLE ONLY, not subjects. Subject: A huge bloodshot floating eyeball with a swirling ink-black vortex pupil and THREE nerve tendrils below, sickly bone-white sclera and bleeding edges. Right-facing side view. Attack: contracts, pupil opens, fires a tear. Death: ruptures into ink, tendrils collapse.\nCreate ONE complete animation sprite atlas for this single monster. EXACTLY FIVE EQUAL COLUMNS by FOUR EQUAL ROWS, no gaps or margins, 20 rectangular cells (last cell empty). All cells have the same 96:96 aspect ratio. Each cell contains ONE whole creature at consistent scale, horizontally centered, lowest visible pixel at bottom of cell. GENUINELY TRANSPARENT background, binary alpha, no ground or shadow. Use 16-32 colors. Read cells left to right then top to bottom. Cells 1-4: idle breathing; cells 5-8: locomotion cycle with substantial limb/tail/wing changes; cells 9-10: obvious attack windup; cells 11-13: three attack poses; cell14: hurt recoil; cells15-19: five death stages progressing to remnants; cell20 FULLY EMPTY. Each pose must be different. Keep all body parts inside cell, never overlap adjacent cells. No decorative floating objects outside each pose. This atlas will be sliced into exact 96x96 game frames; frame layout and correct creature design are essential.",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-1e6ac7d4-192f-496b-bbdf-485cdad42dc3.png"
+  },
+  {
+    "id": "enemy_skull_lantern",
+    "type": "atlas",
+    "w": 96,
+    "h": 96,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "name": "焚颅",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nDraw A burning HUMAN skull, cracked cranium pouring solid-pixel cold teal-white flame, two old-gold embers in eye sockets, scorched book pages hanging from jaw. Right-facing side view. Attack: pulls back then lunges forward, flame flares. Death: skull cracks, flame fragments extinguish.\nCreate a SMALL GAME SPRITE SHEET with 19 clearly separated poses in a strict 5-column x 4-row layout, cell20 empty. 96x96 native pixels each pose, visually simple bold shapes, limited 24 colors. Transparent empty space around every pose. Row-major cells: 1-4 idle,5-8 movement,9-10 windup,11-13 attack,14 hurt,15-19 progressively disintegrating death. IMPORTANT: the background must be real alpha transparency. NO white, grey, checkerboard, noisy texture, grid, borders, backdrop or glow anywhere. Draw only the creature with SOLID opaque pixels and totally empty transparent background. Each creature centered inside its own cell, no cropping.",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-0d48652f-cee8-4499-a15f-3a1aec4eef42.png",
+    "rawCount": 20,
+    "rowCounts": [
+      5,
+      5,
+      5,
+      5
+    ],
+    "sourceIndexes": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      19
+    ]
+  },
+  {
+    "id": "enemy_ink_wisp",
+    "type": "atlas",
+    "w": 64,
+    "h": 64,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "name": "墨火",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nDraw A teal will-o-wisp whose core is ONE black drop of ink, outer flame made from abstract shattered glyph-like shards (no legible writing), absolutely NO face, long tail behind to left. Right-facing side view. Attack: compresses and erupts into sharp teal shards. Death: flame breaks into droplets and collapses.\nCreate a SMALL GAME SPRITE SHEET with 19 clearly separated poses in a strict 5-column x 4-row layout, cell20 empty. 64x64 native pixels each pose, visually simple bold shapes, limited 24 colors. Transparent empty space around every pose. Row-major cells: 1-4 idle,5-8 movement,9-10 windup,11-13 attack,14 hurt,15-19 progressively disintegrating death. IMPORTANT: the background must be real alpha transparency. NO white, grey, checkerboard, noisy texture, grid, borders, backdrop or glow anywhere. Draw only the creature with SOLID opaque pixels and totally empty transparent background. Each creature centered inside its own cell, no cropping.",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-73ce2998-56fc-4d02-a144-e93d2963a5fc.png"
+  },
+  {
+    "id": "enemy_abyss_jelly",
+    "type": "atlas",
+    "w": 96,
+    "h": 128,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "name": "渊母",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate a complete sprite atlas of this ONE creature: A deep-sea jellyfish: bell drawn with SOLID pixels suggesting translucent flesh, glowing book PAGE sealed inside, long tentacles with tiny human hands at their ends. Right-facing side view. Attack: draws tentacles inward, then extends in electrical pulse. Death: bell tears and tentacles fall. STRICTLY follow anatomy described. Do not add extra bones, spines or legs. 19 animation poses, arranged in EXACT FIVE columns FOUR rows, rectangular cells 96:128, last bottom-right cell completely empty. Equal spacing, invisible cell boundaries. Every complete pose fits wholly inside its own cell, consistent creature size, baseline at bottom of cell. Native 96x128 pixels per pose, 16-32 colors, sparse crisp pixel clusters.\nReading row-major: cells1-4 idle, 5-8 locomotion, 9-10 attack preparation, 11-13 attack, 14 hurt, 15-19 death progressively collapsing to debris, 20 empty. Make all poses different with appropriate moving anatomy. Actual transparent alpha background, absolutely NO checkerboard or white/gray background, NO grid or cell borders, no glow or feathering.",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-966171b3-6c16-4dba-86b8-1ee6a867c3df.png",
+    "rowCounts": [
+      5,
+      5,
+      4,
+      5
+    ],
+    "rowBounds": [
+      [
+        0,
+        0.19661266568483063,
+        0.39322533136966126,
+        0.5927835051546392,
+        0.7849779086892489,
+        1
+      ],
+      [
+        0,
+        0.20029455081001474,
+        0.4050073637702504,
+        0.6104565537555229,
+        0.8085419734904271,
+        1
+      ],
+      [
+        0,
+        0.20029455081001474,
+        0.43888070692194403,
+        0.6907216494845361,
+        1
+      ],
+      [
+        0,
+        0.16200294550810015,
+        0.32989690721649484,
+        0.5007363770250368,
+        0.6715758468335787,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "enemy_name_snake",
+    "type": "atlas",
+    "w": 128,
+    "h": 64,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "name": "噬名蛇",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate a complete sprite atlas of this ONE creature: A LONG LOW dark-red serpent, scales are tiny brass name plates with inked abstract scratches (no legible letters), forked tongue resembles an ink stroke. Ground-level right-facing side view. Attack: coils back then strikes VERY LOW forward. Death: long segmented body collapses into disconnected dark plates. STRICTLY follow anatomy described. Do not add extra bones, spines or legs. 19 animation poses, arranged in EXACT FIVE columns FOUR rows, rectangular cells 128:64, last bottom-right cell completely empty. Equal spacing, invisible cell boundaries. Every complete pose fits wholly inside its own cell, consistent creature size, baseline at bottom of cell. Native 128x64 pixels per pose, 16-32 colors, sparse crisp pixel clusters.\nReading row-major: cells1-4 idle, 5-8 locomotion, 9-10 attack preparation, 11-13 attack, 14 hurt, 15-19 death progressively collapsing to debris, 20 empty. Make all poses different with appropriate moving anatomy. Actual transparent alpha background, absolutely NO checkerboard or white/gray background, NO grid or cell borders, no glow or feathering.",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-fdaa2479-5158-4cfa-996f-7819110eba49.png"
+  },
+  {
+    "id": "enemy_echo_bat",
+    "type": "atlas",
+    "w": 96,
+    "h": 64,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "name": "回声蝠",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate a complete sprite atlas of this ONE creature: A sinister purple-black bat whose large wing membranes are STITCHED YELLOWED SHEET-MUSIC PAPER, no eyes or nose: its FACE IS ONLY A ROUND OPEN MOUTH lined with tiny teeth. Right-facing side view. Attack: folds wings and dives then spreads them. Death: paper wings tear into falling scraps. STRICTLY follow anatomy described. Do not add extra bones, spines or legs. 19 animation poses, arranged in EXACT FIVE columns FOUR rows, rectangular cells 96:64, last bottom-right cell completely empty. Equal spacing, invisible cell boundaries. Every complete pose fits wholly inside its own cell, consistent creature size, baseline at bottom of cell. Native 96x64 pixels per pose, 16-32 colors, sparse crisp pixel clusters.\nReading row-major: cells1-4 idle, 5-8 locomotion, 9-10 attack preparation, 11-13 attack, 14 hurt, 15-19 death progressively collapsing to debris, 20 empty. Make all poses different with appropriate moving anatomy. Actual transparent alpha background, absolutely NO checkerboard or white/gray background, NO grid or cell borders, no glow or feathering.",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-4ce73545-f2e3-434a-86d3-4226ddc78688.png"
+  },
+  {
+    "id": "forge_god_portrait",
+    "type": "copy",
+    "w": 1536,
+    "h": 864,
+    "prompt": "Use case: stylized-concept / identity-preserve character design. Create a spectacular FULL-BODY CHARACTER KEY ART for Changzi Adventure's dark gothic, Cthulhu-touched PIXEL ART game. Portrait composition approximately 1024x1536.\nINPUT IMAGE 1: the real person's FACE and HAIR IDENTITY reference. He must remain clearly recognizable: young East Asian male, short tousled spiky dark hair with brown tips, straight dark brows, slightly narrow almond eyes, broad youthful face and rounded jaw, small mole under eye on viewer's left, full natural lips. Preserve his actual face proportions, age, clean-shaven appearance and short hair. Face unobscured, looking toward viewer in slight 3/4 turn. Do NOT replace him with a generic western warrior, do not add beard, helmet, glasses, long hair or old age. The suit in the photo is NOT a costume reference.\nINPUT IMAGE 2: ART STYLE reference only: intricate 2D gothic pixel sprites, midnight blue-black shadows, blood-red cloth, bone and tarnished metal details, crisp pixel clusters. Make the entire final illustration cohesive PIXEL ART, including face, no photographic face pasted onto painting. Deliberate visible square pixels and hard-edged clusters, not smooth digital painting, no photorealism.\nCHARACTER LORE: THE PREVIOUS GOD OF FURNACES AND FORGING, abdicated yet immeasurably powerful. The human identity remains young, with an ancient divine presence expressed through equipment and environment. A dignified, solemn, imposing silhouette, steady unwavering eyes and restrained authority.\nDESIGN: broad layered blackened forged-iron armor over a scorched charcoal smith's leather apron and long torn midnight/blood-red mantle, asymmetrical colossal anvil-shaped right pauldron, segmented heavy forge gauntlets, tarnished old-gold inlay, black chains, a circular sealed furnace core in breastplate showing a thin molten-orange fissure. One bare human forearm with sparse ember cracks, other arm armored. Wield a monumental black iron FORGING HAMMER with an anvil-like head and orange-hot chisel seams, head resting on the ground to his right, one hand on haft. Strong natural anatomy. Behind head a BROKEN CIRCULAR FORGE HALO composed of six floating scorched iron fragments, like the remains of a divine furnace door, with a restrained molten inner edge. Distinctive relic, not horns or spiky crown.\nPOSE AND COMPOSITION: entire figure and whole hammer visible from head to boot soles with generous breathing room, foreground heroic standing pose, shoulders squared, face visible and lit enough for resemblance, low camera angle, boots on cracked obsidian steps. Character fills ~80% image height, face substantial enough to identify.\nBACKGROUND: the abandoned throne-forge of a former god, immense cathedral-industrial rib vaults, chains descending from darkness, extinguished colossal crucibles, a single ancient furnace behind him still burning deep red. Subtle secondary silhouettes of broken anvils and dead god-forged weapons. Ash and a few sparks drift past, dramatic depth, background less detailed and darker than character, no other people.\nLIGHT: rich black/navy shadows #141c2c #23324a, dry blood red #93222a, old gold, bone-white #e8dcc4. Strong controlled molten orange from furnace cracks and hammer, plus narrow cold teal #8fe8dc rim from upper right to connect to game's style. Ashen and majestic rather than bright fantasy fire overload. Crisp pixelated light, not blurry airbrush.\nAbsolutely NO text, letters, labels, logo, watermark, UI or decorative border. One finished character artwork only, not a collage or turnaround sheet. Make him look like a mythic final-boss-caliber retired deity, with strong visual hierarchy and his real facial identity preserved.",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-808e7620-0e95-45c7-ad5b-187f5898b903.png"
+  },
+  {
+    "id": "forge_god_sprite",
+    "type": "sprite",
+    "w": 128,
+    "h": 128,
+    "prompt": "Use case: identity-preserve / game sprite. Create ONE production-ready side-view PIXEL SPRITE of the former GOD OF FURNACES AND FORGING.\nREFERENCE IMAGE 1 is the completed canonical COSTUME and character design. Preserve that EXACT black iron/anvil-shaped asymmetric shoulder armor, circular orange furnace core, old-gold trim and chains, heavy leather smith apron, torn blood-red mantle, gigantic black forging hammer resting on ground, six fragmented forge-ring halo above head. Do not reinvent the costume.\nREFERENCE IMAGE 2 is FACE IDENTITY: the same young East Asian man, short tousled spiky dark hair with brown tips, broad youthful clean-shaven face, straight brows, narrow almond eyes, no beard, no helmet or glasses.\nREFERENCE IMAGE 3 is the side-scrolling game's NATIVE PIXEL DENSITY and sprite proportions, style only. It is NOT a subject to copy.\nDELIVERABLE: just ONE small whole-body character sprite, turned toward the RIGHT in a readable 3/4 SIDE VIEW suitable for a 2D action game. NOT a portrait painting. Natural game-sprite proportions about 5 heads tall, large-enough uncovered face recognizable, substantial armor silhouette, readable heroic stance, no chibi baby style. Entire head, broken halo, hammer and both boots visible fully within square canvas, plenty transparent margin. Boots share the same bottom baseline. Hammer beside the figure on the viewer's left, head rests at ground baseline. No pedestal, scenery, particles or ground shadow. STRICTLY genuine alpha-transparent background, not black or grey or a checkerboard.\nArt MUST appear as a native 128x128-pixel sprite enlarged with NEAREST NEIGHBOR for viewing: BIG VISIBLE SQUARE PIXEL BLOCKS, fixed pixel grid, approx 40 colors maximum. 1 native-pixel ink-black outline #0b0f14, solid hard-edged pixel clusters, no subpixel detail, no blur, antialiasing, noisy fine detail, gradients, halos or semitransparent glow. All light is painted as solid pixels. Midnight navy #141c2c #23324a iron shadows, blood-red #93222a cape, tarnished bronze/gold, bone skin, restrained molten-orange cracks and narrow #8fe8dc rim. Imposing former god, same identity and armor as the reference, but simplified intelligently into tiny game sprite shapes. No words, numbers, labels, border, UI, logos or watermark. One character only, no duplicate poses or panels.",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-f57c4231-a041-447e-a556-dc4142bc417a.png"
+  },
+  {
+    "id": "ch2_ruins",
+    "name": "呼吸废墟·入口与支路",
+    "type": "background",
+    "w": 1536,
+    "h": 864,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-6c4bd68b-5e20-4311-91bb-ac64f914fa8f.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nProduction parallax game background, TWO LAYERS delivered as two equal 16:9 panels stacked vertically, no gap: top half is FAR layer, bottom half is matching MID layer. Each panel intended 1536x864. Overall image aspect 8:9. Do not put any dividing lines, labels or margins.\nTOP PANEL: full opaque scene. Breathing gothic RUINS EXTERIOR: collapsed arcades and book towers, pillars shaped like ribs, dark-red veins and black tendrils over grey-green mossy stone, a black moon with a dried-red halo, drifting torn pages. Keep it dark and desaturated, intricate architectural pixel art like the supplied STYLE reference, much darker than characters. Flat side-view, not a vanishing-point corridor. Empty readable gameplay center, no important details bottom15%. Horizontal repeating environment: left edge and right edge MUST match seamlessly. No foreground characters or interface.\nBOTTOM PANEL: only low ruined mossy arcades, broken rib pillars and black tendrils at the left and right edges, in a stronger, darker silhouette than far layer. ACTUAL ALPHA TRANSPARENCY in all empty space, not black filling, not checkerboard. Upper40% of this panel COMPLETELY EMPTY transparent, lower60% sparse side scenery only, center mostly transparent. Match the top panel architecture and palette. No sky or moon in this mid layer. Crisp pixels, no soft effects. Both panels have exactly the same width and height."
+  },
+  {
+    "id": "ch2_vault",
+    "name": "呼吸废墟·枢纽与书库",
+    "type": "background",
+    "w": 1536,
+    "h": 864,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-3c688bf2-94a6-461d-869c-8afb9e544c64.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate ONE two-layer production game background atlas. Two equal 16:9 WIDE panels STACKED VERTICALLY: TOP is FAR, BOTTOM is MID; each panel1536x864, combined aspect8:9. No divider, labels, padding or border.\nFAR PANEL is a completely OPAQUE intricately drawn environment: Interior ARCHIVE beneath an enormous ribcage dome: curved bone-rib vaults, bookshelves embedded in fleshy stone walls, sparse dim yellow candles, hard-pixel patches of breathing ground mist. Midnight shadows, chapter2 grey-green moss/bone/rust-red veins, flat side-on platform-game view, dark desaturated far layer, spacious readable center, no important objects bottom15%, seamlessly repeating left-to-right architecture and matching edge colors.\nMID PANEL is a sparse TRUE TRANSPARENT layer containing ONLY mossy rib-footings, broken bookcases and low archive masonry. Strong dark foreground silhouettes, upper40% of this panel completely transparent, center mostly transparent, all opaque scenery restricted to lower60%, keep lower15% plain. NO sky or background, NO black rectangle or checkerboard. Use actual alpha. Match far panel palette and shapes, also horizontally seamless.\nDo not copy reference text or UI. No character, no perspective floor, no photographic texture, no painting, no bloom. Sharp purposeful PIXEL ART with visible square clusters."
+  },
+  {
+    "id": "ch2_well",
+    "name": "呼吸废墟·纵井",
+    "type": "background",
+    "w": 1536,
+    "h": 2160,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-3d0ec2c6-424b-4c96-8f8e-6487af00683f.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate ONE two-layer production game background atlas. Two equal TALL PORTRAIT panels SIDE BY SIDE: LEFT is FAR, RIGHT is MID; each panel aspect1536:2160, combined aspect3072:2160. No divider, labels, padding or border.\nFAR PANEL is a completely OPAQUE intricately drawn environment: An endless VERTICAL SHAFT: stacked broken bookshelves and snapped staircases on both side walls, swelling organic stone, upper shaft fading into darkness, a puddle reflection low down. Strong tall vertical composition. Midnight shadows, chapter2 grey-green moss/bone/rust-red veins, flat side-on platform-game view, dark desaturated far layer, spacious readable center, no important objects bottom15%, seamlessly repeating left-to-right architecture and matching edge colors.\nMID PANEL is a sparse TRUE TRANSPARENT layer containing ONLY broken side-wall bookcases, chain fixtures, snapped side staircases and mossy ribs, ONLY in lower 60 percent. Strong dark foreground silhouettes, upper40% of this panel completely transparent, center mostly transparent, all opaque scenery restricted to lower60%, keep lower15% plain. NO sky or background, NO black rectangle or checkerboard. Use actual alpha. Match far panel palette and shapes, also horizontally seamless.\nDo not copy reference text or UI. No character, no perspective floor, no photographic texture, no painting, no bloom. Sharp purposeful PIXEL ART with visible square clusters."
+  },
+  {
+    "id": "ch2_boss",
+    "name": "呼吸废墟·肺钟守卫大厅",
+    "type": "background",
+    "w": 1536,
+    "h": 864,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-6024caa8-f6ce-45c2-83ec-c557d77bb410.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate ONE two-layer production game background atlas. Two equal 16:9 WIDE panels STACKED VERTICALLY: TOP is FAR, BOTTOM is MID; each panel1536x864, combined aspect8:9. No divider, labels, padding or border.\nFAR PANEL is a completely OPAQUE intricately drawn environment: A vast hall containing a COLOSSAL HANGING BRONZE BELL shaped like a breathing lung, rib vaults, side pillars with many small bells, distant floor fissures with dim dried-red illumination. Midnight shadows, chapter2 grey-green moss/bone/rust-red veins, flat side-on platform-game view, dark desaturated far layer, spacious readable center, no important objects bottom15%, seamlessly repeating left-to-right architecture and matching edge colors.\nMID PANEL is a sparse TRUE TRANSPARENT layer containing ONLY low ruined rib pillars at the sides, small bronze bells and dark broken stone. Strong dark foreground silhouettes, upper40% of this panel completely transparent, center mostly transparent, all opaque scenery restricted to lower60%, keep lower15% plain. NO sky or background, NO black rectangle or checkerboard. Use actual alpha. Match far panel palette and shapes, also horizontally seamless.\nDo not copy reference text or UI. No character, no perspective floor, no photographic texture, no painting, no bloom. Sharp purposeful PIXEL ART with visible square clusters."
+  },
+  {
+    "id": "ch3_shore",
+    "name": "无光海·入口海岸",
+    "type": "background",
+    "w": 1536,
+    "h": 864,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-acb010ef-7164-4930-ad48-287212ae638d.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nMake a TWO-LAYER game parallax background atlas. Two equal wide panels stacked top/bottom, each16:9: TOP FAR, BOTTOM MID; combined8:9. Each panel fills its exact half. No dividers, labels or margins.\nFAR: OPAQUE. A pitch-black SEA COAST with distant INVERTED CITY SILHOUETTES, a shattered GIANT CLOCK half sunk in water, black sun ringed by a bone-white corona, fine hard-pixel rain. Deep teal-black water. Chapter3 DEEP SEA palette teal-black and cold navy with restrained bioluminescence. Strong narrative focal objects specified above, do NOT make this merely an ordinary library. Flat side-on game view, dark desaturated intricate pixel-art environment, center clear for gameplay, bottom15% low detail. Left/right edges compose a horizontally SEAMLESS repeat.\nMID: a distinct sparse near silhouette layer containing ONLY low barnacle-encrusted broken clocks and sea-worn stone at the sides, seaweed along lower edges, midnight navy/tealblack. All upper40% of this panel TRANSPARENT, mostly empty transparent center, scenery only lower60%. Use REAL alpha transparency not black/gray/checkerboard. No sky or opaque background. Objects on left/right connect seamlessly when repeated. No humans or UI. CRISP pixel clusters, no blurry glow or smooth painting."
+  },
+  {
+    "id": "ch3_library",
+    "name": "无光海·沉没图书馆",
+    "type": "background",
+    "w": 1536,
+    "h": 864,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-1e12e43c-6080-4bbe-a8f8-adfdc9ab01a9.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nMake a TWO-LAYER game parallax background atlas. Two equal wide panels stacked top/bottom, each16:9: TOP FAR, BOTTOM MID; combined8:9. Each panel fills its exact half. No dividers, labels or margins.\nFAR: OPAQUE. A GOTHIC LIBRARY entirely UNDERWATER: pages swimming like fish schools, stained glass with hard-edged teal shafts of light, coral and barnacles covering shelves, sparse pinpoints of bioluminescence. Chapter3 DEEP SEA palette teal-black and cold navy with restrained bioluminescence. Strong narrative focal objects specified above, do NOT make this merely an ordinary library. Flat side-on game view, dark desaturated intricate pixel-art environment, center clear for gameplay, bottom15% low detail. Left/right edges compose a horizontally SEAMLESS repeat.\nMID: a distinct sparse near silhouette layer containing ONLY low coral-covered bookcases, seaweed and broken stone arches at side edges, midnight navy/tealblack. All upper40% of this panel TRANSPARENT, mostly empty transparent center, scenery only lower60%. Use REAL alpha transparency not black/gray/checkerboard. No sky or opaque background. Objects on left/right connect seamlessly when repeated. No humans or UI. CRISP pixel clusters, no blurry glow or smooth painting."
+  },
+  {
+    "id": "ch3_well",
+    "name": "无光海·深渊竖井",
+    "type": "background",
+    "w": 1536,
+    "h": 2160,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-ed5e2003-786a-404d-8233-de0d6a9f3f6b.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature. Landscape canvas 1536x1080. TWO SEPARATE TALL PORTRAIT PANELS SIDE BY SIDE. LEFT rectangle width768 height1080. RIGHT rectangle width768 height1080. DO NOT draw a wide short panorama. Both panels TALLER than wide. LEFT: opaque vertical deep-sea shaft, water surface at very top, descending tall chains and sea-eroded pillars at sides, small pale teal jellyfish at different depths, darkness increasing toward bottom, dark teal/navy solid pixel shading. Flat side-view for a vertical platformer. RIGHT: a matching transparent mid layer. NO opaque background. Only sea-eaten pillar bases, barnacles, algae and loops of chain in LOWER60% of right panel, with upper40% COMPLETELY empty transparent, central channel transparent. Strictly no white, gray, checkerboard, smoke, fog or glow. Side edges tile horizontally. Each panel intended1536x2160, tall feel is essential. No text, no dividers."
+  },
+  {
+    "id": "ch3_boss",
+    "name": "无光海·最后的读者",
+    "type": "background",
+    "w": 1536,
+    "h": 864,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-5a021182-bfef-42b4-b15a-4b659e6ddcd5.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nONE paired-layer background artwork, VERTICAL canvas width1182 height1330, overall8:9 aspect. Exactly TWO WIDE 16:9 panels stacked, TOP far layer and BOTTOM transparent mid layer. Each half is1182x665. No labels, divider or margins. This is NOT one continuous tall scene.\nTOP opaque FAR layer: At the bottom of the sea a TITANIC READING DESK with an OPEN BOOK LARGER THAN A CITY, curling pages stirring hard-pixel dark currents, a black-sun ring seen above through distant sea surface, drowned gothic architecture. Deep black-teal SEA and underwater monumental book, NOT an ordinary library. Flat side-on video-game composition, detailed crisp PIXEL ART. Dark low saturation, center left readable for combat, important details above bottom15%. Designed to tile seamlessly horizontally with matching left/right boundary architecture.\nBOTTOM transparent MID layer: ONLY low sunken shelf fragments, old pages caught in coral, dark barnacled desk fragments at sides. REAL TRANSPARENT EMPTY SPACE across upper40% of the bottom panel and center. Scenery silhouettes occupy lower60% only, no opaque backdrop, no sky or black/checkerboard/white fill. Slightly stronger silhouette than far layer, complementary matching environment. Horizontally repeating edge objects, no random particles, no characters. Hard solid pixels only, no semitransparent haze or soft glow."
+  },
+  {
+    "id": "ch4_stage",
+    "name": "笑面剧场·舞台",
+    "type": "background",
+    "w": 1536,
+    "h": 864,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-f8addb10-adaf-46a2-9096-7a72696b3540.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nONE paired-layer background artwork, VERTICAL canvas width1182 height1330, overall8:9 aspect. Exactly TWO WIDE 16:9 panels stacked, TOP far layer and BOTTOM transparent mid layer. Each half is1182x665. No labels, divider or margins. This is NOT one continuous tall scene.\nTOP opaque FAR layer: A ruined THEATER STAGE, huge torn dark-red VELVET CURTAINS, an ornate old-gold chandelier, an open book at center stage, rows of motionless PAPER PEOPLE in distant audience seats. Dark-red velvet and tarnished old gold over midnight navy, a sinister abandoned THEATER. Flat side-on video-game composition, detailed crisp PIXEL ART. Dark low saturation, center left readable for combat, important details above bottom15%. Designed to tile seamlessly horizontally with matching left/right boundary architecture.\nBOTTOM transparent MID layer: ONLY low broken stage flats, torn velvet swags and old-gold footlights at the sides. REAL TRANSPARENT EMPTY SPACE across upper40% of the bottom panel and center. Scenery silhouettes occupy lower60% only, no opaque backdrop, no sky or black/checkerboard/white fill. Slightly stronger silhouette than far layer, complementary matching environment. Horizontally repeating edge objects, no random particles, no characters. Hard solid pixels only, no semitransparent haze or soft glow."
+  },
+  {
+    "id": "ch4_seats",
+    "name": "笑面剧场·观众席与包厢",
+    "type": "background",
+    "w": 1536,
+    "h": 864,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-46c038a2-84ae-4d1b-a9ee-dadb6d0dcf9e.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nONE paired-layer background artwork, VERTICAL canvas width1182 height1330, overall8:9 aspect. Exactly TWO WIDE 16:9 panels stacked, TOP far layer and BOTTOM transparent mid layer. Each half is1182x665. No labels, divider or margins. This is NOT one continuous tall scene.\nTOP opaque FAR layer: Tier after tier of THEATER BOXES AND SEATS, every seat occupied by the SAME FIXED GRINNING BONE MASK, corroded ornate old-gold railings and dark-red velvet, hard stage light arriving from the side. Dark-red velvet and tarnished old gold over midnight navy, a sinister abandoned THEATER. Flat side-on video-game composition, detailed crisp PIXEL ART. Dark low saturation, center left readable for combat, important details above bottom15%. Designed to tile seamlessly horizontally with matching left/right boundary architecture.\nBOTTOM transparent MID layer: ONLY low red seat backs, grinning-mask fragments and rusted gold balcony rails at sides. REAL TRANSPARENT EMPTY SPACE across upper40% of the bottom panel and center. Scenery silhouettes occupy lower60% only, no opaque backdrop, no sky or black/checkerboard/white fill. Slightly stronger silhouette than far layer, complementary matching environment. Horizontally repeating edge objects, no random particles, no characters. Hard solid pixels only, no semitransparent haze or soft glow."
+  },
+  {
+    "id": "ch4_fly",
+    "name": "笑面剧场·后台吊杆",
+    "type": "background",
+    "w": 1536,
+    "h": 2160,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-43ade31e-bd21-454e-a4dd-512eba4f3818.png",
+    "prompt": "Use case: background-extraction. Edit this TWO-PANEL game background atlas. KEEP THE LEFT HALF opaque theater fly-loft art exactly unchanged. In the RIGHT HALF, REMOVE ALL gray/white background and smooth vignette. Replace it by ACTUAL ALPHA TRANSPARENCY, retaining only the wooden platforms, rope, sandbags and dark stage flats. Right panel upper40% must be COMPLETELY transparent, center empty transparent. No grey gradient, white, checkerboard, glow or shadow in empty areas. Preserve crisp pixel scenery and same two-panel arrangement, exact equal panel widths. Not a poster or illustration: this is a production far/mid texture atlas. No text."
+  },
+  {
+    "id": "ch4_boss",
+    "name": "笑面剧场·笑面史官",
+    "type": "background",
+    "w": 1536,
+    "h": 864,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-26991649-eced-43e3-afe9-e59fcc69d970.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nPORTRAIT canvas aspect8:9 containing TWO equal horizontal16:9 panels top/bottom. TOP panel far, BOTTOM panel mid. No panel border, labels, text, gaps, or margins.\nFAR PANEL: OPAQUE. A HALL OF MIRRORS deep inside a decayed theater, countless tall ornate mirrors all reflecting the SAME GRINNING FACE, dark blood-red carpet and a central writing desk piled high with name registers, old-gold frames. Dark-red velvet, corroded old gold, midnight navy. Make the specified THEATER architecture visually distinct, not an archive cathedral. Flat side-on composition for game background, central gameplay area readable, bottom15% plain. Seamless left/right repetition within this panel. Pixelated architectural detail, dark low saturation.\nMID PANEL: ONLY low broken ornate mirror frames at edges, red velvet swags and register stacks beside dark desk fragments. Dark silhouette elements on a genuinely TRANSPARENT alpha background. Upper40% completely transparent. Remaining lower60% side props sparse, center mostly empty. No black/white/checkerboard backdrop, no haze, no glow or particles. The two panels have equal sizes. All scenery made from HARD SQUARE PIXEL CLUSTERS. No humans, no interface."
+  },
+  {
+    "id": "enemy_spine_centipede",
+    "name": "书脊蜈蚣",
+    "type": "atlas",
+    "w": 128,
+    "h": 64,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-f8b98f9d-afca-44f1-8a86-0b7c08d3b31a.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nSubject: A long low CENTIPEDE made from articulated BOOK SPINES, every book title blacked out, legs made from snapped feather quill pens. Right-facing. Attack: coils into a circular wheel and charges. Death: book segments and quills scatter. Native game sprite 128x64, 24-32 solid colors. Side-view facing RIGHT. One subject design only.\nComplete ANIMATION ATLAS exactly 5 COLUMNS x 4 ROWS (20 equal cells, final empty). All creatures the SAME scale, centered with lowest point aligned to each cell bottom, generous gap of empty transparent space between silhouettes. Each entire creature inside own cell, no cropping. Cells read left to right each row: 1-4 idle,5-8 move/walk,9-10 windup,11-13 attacks,14 hurt recoil,15-19 five distinct stages of collapsing death ending in debris,20EMPTY. No duplicated identical frames. Death frames must also occupy their own column positions, do NOT bunch them to left. Remember many quill-pen legs and visible bookspine body segments, not a snake.\nGENUINE TRANSPARENT ALPHA background. Do not illustrate checkerboard or white/gray backdrop, no noise, no grid, no cell borders, no ground shadow or particles, no glow. Crisp tiny pixel clusters, no smooth painting."
+  },
+  {
+    "id": "enemy_rust_bellman",
+    "name": "锈钟铃兵",
+    "type": "atlas",
+    "w": 96,
+    "h": 96,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-dd788592-219f-4aad-b2a6-85739bb216aa.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nSubject: A hunched sinister soldier whose HEAD IS A RUSTED BRONZE BELL exhaling hard-pixel pale mist. Holds a staff with several small hanging bells. Ragged midnight coat, corroded brass and dried blood. Right-facing. Attack: lifts and forcefully swings bell staff. Death: bell head breaks off and body collapses. Native game sprite 96x96, 24-32 solid colors. Side-view facing RIGHT. One subject design only.\nComplete ANIMATION ATLAS exactly 5 COLUMNS x 4 ROWS (20 equal cells, final empty). All creatures the SAME scale, centered with lowest point aligned to each cell bottom, generous gap of empty transparent space between silhouettes. Each entire creature inside own cell, no cropping. Cells read left to right each row: 1-4 idle,5-8 move/walk,9-10 windup,11-13 attacks,14 hurt recoil,15-19 five distinct stages of collapsing death ending in debris,20EMPTY. No duplicated identical frames. Death frames must also occupy their own column positions, do NOT bunch them to left. \nGENUINE TRANSPARENT ALPHA background. Do not illustrate checkerboard or white/gray backdrop, no noise, no grid, no cell borders, no ground shadow or particles, no glow. Crisp tiny pixel clusters, no smooth painting."
+  },
+  {
+    "id": "enemy_drowned_scribe",
+    "name": "溺亡抄写员",
+    "type": "atlas",
+    "w": 96,
+    "h": 96,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-27187976-d161-49d4-bfbc-96a6dc0bfc9b.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nSubject: A drowned male scribe, pale teal skin, dripping long navy robe, kelp tangled in hair, clutching a stack of soaked bone-white pages. Right-facing. Attack: draws arm back and throws a wet page fan forwards. Death: robe slumps into puddle and papers fall. Native game sprite 96x96, 24-32 solid colors. Side-view facing RIGHT. One subject design only.\nComplete ANIMATION ATLAS exactly 5 COLUMNS x 4 ROWS (20 equal cells, final empty). All creatures the SAME scale, centered with lowest point aligned to each cell bottom, generous gap of empty transparent space between silhouettes. Each entire creature inside own cell, no cropping. Cells read left to right each row: 1-4 idle,5-8 move/walk,9-10 windup,11-13 attacks,14 hurt recoil,15-19 five distinct stages of collapsing death ending in debris,20EMPTY. No duplicated identical frames. Death frames must also occupy their own column positions, do NOT bunch them to left. \nGENUINE TRANSPARENT ALPHA background. Do not illustrate checkerboard or white/gray backdrop, no noise, no grid, no cell borders, no ground shadow or particles, no glow. Crisp tiny pixel clusters, no smooth painting."
+  },
+  {
+    "id": "enemy_string_puppet",
+    "name": "提线笑偶",
+    "type": "atlas",
+    "w": 96,
+    "h": 128,
+    "cols": 5,
+    "rows": 4,
+    "count": 19,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-8c53b7e4-4afc-45bd-9908-e12507b8bef8.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nSubject: A sinister old theater MARIONETTE, slender hinged old-gold wooden joints, fixed bone-white GRINNING MASK, ragged dark-red velvet costume, suspended by thin strings rising within its own cell. Right-facing. Attack: folds knees, jerks upwards then slams down with flung mask shards. Death: strings snap and hinged limbs collapse. Native game sprite 96x128, 24-32 solid colors. Side-view facing RIGHT. One subject design only.\nComplete ANIMATION ATLAS exactly 5 COLUMNS x 4 ROWS (20 equal cells, final empty). All creatures the SAME scale, centered with lowest point aligned to each cell bottom, generous gap of empty transparent space between silhouettes. Each entire creature inside own cell, no cropping. Cells read left to right each row: 1-4 idle,5-8 move/walk,9-10 windup,11-13 attacks,14 hurt recoil,15-19 five distinct stages of collapsing death ending in debris,20EMPTY. No duplicated identical frames. Death frames must also occupy their own column positions, do NOT bunch them to left. \nGENUINE TRANSPARENT ALPHA background. Do not illustrate checkerboard or white/gray backdrop, no noise, no grid, no cell borders, no ground shadow or particles, no glow. Crisp tiny pixel clusters, no smooth painting."
+  },
+  {
+    "id": "player_airdash",
+    "type": "atlas",
+    "w": 96,
+    "h": 96,
+    "cols": 3,
+    "rows": 1,
+    "count": 3,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-b66bf6fa-7fc2-4faf-883c-baf5ca170b61.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nThe reference shows the EXISTING HERO Changzi. Preserve his exact identity and costume: young slim black-haired male with GLASSES, black long coat with dark-red lining, black boots, teal magic book. Repaint new action frames in the SAME native pixel-art style; DO NOT copy text or labels.\nONE HORIZONTAL SPRITE STRIP, exactly 3 equal cells in ONE ROW, each 96x96 target pixels. Three poses: 1 lean forward preparing; 2 body nearly horizontal in a fast RIGHTWARD AIR DASH, legs tucked back, long red-lined coat stretched straight LEFT behind him, several solid book pages flying left; 3 recover to a compact landing-ready posture. This is an airborne dash, not running. Consistent figure scale across frames, fully visible and facing RIGHT. Entire pose in each equal cell, horizontal center aligned, lowest opaque pixel at bottom of each cell. Generous EMPTY separation between figures but no drawn cell lines. Genuine alpha TRANSPARENT background, no white/grey/checkerboard, no floor or shadow. Hard opaque pixel clusters, max32 colors, no bloom/blur. NO labels, lettering, sheet borders, extra poses or extra rows."
+  },
+  {
+    "id": "player_finisher",
+    "type": "atlas",
+    "w": 160,
+    "h": 160,
+    "cols": 5,
+    "rows": 1,
+    "count": 5,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-bc7718e2-a46f-4f9f-93aa-962252587b8c.png",
+    "prompt": "Use case: background-extraction. EDIT THIS EXISTING SPRITE STRIP. Remove ALL the white/gray background, noisy cloud border, texture and shadow completely, replacing with ACTUAL ALPHA TRANSPARENCY. Leave ONLY the five black-haired glasses-wearing black/red-coat swordfighter poses and their sword/solid black swing arc. Preserve their shapes, pixel art and five equal horizontal-cell positions exactly, no repaint or new poses. Background must be 100% empty transparent, no checkerboard, no white/grey fringe, no glow, no blur. Crisp opaque sprite pixels with hard alpha edge. No words or border."
+  },
+  {
+    "id": "props_ch1",
+    "type": "props",
+    "w": 64,
+    "h": 64,
+    "cols": 8,
+    "rows": 1,
+    "count": 8,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-201d9a7b-1e59-4621-9922-82af7385bb61.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nProduction set of EIGHT DISTINCT FLOOR PROPS in ONE horizontal row with equal64x64 cells, total512x64 target, genuine transparent alpha background. One object per cell, entire object inside cell, horizontally centered and floor aligned at bottom edge. Read left-to-right EXACTLY: 1 book stack; 2 brass candle stand; 3 collapsed wooden bookcase; 4 feather quill holder; 5 ink bottle; 6 small hooded stone statue; 7 cylindrical scroll case; 8 tall archive drawer cabinet. Chapter palette: Ink-blue archive, tarnished gold, bone paper. Side-view game scenery props, subtle 3/4 only where needed to read shape. Draw these as NATIVE64x64 pixel sprites, solid clusters, 1px dark outline, limited24-32 colors, no smooth rendering. All8 must be distinct, do not omit or duplicate. No legs or floor platform added beneath objects. No text, labels, grid, border, ground shadows, glow or checkerboard/white/grey background. Generous empty TRANSPARENT separation between props, not a connected scene."
+  },
+  {
+    "id": "props_ch2",
+    "type": "props",
+    "w": 64,
+    "h": 64,
+    "cols": 8,
+    "rows": 1,
+    "count": 8,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-0f1ef860-8765-482c-8809-3c53a19f2498.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nProduction set of EIGHT DISTINCT FLOOR PROPS in ONE horizontal row with equal64x64 cells, total512x64 target, genuine transparent alpha background. One object per cell, entire object inside cell, horizontally centered and floor aligned at bottom edge. Read left-to-right EXACTLY: 1 rubble pile; 2 broken stone column; 3 clay jar threaded with blood vessels; 4 curved rib bones; 5 old bronze bell; 6 mossy stone; 7 bone heap; 8 broken carved stele. Chapter palette: Grey-green mossy stone, rust-red organic veins, old bone. Side-view game scenery props, subtle 3/4 only where needed to read shape. Draw these as NATIVE64x64 pixel sprites, solid clusters, 1px dark outline, limited24-32 colors, no smooth rendering. All8 must be distinct, do not omit or duplicate. No legs or floor platform added beneath objects. No text, labels, grid, border, ground shadows, glow or checkerboard/white/grey background. Generous empty TRANSPARENT separation between props, not a connected scene."
+  },
+  {
+    "id": "props_ch3",
+    "type": "props",
+    "w": 64,
+    "h": 64,
+    "cols": 8,
+    "rows": 1,
+    "count": 8,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-a2c9241b-e436-438a-bd36-a8fe979a99ba.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nProduction set of EIGHT DISTINCT FLOOR PROPS in ONE horizontal row with equal64x64 cells, total512x64 target, genuine transparent alpha background. One object per cell, entire object inside cell, horizontally centered and floor aligned at bottom edge. Read left-to-right EXACTLY: 1 branching coral; 2 barnacle-encrusted rock; 3 seaweed bunch; 4 bioluminescent anemone; 5 old nautical lantern; 6 shipwreck planks; 7 iron anchor; 8 shell pile. Chapter palette: Wet dark slate, deep teal, coral, barnacle bone, limited teal luminous accents. Side-view game scenery props, subtle 3/4 only where needed to read shape. Draw these as NATIVE64x64 pixel sprites, solid clusters, 1px dark outline, limited24-32 colors, no smooth rendering. All8 must be distinct, do not omit or duplicate. No legs or floor platform added beneath objects. No text, labels, grid, border, ground shadows, glow or checkerboard/white/grey background. Generous empty TRANSPARENT separation between props, not a connected scene."
+  },
+  {
+    "id": "props_ch4",
+    "type": "props",
+    "w": 64,
+    "h": 64,
+    "cols": 8,
+    "rows": 1,
+    "count": 8,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-f46a4066-7719-425f-9e9b-7e86796c3225.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nProduction set of EIGHT DISTINCT FLOOR PROPS in ONE horizontal row with equal64x64 cells, total512x64 target, genuine transparent alpha background. One object per cell, entire object inside cell, horizontally centered and floor aligned at bottom edge. Read left-to-right EXACTLY: 1 stage footlight; 2 red upholstered theater chair; 3 wooden rack holding grinning masks; 4 hanging theater sandbag resting on floor; 5 coil of rope; 6 sinister standing paper doll; 7 upright painted stage flat; 8 ornate dressing-room mirror. Chapter palette: Dark-red velvet, aged gold, black theater wood, bone masks. Side-view game scenery props, subtle 3/4 only where needed to read shape. Draw these as NATIVE64x64 pixel sprites, solid clusters, 1px dark outline, limited24-32 colors, no smooth rendering. All8 must be distinct, do not omit or duplicate. No legs or floor platform added beneath objects. No text, labels, grid, border, ground shadows, glow or checkerboard/white/grey background. Generous empty TRANSPARENT separation between props, not a connected scene."
+  },
+  {
+    "id": "tiles_ch1",
+    "type": "tiles",
+    "w": 64,
+    "h": 32,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-8b699108-560e-4fb2-91fc-5c1adc4839b3.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate one PRODUCTION TERRAIN TILESET, NOT a scenery painting. EXACTLY4 columns x2 rows, EIGHT SQUARE TILES, NO gaps or margins, tile atlas overall2:1 aspect. Native tile16x16 pixels; atlas64x32 native pixels, show enlarged with nearest-neighbor hard square pixels. Extremely simplified precise 16x16 tile geometry, no fine high-resolution illustration. Ink-blue archive stone bricks with restrained tarnished old-gold trim. Midnight blue blocks, thin gold top edge, tiny old-paper scratches.\nExact layout, row1 left-right: 1 GROUND TOP (solid stone/wood below a thin flat horizontal walkable top edge); 2 FULL GROUND FILL (solid matching material all16 rows); 3 PLATFORM TOP (a thin4px-high walkable slab along TOP of the tile, lower12px TRANSPARENT); 4 HANGING UNDER-PLATFORM DECORATION (few strands/ornamental shapes hanging from top edge into otherwise transparent cell). Row2: 5 ground-top variant, 6 darker solid ground-fill variant, 7 platform-top variant with lower12px transparent, 8 hanging-decoration variant on transparent background.\nGround fill and platform must repeat SEAMLESSLY left/right within their individual tile cell. Thin top lines must match neighboring edge heights. Each cell completely fills its own16x16grid coordinate, no spacing, no frame/border, no text, no labels, no checkerboard background. The transparent areas must be REAL ALPHA. 24 colors maximum, no blur, smooth gradients, haze, spotlight or glow. Just the8 flat game tiles."
+  },
+  {
+    "id": "tiles_ch2",
+    "type": "tiles",
+    "w": 64,
+    "h": 32,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-bd1ae746-90b9-43a1-bf79-f6c83236b26e.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate one PRODUCTION TERRAIN TILESET, NOT a scenery painting. EXACTLY4 columns x2 rows, EIGHT SQUARE TILES, NO gaps or margins, tile atlas overall2:1 aspect. Native tile16x16 pixels; atlas64x32 native pixels, show enlarged with nearest-neighbor hard square pixels. Extremely simplified precise 16x16 tile geometry, no fine high-resolution illustration. Grey-green mossy stone and thin rust-red blood-vessel cracks. Organic breathing ruin, moss over worn stone.\nExact layout, row1 left-right: 1 GROUND TOP (solid stone/wood below a thin flat horizontal walkable top edge); 2 FULL GROUND FILL (solid matching material all16 rows); 3 PLATFORM TOP (a thin4px-high walkable slab along TOP of the tile, lower12px TRANSPARENT); 4 HANGING UNDER-PLATFORM DECORATION (few strands/ornamental shapes hanging from top edge into otherwise transparent cell). Row2: 5 ground-top variant, 6 darker solid ground-fill variant, 7 platform-top variant with lower12px transparent, 8 hanging-decoration variant on transparent background.\nGround fill and platform must repeat SEAMLESSLY left/right within their individual tile cell. Thin top lines must match neighboring edge heights. Each cell completely fills its own16x16grid coordinate, no spacing, no frame/border, no text, no labels, no checkerboard background. The transparent areas must be REAL ALPHA. 24 colors maximum, no blur, smooth gradients, haze, spotlight or glow. Just the8 flat game tiles."
+  },
+  {
+    "id": "tiles_ch3",
+    "type": "tiles",
+    "w": 64,
+    "h": 32,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-61a5c6fe-05fc-47a7-b54e-efcc6c3978c8.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate one PRODUCTION TERRAIN TILESET, NOT a scenery painting. EXACTLY4 columns x2 rows, EIGHT SQUARE TILES, NO gaps or margins, tile atlas overall2:1 aspect. Native tile16x16 pixels; atlas64x32 native pixels, show enlarged with nearest-neighbor hard square pixels. Extremely simplified precise 16x16 tile geometry, no fine high-resolution illustration. Wet blue-black slate with seaweed and sparse bone-white sea-foam pixels. Deep teal underwater ruin.\nExact layout, row1 left-right: 1 GROUND TOP (solid stone/wood below a thin flat horizontal walkable top edge); 2 FULL GROUND FILL (solid matching material all16 rows); 3 PLATFORM TOP (a thin4px-high walkable slab along TOP of the tile, lower12px TRANSPARENT); 4 HANGING UNDER-PLATFORM DECORATION (few strands/ornamental shapes hanging from top edge into otherwise transparent cell). Row2: 5 ground-top variant, 6 darker solid ground-fill variant, 7 platform-top variant with lower12px transparent, 8 hanging-decoration variant on transparent background.\nGround fill and platform must repeat SEAMLESSLY left/right within their individual tile cell. Thin top lines must match neighboring edge heights. Each cell completely fills its own16x16grid coordinate, no spacing, no frame/border, no text, no labels, no checkerboard background. The transparent areas must be REAL ALPHA. 24 colors maximum, no blur, smooth gradients, haze, spotlight or glow. Just the8 flat game tiles."
+  },
+  {
+    "id": "tiles_ch4",
+    "type": "tiles",
+    "w": 64,
+    "h": 32,
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-46936406-cca9-4706-8135-b15f96ed6960.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate one PRODUCTION TERRAIN TILESET, NOT a scenery painting. EXACTLY4 columns x2 rows, EIGHT SQUARE TILES, NO gaps or margins, tile atlas overall2:1 aspect. Native tile16x16 pixels; atlas64x32 native pixels, show enlarged with nearest-neighbor hard square pixels. Extremely simplified precise 16x16 tile geometry, no fine high-resolution illustration. Old dark wooden theater floorboards, dark-red velvet edge and fine old-gold trim. Very restrained ornate carved corners.\nExact layout, row1 left-right: 1 GROUND TOP (solid stone/wood below a thin flat horizontal walkable top edge); 2 FULL GROUND FILL (solid matching material all16 rows); 3 PLATFORM TOP (a thin4px-high walkable slab along TOP of the tile, lower12px TRANSPARENT); 4 HANGING UNDER-PLATFORM DECORATION (few strands/ornamental shapes hanging from top edge into otherwise transparent cell). Row2: 5 ground-top variant, 6 darker solid ground-fill variant, 7 platform-top variant with lower12px transparent, 8 hanging-decoration variant on transparent background.\nGround fill and platform must repeat SEAMLESSLY left/right within their individual tile cell. Thin top lines must match neighboring edge heights. Each cell completely fills its own16x16grid coordinate, no spacing, no frame/border, no text, no labels, no checkerboard background. The transparent areas must be REAL ALPHA. 24 colors maximum, no blur, smooth gradients, haze, spotlight or glow. Just the8 flat game tiles."
+  },
+  {
+    "id": "lift_parts",
+    "type": "parts",
+    "bounds": [
+      0,
+      0.58,
+      0.74,
+      0.9,
+      1
+    ],
+    "parts": [
+      {
+        "id": "lift_car",
+        "w": 160,
+        "h": 64
+      },
+      {
+        "id": "lift_panel_idle",
+        "w": 32,
+        "h": 72
+      },
+      {
+        "id": "lift_panel_active",
+        "w": 32,
+        "h": 72
+      },
+      {
+        "id": "lift_rail",
+        "w": 16,
+        "h": 64
+      }
+    ],
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-f6ccf943-d12e-4d5c-b366-a86ad58f6897.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nOne production game PROP ATLAS with EXACTLY4 separated objects in ONE ROW, invisible equal square cells, genuine transparent background. Read left-right: 1 low wide160x64 SIDE-VIEW wrought-iron cage ELEVATOR CAR, floor occupies its bottom16px, visible black iron grille at back, brass fittings and hazard stripes on platform edge, NO tall tower or cables outside car; 2 narrow upright32x72 brass CALL PANEL with round RED idle lamp on top; 3 the EXACT SAME panel with round GOLD running lamp instead of red; 4 a simple straight16x64 vertical iron GUIDE RAIL segment with bolts, top and bottom connect perfectly for VERTICAL tiling, no foot or cap. Whole pieces inside their own cells, NOT connected to one another. Side-on game sprites, flat orthographic view, no perspective. Limited32 solid colors, dark navy iron, old brass, ink-black1pxoutline and cool teal edge pixels. No glow, softshadow, checkerboard, white/grey background, text, labels, border or scene. Native small game sprite readability, hard square pixel clusters."
+  },
+  {
+    "id": "affix_icons",
+    "type": "parts",
+    "bounds": [
+      0,
+      0.3333333333333333,
+      0.6666666666666666,
+      1
+    ],
+    "parts": [
+      {
+        "id": "affix_elite",
+        "w": 32,
+        "h": 32
+      },
+      {
+        "id": "affix_swift",
+        "w": 32,
+        "h": 32
+      },
+      {
+        "id": "affix_horde",
+        "w": 32,
+        "h": 32
+      }
+    ],
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-4612fc68-3a41-41fe-9d16-7994bbb916ba.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nThree distinct tiny GAME ICONS, one horizontal strip, 3 equal32x32cells, genuine transparent background. Exactly left to right: 1 a CRACKED GOLD CROWN containing an OPEN EYE (elite); 2 a sharp TEAL WIND FEATHER with swept gust strokes (swift); 3 a GROUP OF SMALL INK-BLACK HUMAN HANDS reaching upward, with narrow bone and teal rim highlights so black shapes remain readable (horde). One icon per cell, centered, no badge, surrounding frame or circular background. True native32x32px designs, enlarged nearest-neighbor for viewing, very few bold crisp pixel clusters, 1px black outline, max24colors each. No letters, numerals, label, border, grid, watermark, white/grey/checkerboard, glow, blurry light or shadows. The icons must be separate with transparent gutters, no extra symbol."
+  },
+  {
+    "id": "title_keyart",
+    "type": "title",
+    "source": "C:\\Users\\24226\\.codex\\generated_images\\01a1bafb-0b1a-7032-ac3d-75b7ae841ae7\\exec-502cc1af-3df5-4d3c-8fb1-72bdf2e4a061.png",
+    "prompt": "Dark gothic and Cthulhu-touched production pixel art for a 2D side-scrolling action roguelite. Match the attached reference's detail and sinister mature mood, never cute. Palette midnight navy #141c2c #23324a, ink-black #0b0f14 1-pixel outline, bone #e8dcc4, dried blood #93222a, sickly teal #8fe8dc upper-right rim light. Crisp individually readable square pixels, hard edges, no antialiasing, no blur, no soft shadows or halos, no gradients. NO TEXT, labels, titles, grid lines, interface, watermark, signature.\nCreate a finished16:9 WIDESCREEN title-screen KEY ART, no actual title text. Native960x540pixel composition intended to enlarge2x to1920x1080 with sharp square pixels. Entire image must be rich deliberate PIXEL ART, not smooth painting.\nThe black-haired glasses-wearing young archivist HERO in the reference, with black long coat lined blood-red and teal magic book, is seen FROM BEHIND, standing at the far end of a COLLAPSED GOTHIC ARCHIVE. Put him near right third, small against the enormous world. Fractured bookshelves, ribbed arches and collapsed marble staircase descend into a chasm. Thousand torn bone-white book PAGES swirl like a snowstorm from the archive toward a COLOSSAL OPEN EYE in the dark sky on the RIGHT. Eye has an ink-black vortex pupil and bone-white iris with dried-red fissures, cosmic and disturbing. He faces the eye, coat stirred by wind, one hand holding book.\nLEFT40% intentionally almost empty DARK NAVY SHADOW for future menu, low contrast simple distant fog-like pixel silhouettes only, do not put hero, bright eye, text or important object there. All narrative focal detail on right60%. Midnightblue shadows #141c2c #23324a, teal #8fe8dc edges, bone #e8dcc4 pages and sparse dried blood #93222a. Monumental oppressive gothic atmosphere, highly readable silhouette, broad quiet dark regions balanced with detailed right-side ruined architecture. All illumination built from hard-edged solid pixel clusters, no blur or soft gradients. No UI, text, lettering, logo, watermark or border."
+  }
+]

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"spine_centipede"
+display_name = "书脊蜈蚣"
+max_health = 38
+speed = 96.0
+contact_damage = 11
+behavior = &"charger"

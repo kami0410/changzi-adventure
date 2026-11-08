@@ -15,6 +15,8 @@ var style: Style = Style.HUMANOID
 var gait: StringName = &"idle"
 var direction := 1.0
 var accent := Color("9fe8dc")
+## Spin the sprite through the roll; off when drawn roll frames do the turning.
+var roll_spin := true
 
 var _time := 0.0
 var _action: StringName = &""
@@ -152,13 +154,13 @@ func _update_springs(delta: float) -> void:
 				squash_target = Vector2(1.0 + (1.0 - p) * 0.16, 1.0 - (1.0 - p) * 0.15)
 				bob_target = (1.0 - p) * 3.0
 			&"roll":
-				squash_target = Vector2(0.94, 0.9)
+				squash_target = Vector2(0.94, 0.9) if roll_spin else Vector2.ONE
 				lean_target = 0.0
 				bob_target = 0.0
 				tail_target = -direction * 0.5
 			&"dodge":
-				squash_target = Vector2(1.18, 0.82)
-				lean_target = direction * p * TAU
+				squash_target = Vector2(1.18, 0.82) if roll_spin else Vector2(1.05, 0.96)
+				lean_target = direction * p * TAU if roll_spin else direction * 0.06
 				bob_target = -4.0
 			&"death":
 				squash_target = Vector2(1.0 + p * 0.15, 1.0 - p * 0.55)
@@ -282,6 +284,14 @@ func _draw_roll(texture: Texture2D, top_left: Vector2, foot_texel: float, feet: 
 	var turn := 1.0 - pow(1.0 - p, 1.8)
 	var ball := height * 0.36
 	var pivot := feet + Vector2(0, -ball)
+	if not roll_spin:
+		# Drawn roll frames: keep the pose upright on the feet, only add the trail.
+		draw_set_transform(_snap(feet), 0.0, scale)
+		draw_texture_rect(texture, Rect2(top_left - Vector2(0, foot_texel), texture.get_size()), false, color)
+		draw_set_transform(Vector2.ZERO)
+		var fade := Color(accent, color.a * 0.4 * (1.0 - p))
+		draw_arc(pivot, ball + 8.0, -direction * PI * 0.5, -direction * PI * 0.5 - direction * PI * 0.9, 12, fade, 3.0)
+		return
 	var angle := direction * turn * TAU
 	var local_pivot := Vector2(0, -ball / maxf(absf(scale.y), 0.001))
 	draw_set_transform(_snap(pivot), angle, scale)

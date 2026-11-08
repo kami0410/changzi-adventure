@@ -60,3 +60,7 @@ func take_damage(amount: int) -> void:
 	if state == STATE_ATTACK and not _pulsed:
 		amount = maxi(amount / 2, 1)
 	super.take_damage(amount)
+
+
+func creature_phase() -> StringName:
+	return &"attack" if _pulsed else &"windup"

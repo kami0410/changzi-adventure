@@ -34,3 +34,8 @@ Thumbs.db
 .idea/
 *.tmp
 assets/references/
+
+# Raw art deliveries: the original pack folder and its unprocessed generations.
+# The deliverables themselves are kept in art_inbox/ for provenance.
+/昌子大冒险-全套美术素材/
+art_inbox/_sources/*.png

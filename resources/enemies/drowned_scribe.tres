@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"drowned_scribe"
+display_name = "溺亡书记"
+max_health = 34
+speed = 78.0
+contact_damage = 10
+behavior = &"ranged"

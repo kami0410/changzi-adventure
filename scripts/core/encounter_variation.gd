@@ -122,3 +122,9 @@ static func modifier_name(modifier: StringName) -> String:
 
 static func modifier_hint(modifier: StringName) -> String:
 	return String(MODIFIER_HINTS.get(modifier, ""))
+
+
+## Affix icon (art pack) for the HUD hint and the elite's marker.
+static func modifier_icon(modifier: StringName) -> Texture2D:
+	var path := "res://assets/ui/icons/affix_%s.png" % String(modifier)
+	return load(path) as Texture2D if ResourceLoader.exists(path) else null

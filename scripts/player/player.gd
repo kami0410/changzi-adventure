@@ -64,9 +64,30 @@ const DODGE_FRAMES: Array[Texture2D] = [
 	preload("res://assets/sprites/player/frames/dodge_0.png"),
 	preload("res://assets/sprites/player/frames/dodge_1.png"),
 ]
-## The tucked jump pose doubles as the roll ball; ActorMotion spins it.
+## Drawn roll (art pack): crouch, dive, four tucked turns, landing, rise.
 const ROLL_FRAMES: Array[Texture2D] = [
-	preload("res://assets/sprites/player/frames/jump_1.png"),
+	preload("res://assets/sprites/player/frames/roll_0.png"),
+	preload("res://assets/sprites/player/frames/roll_1.png"),
+	preload("res://assets/sprites/player/frames/roll_2.png"),
+	preload("res://assets/sprites/player/frames/roll_3.png"),
+	preload("res://assets/sprites/player/frames/roll_4.png"),
+	preload("res://assets/sprites/player/frames/roll_5.png"),
+	preload("res://assets/sprites/player/frames/roll_6.png"),
+	preload("res://assets/sprites/player/frames/roll_7.png"),
+]
+## Air dash: gather, streak, recover.
+const AIRDASH_FRAMES: Array[Texture2D] = [
+	preload("res://assets/sprites/player/frames/airdash_0.png"),
+	preload("res://assets/sprites/player/frames/airdash_1.png"),
+	preload("res://assets/sprites/player/frames/airdash_2.png"),
+]
+## Combo finisher: overhead raise, wind, sweep, follow-through, recover.
+const FINISHER_FRAMES: Array[Texture2D] = [
+	preload("res://assets/sprites/player/frames/finisher_0.png"),
+	preload("res://assets/sprites/player/frames/finisher_1.png"),
+	preload("res://assets/sprites/player/frames/finisher_2.png"),
+	preload("res://assets/sprites/player/frames/finisher_3.png"),
+	preload("res://assets/sprites/player/frames/finisher_4.png"),
 ]
 ## Run cycle speed; four poses at 12 fps complete a stride in 0.33 s.
 const RUN_FPS := 12.0
@@ -186,6 +207,8 @@ func _ready() -> void:
 		_motion = ActorMotion.new()
 		add_child(_motion)
 		_motion.bind(sprite_visual)
+		# The roll frames already turn the body; ActorMotion only adds the trail.
+		_motion.roll_spin = false
 		_motion.set_style(ActorMotion.Style.HUMANOID)
 		_motion.accent = Color("8fe8dc")
 	if starter_weapon == null:
@@ -321,9 +344,13 @@ func _update_frames(delta: float) -> void:
 		return
 	if action == &"dodge":
 		_frame_anim = &"dodge"
-		_set_frame(_progress_frame(DODGE_FRAMES))
+		_set_frame(_progress_frame(AIRDASH_FRAMES if dodge_kind == &"air" else DODGE_FRAMES))
 		return
-	if action in [&"attack", &"slam"]:
+	if action == &"slam":
+		_frame_anim = &"attack"
+		_set_frame(_progress_frame(FINISHER_FRAMES))
+		return
+	if action == &"attack":
 		_frame_anim = &"attack"
 		_set_frame(_progress_frame(ATTACK_FRAMES))
 		return

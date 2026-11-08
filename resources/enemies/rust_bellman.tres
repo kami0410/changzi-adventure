@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"rust_bellman"
+display_name = "锈钟兵"
+max_health = 48
+speed = 70.0
+contact_damage = 13
+behavior = &"melee"

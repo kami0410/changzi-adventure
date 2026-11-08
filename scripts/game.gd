@@ -23,14 +23,18 @@ const ENEMY_SCENES: Dictionary = {
 	&"abyss_jelly": preload("res://scenes/enemies/abyss_jelly.tscn"),
 	&"name_snake": preload("res://scenes/enemies/name_snake.tscn"),
 	&"echo_bat": preload("res://scenes/enemies/echo_bat.tscn"),
+	&"spine_centipede": preload("res://scenes/enemies/spine_centipede.tscn"),
+	&"rust_bellman": preload("res://scenes/enemies/rust_bellman.tscn"),
+	&"drowned_scribe": preload("res://scenes/enemies/drowned_scribe.tscn"),
+	&"string_puppet": preload("res://scenes/enemies/string_puppet.tscn"),
 }
 ## 0.15 creatures (CreatureArt), not part of the authored waves: each chapter
 ## mixes its own into ordinary encounters through EncounterVariation.
 const CHAPTER_CREATURES: Array = [
-	[&"ink_wisp", &"watcher_eye"],
-	[&"skull_lantern", &"name_snake", &"ink_wisp"],
-	[&"abyss_jelly", &"watcher_eye", &"echo_bat"],
-	[&"skull_lantern", &"echo_bat", &"name_snake"],
+	[&"spine_centipede", &"ink_wisp", &"watcher_eye"],
+	[&"rust_bellman", &"skull_lantern", &"name_snake", &"ink_wisp"],
+	[&"drowned_scribe", &"abyss_jelly", &"watcher_eye", &"echo_bat"],
+	[&"string_puppet", &"skull_lantern", &"echo_bat", &"name_snake"],
 ]
 const BOSS_SCENE = preload("res://scenes/bosses/ink_archivist.tscn")
 const SMILING_SCENE = preload("res://scenes/bosses/smiling_archivist.tscn")
@@ -1167,7 +1171,7 @@ func _populate_room(room: ArenaRoom, ids: Array, wave_ids: Array = []) -> void:
 			roaming_root.process_mode = Node.PROCESS_MODE_PAUSABLE
 		var roaming_modifier: StringName = variation.get("modifier", EncounterVariation.NONE)
 		if roaming_modifier != EncounterVariation.NONE and hud != null:
-			hud.show_message(EncounterVariation.modifier_hint(roaming_modifier))
+			hud.show_message(EncounterVariation.modifier_hint(roaming_modifier), EncounterVariation.modifier_icon(roaming_modifier))
 		return
 	_spawn_group(room, first, -140.0, variation, 0)
 	if not rest.is_empty():
@@ -1175,7 +1179,7 @@ func _populate_room(room: ArenaRoom, ids: Array, wave_ids: Array = []) -> void:
 		room.queue_wave(func(): _spawn_group(room, rest, -110.0, variation, base))
 	var modifier: StringName = variation.get("modifier", EncounterVariation.NONE)
 	if modifier != EncounterVariation.NONE and hud != null:
-		hud.show_message(EncounterVariation.modifier_hint(modifier))
+		hud.show_message(EncounterVariation.modifier_hint(modifier), EncounterVariation.modifier_icon(modifier))
 
 
 func _roll_variation(room: ArenaRoom, ids: Array, wave_ids: Array) -> Dictionary:
@@ -1344,6 +1348,12 @@ func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
 			if enemy.sprite_visual != null:
 				enemy.sprite_base_modulate = EncounterVariation.ELITE_TINT
 				enemy.sprite_visual.modulate = EncounterVariation.ELITE_TINT
+				var crown := Sprite2D.new()
+				crown.name = "EliteMark"
+				crown.texture = EncounterVariation.modifier_icon(EncounterVariation.ELITE)
+				crown.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+				crown.position = Vector2(0, PixelSprite.art_top(enemy.sprite_visual) - 30.0)
+				enemy.add_child(crown)
 		elif modifier == EncounterVariation.SWIFT:
 			enemy.attack_cooldown *= 0.85
 		enemy.deaggro_range = 1150
@@ -1440,23 +1450,23 @@ func _apply_art(enemy: Enemy, texture: Texture2D, art_scale: float, tint: Color,
 ## enemies, with a CreatureArt child swapping the frames. The collider follows
 ## the drawn size (a snake stays low enough to jump over).
 func _apply_creature_art(enemy: Enemy, id: StringName) -> void:
-	var sheet := CreatureArt.sheet_for(id)
-	var frames := CreatureArt.frames_for(sheet)
-	if frames.is_empty():
+	var first := CreatureArt.first_frame(id)
+	if first == null:
 		return
 	var scale_factor := CreatureArt.display_scale(id)
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite"
-	PixelSprite.setup(sprite, frames[0], scale_factor, ENEMY_FOOT_Y)
+	PixelSprite.setup(sprite, first, scale_factor, ENEMY_FOOT_Y)
 	enemy.add_child(sprite)
 	enemy.sprite_visual = sprite
 	enemy.sprite_base_modulate = Color.WHITE
+	enemy.frame_animated = true
+	enemy.death_delay = maxf(enemy.death_delay, CreatureArt.death_length(id) + 0.25)
 	var animator := CreatureArt.new()
 	animator.name = "CreatureArt"
-	animator.sprite = sprite
-	animator.frames = frames
-	animator.fps = CreatureArt.frame_rate(sheet)
 	enemy.add_child(animator)
+	animator.bind(enemy, id, sprite)
+	var frames: Array[Texture2D] = [first]
 	var rect := PixelSprite.opaque_rect(frames[0])
 	var visual := Vector2(rect.size) * scale_factor
 	var collider := enemy.get_node_or_null("CollisionShape2D") as CollisionShape2D
