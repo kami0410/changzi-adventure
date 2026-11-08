@@ -38,3 +38,13 @@
 - 集成：playability 1,475、ch1_demo 109、run_save 695（连跑 3 次）、gamepad 212、ui_prompts 113（2 条环境性失败，原版同样）、ch1_event 73、menus 459、ai_settings 45、ch2 2,333、ch3 4,366、ch4 5,135，合计 15,015。
 - 导出：`scripts/export_game.ps1 -Platform All` → Windows exe 136.9 MB、Android apk 62.7 MB；exe `--headless --quit-after 400` 启动无脚本错误。
 - 截图：`tests/capture_polish_013.gd`（翻滚、电梯面板/乘坐、四章地块、第 1 章随机布局），输出在 `artifacts/screens/polish013/`（不提交）。
+
+## 第二轮（同日，用户反馈「地图美术好怪、一直一样」+「主动发现其他问题」）
+
+- **根因**：第 2–4 章每章一张画铺满 9 区、背景随镜头 1:1 移动无景深；更关键的是 27 个区域里 7 类区域三章地形逐字相同（只有支路略有差别），实际只有约 5 套布局。
+- **Magpie 出图 403**（账号层拒绝），按 magpie-art 约定改走程序化：`tools/build_region_backdrops.py`（四张原画 → 27 张区域图，裁切/翻转/渐变映射/水纹/暗角；高房间竖长图上方抽象暗雾，避免镜像月亮与拉伸伪影；WebP 共 4.4 MB）、`tools/build_dressing.py`（取自原画的中景带 ×6、每章 6 道具图集）。手绘几何剪影试过，和插画冲突，已弃用。
+- `RoomDressing`：视差（背景容器 + 边缘镜像补瓦片，不进 `backdrop_tiles`）、中景带、纵井井壁/砖柱/横梁（仅 `_well`）、地面道具与光晕/摇摆；第 3 章发光道具带 `PointLight2D`。
+- `RoomVariety`：每局额外跳台（见 ADR）；平台类（单向/塌落/移动）支持 `tile_texture`，用本章地块绘制。
+- 修复：`MDSBigRoom` 区域背景覆盖房间 `backdrop_path`（第 2 章从未显示房间图）；标题页「离开档案馆」在 720p 被挤出屏幕；Hub 地板下纯黑；普通敌人不随章节成长；第 3 章视野压缩（第 14 项）落地；手柄改键焦点测试的延迟调用竞争（多等一帧）。
+- 排查过但不是问题：运行期日志无报错；局内商店文案正确（截图脚本是测试数据）；新游戏有二次确认；Hub 左侧"趴着"的是出生落地帧。
+- 第二轮测试（Windows 本机）：单元 **13,678 / 0**；集成 playability 1,475、ch1_demo 109、ch1_event 73、run_save 695、gamepad 212、menus 459、ai_settings 45、ch2 2,333、ch3 4,256、ch4 5,021 全 0 失败（ch3/ch4 断言数比第一轮少，是因为背景改成一张竖长图，逐瓦片断言变少）；ui_prompts 仍是 2 条本机环境性失败。

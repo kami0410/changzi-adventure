@@ -47,6 +47,9 @@ signal arrived(stop: int)
 ## Panel offset: negative x puts it left of the car, positive x right of it.
 @export var panel_offset: Vector2 = Vector2(-36, 0)
 
+## Chapter terrain atlas for non-elevator platforms (set by MDSBigRoom).
+var tile_texture: Texture2D
+
 ## Travel after clamping to [member room_bounds].
 var effective_travel := Vector2.ZERO
 var travel_clamped := false
@@ -462,6 +465,12 @@ func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0)))
 	if call_mode:
 		_draw_elevator(rect)
+		return
+	if tile_texture != null:
+		TileVariants.draw_platform_strip(self, tile_texture, rect, Color(1.0, 0.95, 0.85))
+		# Rig hangers up to the fly loft so the slide reads as stage machinery.
+		draw_line(Vector2(8, 0), Vector2(8, -400), Color(0.6, 0.5, 0.4, 0.35), 1.0)
+		draw_line(Vector2(rect.size.x - 8, 0), Vector2(rect.size.x - 8, -400), Color(0.6, 0.5, 0.4, 0.35), 1.0)
 		return
 	draw_rect(rect, color)
 	draw_rect(Rect2(rect.position, Vector2(rect.size.x, minf(4.0, rect.size.y))), edge_color)

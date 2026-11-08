@@ -74,6 +74,9 @@ func set_active_weapon(slot: int) -> void:
 
 ## HUD footer follows the last device: keyboard hints on keys, face buttons
 ## and sticks after a controller press.
+const CONTROLS_HINT_SECONDS := 25.0
+const CONTROLS_HINT_FADED := 0.3
+
 func _refresh_controls_hint() -> void:
 	var hint := find_child("ControlsHint", true, false) as Label
 	if hint == null:
@@ -98,6 +101,23 @@ func _refresh_controls_hint() -> void:
 		parts.append("%s 地图" % flow.prompt_label(&"map"))
 	parts.append("%s 暂停" % flow.prompt_label(&"pause"))
 	hint.text = "    ".join(parts)
+	_fade_controls_hint(hint)
+
+
+## The footer is a reminder, not permanent chrome: full strength for a while
+## after it changes (start, device or keybind change), then it settles to a
+## faint line so it stops competing with the game.
+var _hint_tween: Tween
+
+func _fade_controls_hint(hint: Label) -> void:
+	hint.modulate.a = 1.0
+	if _hint_tween != null:
+		_hint_tween.kill()
+	if not hint.is_inside_tree():
+		return
+	_hint_tween = hint.create_tween()
+	_hint_tween.tween_interval(CONTROLS_HINT_SECONDS)
+	_hint_tween.tween_property(hint, "modulate:a", CONTROLS_HINT_FADED, 1.5)
 
 
 func _on_input_device_changed(_using_gamepad: bool) -> void:

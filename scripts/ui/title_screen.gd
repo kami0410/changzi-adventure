@@ -46,11 +46,11 @@ func _build() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(center)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 14)
+	column.add_theme_constant_override("separation", 8)
 	center.add_child(column)
 	var emblem := TextureRect.new()
 	emblem.texture = load("res://assets/branding/logo_pixel.png")
-	emblem.custom_minimum_size = Vector2(256, 256)
+	emblem.custom_minimum_size = Vector2(176, 176)
 	emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	emblem.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -73,7 +73,7 @@ func _build() -> void:
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(version)
 	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 16)
+	gap.custom_minimum_size = Vector2(0, 8)
 	column.add_child(gap)
 	if _flow == null:
 		_flow = _flow_node()
@@ -98,25 +98,18 @@ func _build() -> void:
 		var resume := Button.new()
 		resume.name = "ResumeRunButton"
 		resume.text = "继续本局"
-		resume.custom_minimum_size = Vector2(280, 50)
+		resume.custom_minimum_size = Vector2(280, 40)
 		resume.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		resume.pressed.connect(_resume_run)
 		column.add_child(resume)
 		resume_button = resume
-	var settings := Button.new()
-	settings.name = "SettingsButton"
-	settings.text = "设置"
-	settings.custom_minimum_size = Vector2(280, 44)
-	settings.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	settings.pressed.connect(func(): settings_requested.emit())
-	column.add_child(settings)
-	_gallery_button = Button.new()
-	_gallery_button.name = "EndingGalleryButton"
-	_gallery_button.text = "结局画廊"
-	_gallery_button.custom_minimum_size = Vector2(280, 44)
-	_gallery_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_gallery_button.pressed.connect(_open_ending_gallery)
-	column.add_child(_gallery_button)
+	var start := Button.new()
+	start.name = "StartButton"
+	start.text = "继续旅程" if has_progress else "开始旅程"
+	start.custom_minimum_size = Vector2(280, 40)
+	start.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	start.pressed.connect(_start)
+	column.add_child(start)
 	if has_progress:
 		_new_game_button = Button.new()
 		_new_game_button.name = "NewGameButton"
@@ -125,16 +118,23 @@ func _build() -> void:
 		_new_game_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		_new_game_button.pressed.connect(_confirm_new_game)
 		column.add_child(_new_game_button)
-	var start := Button.new()
-	start.name = "StartButton"
-	start.text = "继续旅程" if has_progress else "开始旅程"
-	start.custom_minimum_size = Vector2(280, 50)
-	start.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	start.pressed.connect(_start)
-	column.add_child(start)
+	var settings := Button.new()
+	settings.name = "SettingsButton"
+	settings.text = "设置"
+	settings.custom_minimum_size = Vector2(280, 40)
+	settings.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	settings.pressed.connect(func(): settings_requested.emit())
+	column.add_child(settings)
+	_gallery_button = Button.new()
+	_gallery_button.name = "EndingGalleryButton"
+	_gallery_button.text = "结局画廊"
+	_gallery_button.custom_minimum_size = Vector2(280, 40)
+	_gallery_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_gallery_button.pressed.connect(_open_ending_gallery)
+	column.add_child(_gallery_button)
 	var quit := Button.new()
 	quit.text = "离开档案馆"
-	quit.custom_minimum_size = Vector2(280, 44)
+	quit.custom_minimum_size = Vector2(280, 40)
 	quit.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	quit.pressed.connect(func(): get_tree().quit())
 	column.add_child(quit)

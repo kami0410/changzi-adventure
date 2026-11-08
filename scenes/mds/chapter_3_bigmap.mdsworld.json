@@ -17,7 +17,8 @@
       "color": "#2c3a66",
       "weather": "fog(color=#1a2440, density=0.45, ground=1, ground_height=0.25, drift=-20), rain(density=0.25, angle=-8, fall_speed=900, mist=0.2, color=Color(0.55, 0.65, 0.85, 0.35))",
       "background": "",
-      "boss_background": "deep_water"
+      "boss_background": "deep_water",
+      "darkness": 0.5
     }
   },
   "rooms": {
@@ -435,6 +436,7 @@
       }
     },
     "ch3_boss": {
+      "darkness": 0.3,
       "scene_path": "res://scenes/mds/ch3_bigmap/ch3_boss.tscn",
       "name": "无光海 · 最后的读者",
       "area": "Lightless Sea",

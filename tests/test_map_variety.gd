@@ -11,6 +11,7 @@ func run(t: Callable) -> void:
 	_test_patterns_reachable(t)
 	_test_layout_seeded(t)
 	_test_variation(t)
+	_test_room_variety(t)
 
 
 func _test_patterns_reachable(t: Callable) -> void:
@@ -113,3 +114,46 @@ func _test_variation(t: Callable) -> void:
 			inside = false
 	t.call(inside, true, "spawn_offsets_reasonable")
 	t.call(EncounterVariation.modifier_name(EncounterVariation.ELITE), "精英", "modifier_name")
+
+
+func _test_room_variety(t: Callable) -> void:
+	var bounds := Rect2(0, 0, 2560, 1440)
+	var floor_surfaces: Array[Rect2] = [Rect2(0, 1424, 2560, 16), Rect2(800, 1344, 320, 16)]
+	var avoid: Array[Vector2] = [Vector2(2552, 1334), Vector2(1600, 1334)]
+	var shafts: Array[float] = [1280.0]
+	t.call(RoomVariety.plan(1, "k", bounds, floor_surfaces, avoid, shafts).is_empty(), true,
+		"variety_skips_chapter_1")
+	var a := RoomVariety.plan(2, "7|ch2_hub", bounds, floor_surfaces, avoid, shafts)
+	var b := RoomVariety.plan(2, "7|ch2_hub", bounds, floor_surfaces, avoid, shafts)
+	t.call(a, b, "variety_deterministic")
+	t.call(a.size() >= RoomVariety.MIN_COUNT, true, "variety_places_platforms")
+	var kinds := {}
+	var ok := true
+	for chapter in [2, 3, 4]:
+		for seed_value in range(1, 30):
+			var specs := RoomVariety.plan(chapter, "%d|r" % seed_value, bounds, floor_surfaces, avoid, shafts)
+			var placed: Array[Rect2] = floor_surfaces.duplicate()
+			for spec in specs:
+				kinds["%d:%s" % [chapter, spec["kind"]]] = true
+				var rect: Rect2 = spec["rect"]
+				# Reachable from some surface below within the jump budget.
+				var reachable := false
+				for other in placed:
+					var rise := other.position.y - rect.position.y
+					var gap := maxf(maxf(other.position.x - rect.end.x, rect.position.x - other.end.x), 0.0)
+					if rise >= RoomVariety.RISE_MIN - 0.1 and rise <= BigRoomData.MAX_STEP + 0.1 							and gap <= RoomVariety.MAX_GAP + 0.1:
+						reachable = true
+				if not reachable:
+					ok = false
+				if absf(rect.get_center().x - 1280.0) < RoomVariety.SHAFT_HALF:
+					ok = false
+				for point in avoid:
+					if absf(clampf(point.x, rect.position.x, rect.end.x) - point.x) < RoomVariety.AVOID_RADIUS.x 							and absf(clampf(point.y, rect.position.y, rect.end.y) - point.y) < RoomVariety.AVOID_RADIUS.y:
+						ok = false
+				if spec["kind"] != &"moving":
+					placed.append(rect)
+	t.call(ok, true, "variety_reachable_and_clear")
+	t.call(kinds.has("2:one_way") and not kinds.has("2:collapse") and not kinds.has("2:moving"), true,
+		"variety_ch2_stone_ledges")
+	t.call(kinds.has("3:collapse"), true, "variety_ch3_rotten_planks")
+	t.call(kinds.has("4:moving"), true, "variety_ch4_stage_rigs")

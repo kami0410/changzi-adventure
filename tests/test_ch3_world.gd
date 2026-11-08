@@ -529,7 +529,7 @@ func _test_game_wiring(t: Callable) -> void:
 			t.call(world.starting_room, _plan().start_region(),
 				"ch3_world_scene_uses_plan_entry")
 			t.call(world.seamless_rooms, false, "ch3_world_uses_separate_rooms")
-			t.call(world.room_darkness, false, "ch3_world_leaves_vision_compression_off")
+			t.call(world.room_darkness, true, "ch3_world_has_vision_compression")
 			t.call(world.room_weather, true, "ch3_world_has_area_weather")
 			t.call(world.room_background, true, "ch3_world_has_area_backdrop")
 			world.free()

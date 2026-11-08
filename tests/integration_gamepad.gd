@@ -539,6 +539,9 @@ func _run() -> void:
 		var capturing := keybind._buttons.get(&"jump") as Button
 		check(root.gui_get_focus_owner() == capturing, "gamepad_keybind_focus_after_capture_start")
 		await _press_key(KEY_K)
+		# The page rebuilds its rows and refocuses with a deferred call; let
+		# that run before reading the focus owner.
+		await process_frame
 		var rebound := keybind._buttons.get(&"jump") as Button
 		check(root.gui_get_focus_owner() == rebound, "gamepad_keybind_focus_after_rebind")
 		check(GameFlow.key_label(&"jump") == OS.get_keycode_string(KEY_K), "gamepad_keybind_rebind_applied")

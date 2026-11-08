@@ -21,6 +21,8 @@ const GROUP := &"one_way_platforms"
 @export var edge_color: Color = Color("74b3a7")
 ## When false the top still blocks but down+jump does not drop through.
 @export var drop_through: bool = true
+## Chapter terrain atlas; set by MDSBigRoom so the ledge matches the tiles.
+var tile_texture: Texture2D
 
 var _shape: CollisionShape2D
 
@@ -69,8 +71,11 @@ func collision_shape() -> CollisionShape2D:
 
 func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0)))
-	draw_rect(rect, color)
-	draw_rect(Rect2(rect.position, Vector2(rect.size.x, minf(4.0, rect.size.y))), edge_color)
+	if tile_texture != null:
+		TileVariants.draw_platform_strip(self, tile_texture, rect)
+	else:
+		draw_rect(rect, color)
+		draw_rect(Rect2(rect.position, Vector2(rect.size.x, minf(4.0, rect.size.y))), edge_color)
 	if not drop_through:
 		return
 	# Three short down-chevrons read as "this surface opens downward" without

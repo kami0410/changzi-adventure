@@ -69,6 +69,8 @@ func build() -> void:
 	_build_ground()
 	_build_platforms()
 	_notify_child_surfaces()
+	_apply_prop_tiles()
+	_build_run_variety()
 	_build_ambient()
 	_build_gates()
 	_build_dressing()
@@ -523,6 +525,72 @@ func _notify_child_bounds() -> void:
 	for child in get_children():
 		if child.has_method(&"set_room_bounds"):
 			child.call(&"set_room_bounds", room_bounds)
+
+
+## Authored prop platforms draw with the chapter terrain atlas.
+func _apply_prop_tiles() -> void:
+	var atlas := _terrain_atlas()
+	if atlas == null:
+		return
+	for child in get_children():
+		if child is MovingPlatform and (child as MovingPlatform).call_mode:
+			continue
+		if &"tile_texture" in child:
+			child.set(&"tile_texture", atlas)
+			(child as CanvasItem).queue_redraw()
+
+
+func _terrain_atlas() -> Texture2D:
+	if data == null or data.tile_set == null or not data.tile_set.has_source(0):
+		return null
+	var source := data.tile_set.get_source(0) as TileSetAtlasSource
+	return source.texture if source != null else null
+
+
+## Seeded extra platforms for this run (see RoomVariety). Off without a live
+## run or when Flow.encounter_variation is off (authored-layout acceptance).
+var variety_nodes: Array[Node2D] = []
+
+
+func _build_run_variety() -> void:
+	variety_nodes.clear()
+	var info := RoomDressing.parse_room(data.resource_path if data != null else "")
+	if info.is_empty() or not is_inside_tree():
+		return
+	var flow := get_node_or_null("/root/Flow") as GameFlow
+	if flow == null or not flow.encounter_variation or flow.current_run == null \
+			or flow.current_run.run_seed == 0:
+		return
+	var avoid: Array[Vector2] = []
+	var shafts: Array[float] = []
+	for child in get_children():
+		if child is Node2D and not child is TileMapLayer and not child.name in ["Backdrop", "Ambient"]:
+			avoid.append((child as Node2D).position)
+		if child is MovingPlatform:
+			var lift := child as MovingPlatform
+			shafts.append(lift.position.x + lift.size.x * 0.5)
+	var game := get_parent() as MDSWorldGame
+	if game != null and game.world != null and not game.current_room.is_empty():
+		for key in game.world.get_gates(game.current_room).keys():
+			var gate_name := String(key)
+			var at: Vector2 = game.world.get_gate_local_pos(game.current_room, gate_name)
+			avoid.append(at)
+			var side := game.world.get_gate_side(game.current_room, gate_name)
+			if side == "top" or side == "bot" or side == "bottom":
+				shafts.append(at.x)
+	var surfaces: Array[Rect2] = []
+	surfaces.append_array(built_ground_surfaces)
+	surfaces.append_array(built_platform_surfaces)
+	for child in get_children():
+		if child is OneWayPlatform:
+			surfaces.append(Rect2((child as Node2D).position, (child as OneWayPlatform).size))
+		elif child is CollapsingPlatform:
+			surfaces.append(Rect2((child as Node2D).position, (child as CollapsingPlatform).size))
+	var specs := RoomVariety.plan(int(info["chapter"]),
+		"%d|%s" % [flow.current_run.run_seed, String(info["room"])], room_bounds, surfaces, avoid, shafts)
+	for node in RoomVariety.build(self, specs, _terrain_atlas()):
+		_track(node)
+		variety_nodes.append(node)
 
 
 ## Region dressing (parallax + floor props). Only rooms whose data path

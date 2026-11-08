@@ -77,6 +77,7 @@ func _ready() -> void:
 			child.process_mode = Node.PROCESS_MODE_DISABLED
 	_apply_background_art()
 	$Ground/Visual.hide()
+	_build_floor_tiles()
 	if not Flow.title_shown_this_session and DisplayServer.get_name() != "headless":
 		Flow.title_shown_this_session = true
 		var title := TitleScreen.new()
@@ -90,6 +91,38 @@ func _ready() -> void:
 	_connect_title_settings()
 	if not run_requested.is_connected(_on_run_requested):
 		run_requested.connect(_on_run_requested)
+
+
+## The flat ground colour is hidden in favour of the painted archive, which
+## left a black band under the walkway. Paint the archive terrain tiles there
+## (visual only; the Ground body still owns collision).
+func _build_floor_tiles() -> void:
+	if get_node_or_null("FloorTiles") != null:
+		return
+	var tiles_set := load("res://resources/tiles/ch1_tiles.tres") as TileSet
+	if tiles_set == null:
+		return
+	var top_row := 35  # y = 560, the Ground body's top edge
+	var fill := TileMapLayer.new()
+	fill.name = "FloorFill"
+	fill.tile_set = tiles_set
+	fill.collision_enabled = false
+	var top := TileMapLayer.new()
+	top.name = "FloorTiles"
+	top.tile_set = tiles_set
+	top.collision_enabled = false
+	for column in 80:
+		top.set_cell(Vector2i(column, top_row), 0,
+			TileVariants.pick(tiles_set, Vector2i(0, 0), column, top_row))
+		for row in range(top_row + 1, 46):
+			fill.set_cell(Vector2i(column, row), 0,
+				TileVariants.fill(tiles_set, Vector2i(1, 0), row - top_row))
+	add_child(fill)
+	add_child(top)
+	move_child(fill, 0)
+	move_child(top, 1)
+	fill.z_index = -1
+	top.z_index = -1
 
 
 func _apply_background_art() -> void:

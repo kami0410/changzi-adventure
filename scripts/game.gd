@@ -1192,8 +1192,8 @@ func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
 		var art_id: StringName = ENEMY_ART_FALLBACK.get(id, id)
 		var tint := ENEMY_FALLBACK_TINT if ENEMY_ART_FALLBACK.has(id) else Color.WHITE
 		_apply_art(enemy, ENEMY_ART[art_id], float(ENEMY_ART_SCALE.get(id, 1.0)), tint)
-		var health_scale := Difficulty.enemy_health(Flow.difficulty)
-		var damage_scale := 1.0
+		var health_scale := Difficulty.enemy_health(Flow.difficulty) * chapter_health_scale(_chapter)
+		var damage_scale := chapter_damage_scale(_chapter)
 		var speed_scale := 1.0
 		var elite := modifier == EncounterVariation.ELITE \
 			and int(variation.get("elite", -1)) == base_index + index
@@ -1225,6 +1225,22 @@ func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
 		enemy.died.connect(_on_enemy_died)
 		enemy.damaged.connect(relic_effects.on_damage)
 		offset += 150
+
+## Ordinary enemies reuse the same EnemyData in every chapter while the
+## player keeps collecting weapons, relics and authorities, so later chapters
+## went soft. Each chapter past the first adds health and contact damage
+## (bosses already scale through CampaignData).
+const CHAPTER_HEALTH_STEP := 0.35
+const CHAPTER_DAMAGE_STEP := 0.15
+
+
+static func chapter_health_scale(chapter_index: int) -> float:
+	return 1.0 + CHAPTER_HEALTH_STEP * float(clampi(chapter_index, 0, 3))
+
+
+static func chapter_damage_scale(chapter_index: int) -> float:
+	return 1.0 + CHAPTER_DAMAGE_STEP * float(clampi(chapter_index, 0, 3))
+
 
 func _spawn_boss(room: ArenaRoom, chapter: Dictionary, chapter_index: int) -> InkArchivist:
 	var scene: PackedScene = BOSS_SCENE

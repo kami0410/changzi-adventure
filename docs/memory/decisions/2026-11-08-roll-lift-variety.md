@@ -25,3 +25,10 @@
 - 验收测试中「电梯自动到顶」「捷径默认封闭」「第 2–4 章用第 1 章瓦片」三类断言按新规则改写。
 - 精英额外残页与完美闪避回墨是新的经济来源，数值暂定，后续试玩再调。
 - 第 1 章布局随机只改平台，不改房间数量/门/奖励结构；第 2–4 章大图几何仍是固定的，随机性来自遭遇变数。
+
+## 补充决策（第二轮）
+
+6. **区域美术程序化**：图像生成不可用时，区域背景由现有四张原画派生（`tools/build_region_backdrops.py`），中景带同样取自原画；不再使用手绘几何剪影。房间 `backdrop_path` 优先于世界文件。
+7. **每局额外跳台**：`RoomVariety.plan` 纯函数、`run_seed + 区域` 决定；只加不删、全部可选；`Flow.encounter_variation` 同时控制遭遇变数与额外跳台。
+8. **章节成长**：普通敌人生命每章 +35%、伤害 +15%（`game.gd` `CHAPTER_HEALTH_STEP/CHAPTER_DAMAGE_STEP`）。
+9. **第 3 章黑暗**：区域 `darkness` 0.5、Boss 0.3，`chapter_3_bigmap_world.tscn` 开 `room_darkness`。

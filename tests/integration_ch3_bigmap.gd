@@ -325,9 +325,11 @@ func _check_weather(mds, room: MDSBigRoom, room_id: String) -> void:
 			"region_weather_fog_effect_%s" % room_id)
 		check(mds.weather.get_node_or_null("Rain") != null,
 			"region_weather_rain_effect_%s" % room_id)
-	check(mds.room_darkness == false, "region_darkness_off_%s" % room_id)
-	check(room.get_node_or_null("MDSDarkness") == null,
-		"region_no_darkness_node_%s" % room_id)
+	# 0.14: the Lightless Sea is dark (status #14 vision compression); the
+	# player and enemies carry MDS lights, glowing props light their area.
+	check(mds.room_darkness, "region_darkness_on_%s" % room_id)
+	check(room.get_node_or_null("MDSDarkness") != null,
+		"region_darkness_node_%s" % room_id)
 
 
 ## `deep_water` is the area's boss-room animated background; every other region

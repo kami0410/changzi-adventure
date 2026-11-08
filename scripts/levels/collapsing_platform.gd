@@ -30,6 +30,8 @@ enum State { IDLE, WARNING, FALLING, GONE }
 @export var color: Color = Color("183039")
 @export var edge_color: Color = Color("74b3a7")
 @export var warning_color: Color = Color("d8765a")
+## Chapter terrain atlas; set by MDSBigRoom so the plank matches the tiles.
+var tile_texture: Texture2D
 
 var state: State = State.IDLE
 
@@ -219,11 +221,18 @@ func _draw() -> void:
 		alpha = clampf(1.0 - _progress * 0.85, 0.0, 1.0)
 	body.a *= alpha
 	var rect := Rect2(_visual_offset, Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0)))
-	draw_rect(rect, body)
-	var edge := Color(edge_color, alpha)
-	if state == State.WARNING:
-		edge = Color(warning_color.lightened(0.25), alpha)
-	draw_rect(Rect2(rect.position, Vector2(rect.size.x, minf(4.0, rect.size.y))), edge)
+	if tile_texture != null:
+		# Rotten planks: the chapter tile, slightly warm, reddening as it warns.
+		var tint := Color(1.0, 0.86, 0.72, alpha)
+		if state == State.WARNING:
+			tint = tint.lerp(Color(1.6, 0.8, 0.6, alpha), _warning_t)
+		TileVariants.draw_platform_strip(self, tile_texture, Rect2(Vector2.ZERO, rect.size), tint, _visual_offset)
+	else:
+		draw_rect(rect, body)
+		var edge := Color(edge_color, alpha)
+		if state == State.WARNING:
+			edge = Color(warning_color.lightened(0.25), alpha)
+		draw_rect(Rect2(rect.position, Vector2(rect.size.x, minf(4.0, rect.size.y))), edge)
 	if state != State.WARNING:
 		return
 	# Crack marks grow with the warning so the collapse is readable even

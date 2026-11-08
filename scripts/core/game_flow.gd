@@ -20,8 +20,9 @@ var run_save_path: String = RunSave.DEFAULT_PATH
 ## Set by the title screen's "continue run" button and consumed by game.gd.
 var resume_requested := false
 var auto_save: bool = true
-## Per-run encounter variation (EncounterVariation). Acceptance suites that
-## check the authored waves enemy by enemy switch it off.
+## Per-run variety: encounter variation (EncounterVariation) and the extra
+## big-map platforms (RoomVariety). Acceptance suites that check the authored
+## waves and layouts switch it off.
 var encounter_variation: bool = true
 var last_victory: bool = false
 var last_reward: int = 0

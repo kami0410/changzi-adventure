@@ -30,3 +30,21 @@ static func _has(tile_set: TileSet, coords: Vector2i) -> bool:
 		return false
 	var source := tile_set.get_source(0) as TileSetAtlasSource
 	return source != null and source.has_tile(coords)
+
+
+## Draws a platform as terrain tiles on [param canvas]: the atlas's platform
+## top tile across [param rect] (16 px rows) and its hanging underside tile one
+## row below. Used by the prop platforms so they match the chapter tiles.
+static func draw_platform_strip(canvas: CanvasItem, atlas: Texture2D, rect: Rect2,
+		modulate := Color.WHITE, offset := Vector2.ZERO) -> void:
+	if atlas == null:
+		return
+	var columns := maxi(1, int(ceilf(rect.size.x / 16.0)))
+	for column in columns:
+		var x := rect.position.x + column * 16.0
+		var w := minf(16.0, rect.end.x - x)
+		var variant := 16.0 if absi(hash(column * 7 + int(rect.position.x))) % 3 == 0 else 0.0
+		canvas.draw_texture_rect_region(atlas, Rect2(Vector2(x, rect.position.y) + offset, Vector2(w, 16)),
+			Rect2(32, variant, w, 16), modulate)
+		canvas.draw_texture_rect_region(atlas, Rect2(Vector2(x, rect.position.y + 16.0) + offset, Vector2(w, 16)),
+			Rect2(48, variant, w, 16), modulate)

@@ -294,6 +294,16 @@ func _add_prop(atlas: Texture2D, slot: int, spot: Vector2, rng: RandomNumberGene
 		glow.set_meta(&"phase", rng.randf() * TAU)
 		add_child(glow)
 		_glows.append(glow)
+		if chapter == 3:
+			# The Lightless Sea is dark (MDS darkness); lanterns and anemones
+			# push a little real light back into it.
+			var light := PointLight2D.new()
+			light.texture = MDSWorldGame.radial_light_texture()
+			light.texture_scale = 1.4
+			light.color = glow_color
+			light.energy = 0.9
+			light.position = glow.position
+			add_child(light)
 	if (SWAY.get(chapter, []) as Array).has(slot):
 		sprite.set_meta(&"phase", rng.randf() * TAU)
 		_sway.append(sprite)
