@@ -61,6 +61,10 @@ func show_ending(won: bool, reward: int) -> void:
 func show_campaign_ending(won: bool, reward: int, ending: Dictionary, records: int, kills: int, demo: bool = false, run_seed: int = 0) -> void:
 	_won = won
 	_run_seed = run_seed
+	# A won campaign closes on the resolved 名册 motif.
+	var audio := get_node_or_null("/root/Audio")
+	if won and audio != null and audio.has_method("play_music"):
+		audio.call("play_music", "res://assets/audio/music/ending.ogg", 1.5)
 	var title := get_node_or_null("Center/Panel/Margin/VBox/Title") as Label
 	var body := get_node_or_null("Center/Panel/Margin/VBox/Body") as Label
 	var echoes := get_node_or_null("Center/Panel/Margin/VBox/Echoes") as Label

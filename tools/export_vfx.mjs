@@ -37,7 +37,6 @@ const RECIPES = {
   smash: ["melee/hammer-smash", BONE, 34, 1],
   whip: ["melee/whip-crack", BLOOD, 27, 1],
   flurry: ["melee/dagger-flurry", TEAL, 30, 1],
-  thrust: ["melee/thrust", TEAL, 24, 1],
   claw: ["melee/claw-swipe", BLOOD, 28, 1],
   hit_spark: ["impacts/hit-spark", TEAL, 16, 1],
   hit_crit: ["impacts/crit-hit", GOLD, 28, 1],
@@ -50,7 +49,6 @@ const RECIPES = {
   boss_die: ["shadow/dark-explosion", BLOOD, 115, 2],
   enemy_spawn: ["spawn/summon-rise", INK, 60, 2],
   respawn: ["holy/holy-pillar", TEAL, 70, 2],
-  soul_rise: ["spawn/soul-rise", TEAL, 97, 2],
   chest_open: ["pickups/collect-burst", GOLD, 40, 1],
   heal: ["holy/heal-aoe", TEAL, 60, 2],
   cast_circle: ["arcane/magic-circle-cast", TEAL, 50, 2],
@@ -67,14 +65,6 @@ const RECIPES = {
   status_poisoned: ["status/poisoned", null, 48, 1],
   boss_phase: ["lightning/thunderclap", BLOOD, 58, 1],
   // Creature loops used as enemy art (0.15 roster), recoloured to the chapter moods.
-  creature_eye: ["critters/eyeball", BLOOD, 96, 2],
-  creature_skull: ["critters/flying-skull", BONE, 72, 2],
-  creature_wisp: ["critters/wisp", TEAL, 96, 2],
-  creature_jelly: ["critters/jellyfish", ["#061a24", "#0c3a4a", "#156b78", "#2fb4b0", "#7ff0dc", "#d6fff4", "#ffffff"], 96, 2],
-  creature_slime: ["critters/slime", INK, 54, 1],
-  creature_snake: ["critters/snake", BLOOD, 72, 2],
-  creature_bat: ["critters/bat", INK, 72, 2],
-  creature_crow: ["critters/bird", BONE, 72, 2],
 };
 
 function alphaCount(rgba) {

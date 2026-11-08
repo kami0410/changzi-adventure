@@ -1,7 +1,8 @@
 class_name NPCEventData
 extends RefCounted
 
-## One Hub personal event per visible NPC (叙事审计 E2, 第一批). The story
+## One Hub personal event per NPC (叙事审计 E2; 闻烬/白榆 join in 1.0, when
+## they appear in the Hub after the first chapter is cleared). The story
 ## beats come from docs/story-bible.md 「四位同行者 / 五位 NPC」: 陆沉 admits he
 ## tore the three pages to protect himself (red folder), 阿砚 refuses the god
 ## name and lights the furnace once more (broken-page sword as his gravestone),
@@ -75,6 +76,49 @@ const EVENTS: Dictionary = {
 			"……瓶子的账，等我哪天不在了再算。今天不谈这个。",
 		],
 	},
+	&"wenjin": {
+		"id": "wenjin_broken_pen",
+		"title": "断尖笔",
+		"prop": "断尖笔",
+		"min_tier": 2,
+		"requires_demo_cleared": true,
+		"lines": [
+			"关门。别让陆沉看见我在这里。",
+			"（她把一支笔放在桌上。笔尖断了，断口被摩挲得发亮，像被人握了很多年。）",
+			"认得这支断尖笔吗？你送的。那年我们都还在老师门下，你说史官的笔要硬，写下的字才不会被改。",
+			"后来我学会的第一件事，就是改字。",
+			"有一份名单，「当日应归档者」。上面有你的名字，墨还没干。",
+			"我用这支笔把它划掉了。笔尖就是那一下断的——名单比我想的要硬。",
+			"档案馆把我除了名。陆沉说我篡改记录。他说得对，我从来没否认过。",
+			"（她把笔推到你面前，又在半路停住，收了回去。）",
+			"我靠替人改过去活到现在。改得越多，我自己那一页就越空。",
+			"有时候我想，要是哪天我死了，名册上会不会根本没有「闻烬」这两个字。",
+			"……别那么看我。我不需要谁替我记住。",
+			"（她把断笔插回袖口，动作很慢。）",
+			"只是你要是哪天记得，就记得是我先动的笔。",
+		],
+	},
+	&"baiyu": {
+		"id": "baiyu_endless_map",
+		"title": "没有终点的地图",
+		"prop": "手绘地图",
+		"min_tier": 2,
+		"requires_demo_cleared": true,
+		"lines": [
+			"你来了。今天不画路线，陪我看一张旧图吧。",
+			"（他摊开一张手绘地图。线条从纸的四角往中间走，越走越细，最后都停在一片空白前面。）",
+			"这上面的每一条路，都没有走完。有人走到一半回去了，有人走到一半死了，有人只是忘了自己要去哪里。",
+			"没走完的路不会消失。它们会留在那儿，等下一个人。",
+			"等得久了，就聚成了我。",
+			"（他用指尖沿着一条线慢慢往前描，停在空白的边上。）",
+			"所以我带路的时候，总会在岔口多站一会儿。我在等一个走到这里还会回头的人。",
+			"你上次回头了。在第二道门前面，你停下来看了一眼来路。",
+			"那一眼，让这张图第一次多出了一小段线。",
+			"我不知道终点在哪儿。我从来没走到过任何一条路的终点。",
+			"……下一次，我不在前面带路了。我们一起走，好吗？",
+			"（地图的空白处，有一道很淡的墨痕，像刚刚落笔。）",
+		],
+	},
 }
 
 
@@ -88,7 +132,7 @@ static func event_id(npc_id: StringName) -> String:
 
 
 ## An event fires once, after the NPC's trust tier and the chapter progress
-## gate are both met. Hidden NPCs (闻烬/白榆) have no entry and never fire.
+## gate are both met (闻烬/白榆 only stand in the Hub once the gate is open).
 static func can_trigger(profile: Profile, npc_id: StringName) -> bool:
 	if profile == null:
 		return false

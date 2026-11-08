@@ -91,21 +91,6 @@
     72
    ]
   },
-  "thrust": {
-   "source": "melee/thrust",
-   "frames": 14,
-   "fps": 30,
-   "loop": false,
-   "columns": 3,
-   "frame_size": [
-    145,
-    65
-   ],
-   "pivot": [
-    8,
-    54
-   ]
-  },
   "claw": {
    "source": "melee/claw-swipe",
    "frames": 16,
@@ -284,21 +269,6 @@
    "pivot": [
     96,
     204
-   ]
-  },
-  "soul_rise": {
-   "source": "spawn/soul-rise",
-   "frames": 46,
-   "fps": 15,
-   "loop": false,
-   "columns": 9,
-   "frame_size": [
-    76,
-    128
-   ],
-   "pivot": [
-    38,
-    115
    ]
   },
   "chest_open": {
@@ -524,126 +494,6 @@
    "pivot": [
     126,
     105
-   ]
-  },
-  "creature_eye": {
-   "source": "critters/eyeball",
-   "frames": 48,
-   "fps": 15,
-   "loop": true,
-   "columns": 9,
-   "frame_size": [
-    62,
-    83
-   ],
-   "pivot": [
-    31,
-    76
-   ]
-  },
-  "creature_skull": {
-   "source": "critters/flying-skull",
-   "frames": 36,
-   "fps": 15,
-   "loop": true,
-   "columns": 8,
-   "frame_size": [
-    90,
-    125
-   ],
-   "pivot": [
-    45,
-    115
-   ]
-  },
-  "creature_wisp": {
-   "source": "critters/wisp",
-   "frames": 48,
-   "fps": 15,
-   "loop": true,
-   "columns": 7,
-   "frame_size": [
-    121,
-    92
-   ],
-   "pivot": [
-    61,
-    85
-   ]
-  },
-  "creature_jelly": {
-   "source": "critters/jellyfish",
-   "frames": 48,
-   "fps": 15,
-   "loop": true,
-   "columns": 9,
-   "frame_size": [
-    83,
-    111
-   ],
-   "pivot": [
-    39,
-    36
-   ]
-  },
-  "creature_slime": {
-   "source": "critters/slime",
-   "frames": 54,
-   "fps": 30,
-   "loop": true,
-   "columns": 8,
-   "frame_size": [
-    83,
-    76
-   ],
-   "pivot": [
-    42,
-    60
-   ]
-  },
-  "creature_snake": {
-   "source": "critters/snake",
-   "frames": 36,
-   "fps": 15,
-   "loop": true,
-   "columns": 3,
-   "frame_size": [
-    94,
-    22
-   ],
-   "pivot": [
-    46,
-    17
-   ]
-  },
-  "creature_bat": {
-   "source": "critters/bat",
-   "frames": 36,
-   "fps": 15,
-   "loop": true,
-   "columns": 5,
-   "frame_size": [
-    95,
-    61
-   ],
-   "pivot": [
-    48,
-    29
-   ]
-  },
-  "creature_crow": {
-   "source": "critters/bird",
-   "frames": 36,
-   "fps": 15,
-   "loop": true,
-   "columns": 6,
-   "frame_size": [
-    52,
-    41
-   ],
-   "pivot": [
-    36,
-    19
    ]
   }
  }

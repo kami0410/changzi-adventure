@@ -28,10 +28,10 @@ const MODIFIER_HINTS := {
 	SWIFT: "遭遇变数 · 迅潮：敌人行动更快",
 	HORDE: "遭遇变数 · 群潮：敌人更多，但更脆弱",
 }
-const SUBSTITUTE_CHANCE := 0.35
+const SUBSTITUTE_CHANCE := 0.4
 const EXTRA_BASE_CHANCE := 0.3
 const EXTRA_PER_CHAPTER := 0.1
-const MODIFIER_CHANCE := 0.35
+const MODIFIER_CHANCE := 0.45
 const ELITE_HEALTH := 2.0
 const ELITE_DAMAGE := 1.3
 const ELITE_PAGES := 4

@@ -22,6 +22,7 @@ var _confirm_action := Callable()
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_ensure_nodes()
+	PaperGrain.apply(get_node_or_null("Root/Center/Panel") as Control)
 	_sync_visibility()
 
 

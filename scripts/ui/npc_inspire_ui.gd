@@ -164,6 +164,7 @@ func _build() -> void:
 	_panel = PanelContainer.new()
 	_panel.custom_minimum_size = Vector2(1120, 660)
 	center.add_child(_panel)
+	PaperGrain.apply(_panel)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 28)
 	margin.add_theme_constant_override("margin_right", 28)

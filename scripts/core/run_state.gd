@@ -17,6 +17,8 @@ var ink: int = 100
 var max_ink: int = 100
 var corruption: int = 0
 var pages: int = 0
+## Chapter mutator (RunMutators.CORRUPTION_GAIN); set at chapter start, not saved.
+var mutator_corruption_scale: float = 1.0
 var inventory := Inventory.new()
 var current_biome: StringName = &""
 var authority: AuthorityData
@@ -59,8 +61,8 @@ func spend_pages(amount: int) -> bool:
 func add_corruption(amount: int) -> void:
 	if amount == 0:
 		return
-	if amount > 0 and not is_equal_approx(corruption_gain_multiplier, 1.0):
-		amount = maxi(int(ceilf(float(amount) * corruption_gain_multiplier)), 1)
+	if amount > 0 and not is_equal_approx(corruption_gain_multiplier * mutator_corruption_scale, 1.0):
+		amount = maxi(int(ceilf(float(amount) * corruption_gain_multiplier * mutator_corruption_scale)), 1)
 	corruption = clampi(corruption + amount, 0, 100)
 	corruption_changed.emit(corruption)
 	var tier := corruption_tier()

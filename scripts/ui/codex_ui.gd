@@ -71,6 +71,7 @@ var _suspend_refresh := false
 
 func _ready() -> void:
 	_ensure_nodes()
+	PaperGrain.apply(get_node_or_null("Center/Panel") as Control, 0.4)
 	# The page starts hidden inside Main and is populated by bind_state before
 	# the first frame; a standalone instance still builds its empty state.
 	if visible:

@@ -102,7 +102,9 @@ def main():
         tiles.alpha_composite(t, ((c - 1) * 340, 0))
         d.text(((c - 1) * 340, 164), f"第{c}章 地块 4×2（16px）", font=FONT, fill=(220, 220, 210))
     tiles.save(OUT / "r6_tiles.png")
-    vfx_strip(["creature_eye", "creature_skull", "creature_wisp", "creature_jelly", "creature_snake", "creature_bat"]).save(OUT / "r7_creatures_placeholder.png")
+    # r7 showed the pixelfx placeholder critters; the delivered creature art
+    # replaced them in 1.0 and the sheets were removed. The committed
+    # r7_creatures_placeholder.png stays as the brief's historical reference.
     props = Image.new("RGBA", (384 * 2, 64 * 2 * 4), BG)
     for c in range(1, 5):
         p = Image.open(ROOT / f"assets/sprites/props/dressing_ch{c}.png").convert("RGBA").resize((768, 128), Image.NEAREST)

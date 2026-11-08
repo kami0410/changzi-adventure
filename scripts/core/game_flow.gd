@@ -95,6 +95,7 @@ func _ready() -> void:
 	shake_scale = profile.shake_scale
 	flash_scale = profile.flash_scale
 	apply_master_volume()
+	apply_window_mode()
 	ensure_actions()
 	apply_keybinds(profile)
 	# The window close button must first give the active run a chance to save.
@@ -435,6 +436,15 @@ func save_profile() -> void:
 
 ## Applies the persisted master volume at startup and after the settings page
 ## changes it. A stored 0 maps to the mixer's -60 dB floor instead of -inf.
+## Restores the saved window mode; headless runs (tests, export checks) skip it.
+func apply_window_mode() -> void:
+	if profile == null or DisplayServer.get_name() == "headless":
+		return
+	var full := DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]
+	if profile.fullscreen != full:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if profile.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
+
+
 func apply_master_volume() -> void:
 	var volume := clampf(profile.master_volume if profile != null else 1.0, 0.0, 1.0)
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(volume, 0.001)))
@@ -452,6 +462,8 @@ func reset_profile() -> void:
 		profile.flash_scale = old.flash_scale
 		profile.text_scale = old.text_scale
 		profile.master_volume = old.master_volume
+		profile.fullscreen = old.fullscreen
+		profile.grimoire = old.grimoire.duplicate(true)
 		profile.keybinds = old.keybinds.duplicate()
 		profile.joybinds = old.joybinds.duplicate()
 		old.queue_free()

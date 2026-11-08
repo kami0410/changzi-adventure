@@ -1,12 +1,12 @@
 extends RefCounted
 
-## Hub personal events (叙事审计 E2, 第一批). The data is authored from the
-## story bible; these checks pin the three visible NPCs, their trust/chapter
-## gates, the once-only flag and the no-reward rule. 闻烬/白榆 stay hidden and
-## have no event.
+## Hub personal events (叙事审计 E2; 闻烬/白榆 added in 1.0). The data is
+## authored from the story bible; these checks pin all five NPCs, their
+## trust/chapter gates, the once-only flag and the no-reward rule. 闻烬/白榆
+## only stand in the Hub once the first chapter is cleared.
 
-const VISIBLE: Array[StringName] = [&"luchen", &"ayan", &"guru"]
-const HIDDEN: Array[StringName] = [&"wenjin", &"baiyu"]
+const VISIBLE: Array[StringName] = [&"luchen", &"ayan", &"guru", &"wenjin", &"baiyu"]
+const LATE: Array[StringName] = [&"wenjin", &"baiyu"]
 
 
 func run(t: Callable) -> void:
@@ -45,10 +45,12 @@ func _test_data(t: Callable) -> void:
 		"npc_event_ayan_tier")
 	t.call(int(NPCEventData.event_for(&"guru").get("min_tier", -1)), 1,
 		"npc_event_guru_tier")
-	for npc_id in HIDDEN:
-		t.call(NPCEventData.event_for(npc_id).is_empty(), true,
-			"npc_event_hidden_has_none_" + String(npc_id))
-		t.call(NPCEventData.event_id(npc_id), "", "npc_event_hidden_id_" + String(npc_id))
+	for npc_id in LATE:
+		t.call(Hub.is_late_npc(npc_id), true, "npc_late_arrival_" + String(npc_id))
+		t.call(int(NPCEventData.event_for(npc_id).get("min_tier", -1)), 2, "npc_event_late_tier_" + String(npc_id))
+		t.call(bool(NPCEventData.event_for(npc_id).get("requires_demo_cleared", false)), true,
+			"npc_event_late_gate_" + String(npc_id))
+	t.call(Hub.is_late_npc(&"luchen"), false, "npc_luchen_not_late")
 	t.call(NPCEventData.event_for(&"missing").is_empty(), true, "npc_event_missing")
 	t.call(NPCEventData.event_id(&"missing"), "", "npc_event_missing_id")
 

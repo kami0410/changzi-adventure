@@ -564,10 +564,13 @@ func _on_attack_requested() -> void:
 		return
 	_combo_index = _combo_index + 1 if _combo_window_left > 0.0 else 1
 	_combo_index = ((_combo_index - 1) % 3) + 1
-	if _roll_strike_left > 0.0:
+	var roll_strike := _roll_strike_left > 0.0
+	if roll_strike:
 		# Roll into a strike: the swing out of a roll is always the finisher.
 		_combo_index = 3
 		_roll_strike_left = 0.0
+		if is_inside_tree():
+			VFX.spawn(get_parent(), &"slash_spin", global_position + Vector2(facing.x * 30.0, -30), facing.x < 0.0, 1.2)
 	_combo_window_left = 0.55
 	weapon.damage_multiplier = [1.0, 1.18, 1.55][_combo_index - 1]
 	_attack_lunge_left = 0.1 if _combo_index < 3 else 0.16

@@ -48,6 +48,8 @@ var legacy_discovered_phrases: Array[String] = []
 ## is {"text", "name", "intent"}; intent holds the AI's reading (empty for an
 ## offline sentence), so an AI spell can be re-forged without asking again.
 const GRIMOIRE_MAX := 12
+## Settings page: the window mode survives a restart (1.0).
+var fullscreen: bool = false
 var grimoire: Array[Dictionary] = []
 var endings: Array[String] = []
 var runs_completed: int = 0
@@ -355,6 +357,7 @@ func save_profile(path: String = "user://profile.cfg") -> void:
 	config.set_value("settings", "shake_scale", shake_scale)
 	config.set_value("settings", "flash_scale", flash_scale)
 	config.set_value("settings", "master_volume", master_volume)
+	config.set_value("settings", "fullscreen", fullscreen)
 	config.set_value("npc", "blessings", npc_blessings)
 	config.set_value("npc", "trust", npc_trust)
 	config.set_value("npc", "events", npc_events)
@@ -478,6 +481,7 @@ func load_profile(path: String = "user://profile.cfg") -> bool:
 	shake_scale = clampf(_as_float(config.get_value("settings", "shake_scale", 1.0), 1.0), 0.0, 1.0)
 	flash_scale = clampf(_as_float(config.get_value("settings", "flash_scale", 1.0), 1.0), 0.0, 1.0)
 	master_volume = clampf(_as_float(config.get_value("settings", "master_volume", 1.0), 1.0), 0.0, 1.0)
+	fullscreen = _as_bool(config.get_value("settings", "fullscreen", false), false)
 
 	grimoire.clear()
 	for value in _as_array(config.get_value("codex", "grimoire", [])):

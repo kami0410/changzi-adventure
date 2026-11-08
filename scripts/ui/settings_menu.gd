@@ -262,10 +262,13 @@ func _set_text_scale(size: int) -> void:
 
 func _toggle_fullscreen() -> void:
 	var mode := DisplayServer.window_get_mode()
-	if mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-	else:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	var full := not (mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if full else DisplayServer.WINDOW_MODE_WINDOWED)
+	var flow := _flow_node()
+	if flow != null and flow.profile != null:
+		flow.profile.fullscreen = full
+		if flow.auto_save:
+			flow.save_profile()
 
 
 func _on_volume_changed(value: float) -> void:

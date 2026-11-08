@@ -5,6 +5,13 @@ extends Node
 ## Music is an original procedural score; voice is a local SAPI prototype.
 
 var _music: AudioStreamPlayer
+## Adaptive combat stem (<track>_combat.ogg): same tempo and length as the
+## track, started in sync and faded in by set_music_layer(1) during fights.
+var _combat: AudioStreamPlayer
+var _combat_tween: Tween
+var _music_layer := 0
+const COMBAT_ON_DB := -7.0
+const COMBAT_OFF_DB := -60.0
 var _voice: AudioStreamPlayer
 var _sfx_players: Array[AudioStreamPlayer] = []
 var _music_tween: Tween
@@ -29,6 +36,12 @@ func _ensure_players() -> void:
 		_music.name = "MusicPlayer"
 		_music.bus = "Music"
 		add_child(_music)
+	if _combat == null:
+		_combat = AudioStreamPlayer.new()
+		_combat.name = "CombatLayer"
+		_combat.bus = "Music"
+		_combat.volume_db = COMBAT_OFF_DB
+		add_child(_combat)
 	if _voice == null:
 		_voice = AudioStreamPlayer.new()
 		_voice.name = "VoicePlayer"
@@ -106,15 +119,48 @@ func play_music(path: String, fade: float = 1.0) -> void:
 		await _music_tween.finished
 	_music.stream = stream
 	_music.volume_db = -30.0 if fade > 0.0 else -6.0
+	_start_combat_layer(path)
 	if is_inside_tree():
 		_music.play()
+		if _combat != null and _combat.stream != null:
+			_combat.play()
 	if fade > 0.0:
 		_music_tween = create_tween()
 		_music_tween.tween_property(_music, "volume_db", -6.0, fade * 0.65)
 
 
+## The track's combat stem, if one exists; it plays silently until a fight.
+static func combat_stem_path(path: String) -> String:
+	return path.get_basename() + "_combat." + path.get_extension()
+
+
+func has_combat_layer() -> bool:
+	return _combat != null and _combat.stream != null
+
+
+func music_layer() -> int:
+	return _music_layer
+
+
+func _start_combat_layer(path: String) -> void:
+	if _combat == null:
+		return
+	_combat.stop()
+	_combat.stream = null
+	_music_layer = 0
+	_combat.volume_db = COMBAT_OFF_DB
+	var stem := combat_stem_path(path)
+	if not ResourceLoader.exists(stem):
+		return
+	var stream := load(stem) as AudioStream
+	if stream is AudioStreamOggVorbis:
+		stream.loop = true
+	_combat.stream = stream
+
+
 func stop_music(fade: float = 0.6) -> void:
 	_current_music = ""
+	set_music_layer(0)
 	if _music == null or not _music.playing:
 		return
 	_music_tween = create_tween()
@@ -161,9 +207,18 @@ func _restore_music() -> void:
 	_duck_tween.tween_method(func(value: float): AudioServer.set_bus_volume_db(index, value), -14.0, -6.0, 0.45)
 
 
+## 0 = exploration, 1 = combat: fades the chapter's combat stem in or out.
 func set_music_layer(layer: int) -> void:
-	# Reserved for adaptive layers; the score switches tracks per chapter.
-	pass
+	layer = clampi(layer, 0, 1)
+	if layer == _music_layer:
+		return
+	_music_layer = layer
+	if _combat == null or _combat.stream == null:
+		return
+	if _combat_tween != null and _combat_tween.is_valid():
+		_combat_tween.kill()
+	_combat_tween = create_tween()
+	_combat_tween.tween_property(_combat, "volume_db", COMBAT_ON_DB if layer == 1 else COMBAT_OFF_DB, 0.8 if layer == 1 else 2.4)
 
 
 ## Stop and release every player/tween, including short-lived SFX players.
@@ -176,7 +231,10 @@ func shutdown(settle_msec: int = 0) -> void:
 		_music_tween.kill()
 	if _duck_tween != null and _duck_tween.is_valid():
 		_duck_tween.kill()
+	if _combat_tween != null and _combat_tween.is_valid():
+		_combat_tween.kill()
 	_stop_player(_music)
+	_stop_player(_combat)
 	_stop_player(_voice)
 	for player in _sfx_players:
 		_stop_player(player)
@@ -186,7 +244,9 @@ func shutdown(settle_msec: int = 0) -> void:
 		_release_player(player)
 	_sfx_players.clear()
 	_release_player(_music)
+	_release_player(_combat)
 	_release_player(_voice)
+	_combat = null
 	_music = null
 	_voice = null
 

@@ -38,6 +38,7 @@ var _return_focus: Control = null
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_ensure_nodes()
+	PaperGrain.apply(get_node_or_null("Root/Panel") as Control)
 	if _root != null:
 		_root.visible = false
 	var flow := _flow_node()

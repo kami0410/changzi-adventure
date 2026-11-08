@@ -333,9 +333,12 @@ func apply_stun(duration: float) -> void:
 	if dead or duration <= 0.0:
 		return
 	var weight := clampf(float(max_health) / 120.0, 1.0, 4.0)
+	var was_stunned := _stun_left > 0.0
 	_stun_left = maxf(_stun_left, duration / weight)
 	if state == STATE_ATTACK:
 		_finish_attack()
+	if not was_stunned and _stun_left >= 0.4 and is_inside_tree():
+		VFX.attach(self, &"status_stunned", _stun_left, Vector2(0, PixelSprite.art_top(sprite_visual) - 14.0 if sprite_visual != null else -70.0))
 
 
 func is_stunned() -> bool:

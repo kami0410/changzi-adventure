@@ -306,12 +306,25 @@ func _test_prompts_built_once() -> void:
 		_set_gamepad(false)
 		check(codex._equip_buttons[0].text.contains("Q"), "built_once_codex_equip_returns_keyboard")
 		if codex._free_text != null:
+			# The hint is the unconfigured path; never read the machine's real
+			# user://ai_config.cfg (a configured AI would send a request instead).
+			var ai := root.get_node_or_null("AI") as AIService
+			var saved_config: Dictionary = {}
+			var saved_path := ""
+			if ai != null:
+				saved_config = ai.config.duplicate()
+				saved_path = ai.config_path
+				ai.config_path = "user://test_ui_prompts_ai.cfg"
+				ai.config = AIService.normalized_config(AIService.DEFAULT_CONFIG)
 			codex._free_text.text = "让雷落在火里"
 			codex._on_ai_requested()
 			check(codex._ai_status.text.contains("F10"), "built_once_codex_ai_hint_keyboard")
 			_set_gamepad(true)
 			codex._on_ai_requested()
 			check(codex._ai_status.text.contains("Back"), "built_once_codex_ai_hint_follows_pad")
+			if ai != null:
+				ai.config = saved_config
+				ai.config_path = saved_path
 	root.remove_child(codex)
 	codex.free()
 	_set_gamepad(false)

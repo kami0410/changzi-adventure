@@ -63,6 +63,10 @@ const CHAPTER_PLAN_PATHS: Array[String] = [
 ]
 ## A weapon never vanishes: equipping swaps with the held one and drops it.
 const WEAPON_DROP_CHANCE := 0.04
+## 章节异象 (RunMutators) for the current chapter; NONE in the fixed-content
+## acceptance suites, which turn Flow.encounter_variation off.
+var _mutator: StringName = RunMutators.NONE
+var mutators_enabled := true
 const BOSS_DATA = preload("res://resources/bosses/ink_archivist.tres")
 const ENEMY_ART: Dictionary = {
 	&"ink_hound": preload("res://assets/sprites/enemies/ink_hound.png"),
@@ -671,12 +675,13 @@ func _process(delta: float) -> void:
 	if _finished or _ending_pending or get_tree().paused:
 		return
 	_update_corruption_frenzy(delta)
+	_update_music_layer(delta)
 	_update_room_locks()
 	_update_boss_bar()
 	_update_stele_prompts()
 	relic_effects.tick(delta, get_tree().get_nodes_in_group("enemies"))
-	phrase_caster.cooldown_scale = relic_effects.cooldown_scale()
-	var authority_damage := _authority.damage_multiplier(run_state)
+	phrase_caster.cooldown_scale = relic_effects.cooldown_scale() * RunMutators.value(RunMutators.PHRASE_COOLDOWN, _mutator)
+	var authority_damage := _authority.damage_multiplier(run_state) * RunMutators.value(RunMutators.DAMAGE_DEALT, _mutator)
 	phrase_caster.damage_scale = 3.0 * relic_effects.damage_scale() * _archive_damage_multiplier * authority_damage
 	player.damage_dealt_multiplier = authority_damage
 	phrase_caster.tick(delta)
@@ -1220,7 +1225,27 @@ func _roll_variation(room: ArenaRoom, ids: Array, wave_ids: Array) -> Dictionary
 	for id in CHAPTER_CREATURES[chapter_index]:
 		if ENEMY_SCENES.has(id):
 			featured.append(id)
-	return EncounterVariation.roll(ids, wave_ids, usable, run_state.run_seed, key, _chapter, featured)
+	var variation := EncounterVariation.roll(ids, wave_ids, usable, run_state.run_seed, key, _chapter, featured)
+	return apply_mutator_to_variation(variation, usable, key)
+
+
+## The chapter mutator bends the rolled encounter: 群鸦 adds an enemy, 血月
+## turns a plain fight into an elite fight more often. Deterministic per key.
+func apply_mutator_to_variation(variation: Dictionary, usable: Array[StringName], key: String) -> Dictionary:
+	if variation.is_empty() or _mutator == RunMutators.NONE:
+		return variation
+	var rng := EncounterVariation.rng_for(run_state.run_seed, key + "|mutator")
+	var rest: Array = variation.get("rest", [])
+	for i in int(RunMutators.value(RunMutators.EXTRA_ENEMIES, _mutator, 0.0)):
+		if not usable.is_empty():
+			rest.append(usable[rng.randi_range(0, usable.size() - 1)])
+	variation["rest"] = rest
+	if variation.get("modifier", EncounterVariation.NONE) == EncounterVariation.NONE 			and rng.randf() < RunMutators.value(RunMutators.ELITE_EXTRA_CHANCE, _mutator, 0.0):
+		var total := (variation.get("first", []) as Array).size() + rest.size()
+		if total > 0:
+			variation["modifier"] = EncounterVariation.ELITE
+			variation["elite"] = rng.randi_range(0, total - 1)
+	return variation
 
 
 ## Legacy linear arenas sit 250 px above their ground and keep the historical
@@ -1346,9 +1371,9 @@ func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
 			var art_id: StringName = ENEMY_ART_FALLBACK.get(id, id)
 			var tint := ENEMY_FALLBACK_TINT if ENEMY_ART_FALLBACK.has(id) else Color.WHITE
 			_apply_art(enemy, ENEMY_ART[art_id], float(ENEMY_ART_SCALE.get(id, 1.0)), tint)
-		var health_scale := Difficulty.enemy_health(Flow.difficulty) * chapter_health_scale(_chapter)
+		var health_scale := Difficulty.enemy_health(Flow.difficulty) * chapter_health_scale(_chapter) 			* RunMutators.value(RunMutators.ENEMY_HEALTH, _mutator)
 		var damage_scale := chapter_damage_scale(_chapter)
-		var speed_scale := 1.0
+		var speed_scale := RunMutators.value(RunMutators.ENEMY_SPEED, _mutator)
 		var elite := modifier == EncounterVariation.ELITE \
 			and int(variation.get("elite", -1)) == base_index + index
 		if elite:
@@ -1391,6 +1416,10 @@ func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
 			enemy.aggro_range = 430.0
 			enemy.aggro_vertical = 240.0
 			enemy.deaggro_range = 900.0
+		var aggro_bonus := RunMutators.value(RunMutators.AGGRO_BONUS, _mutator, 0.0)
+		if aggro_bonus > 0.0:
+			enemy.aggro_range += aggro_bonus
+			enemy.deaggro_range += aggro_bonus
 		enemy.set_target(player)
 		enemy.died.connect(_on_enemy_died)
 		enemy.damaged.connect(relic_effects.on_damage)
@@ -1566,7 +1595,13 @@ func _start_mds_chapter(index: int) -> void:
 	_chests.clear()
 	for hazard in get_tree().get_nodes_in_group("hostile_hazards"):
 		hazard.queue_free()
-	hud.set_region("%s · %s" % [chapter["region"], Difficulty.display_name(Flow.difficulty)])
+	_mutator = RunMutators.for_chapter(run_state.run_seed, chapter_index) if mutators_enabled and Flow.encounter_variation else RunMutators.NONE
+	run_state.mutator_corruption_scale = RunMutators.value(RunMutators.CORRUPTION_GAIN, _mutator)
+	_apply_corruption_penalties()
+	var region_text := "%s · %s" % [chapter["region"], Difficulty.display_name(Flow.difficulty)]
+	if _mutator != RunMutators.NONE:
+		region_text += " · 异象：%s" % RunMutators.display_name(_mutator)
+	hud.set_region(region_text)
 	hud.set_progress(_cleared_in_chapter if resume else 0, _chapter_progress_total())
 	hud.set_objective(chapter["objective"])
 	hud.hide_boss()
@@ -1596,7 +1631,55 @@ func _start_mds_chapter(index: int) -> void:
 	world.room_loaded.connect(_on_mds_room_loaded)
 	add_child(world)
 	_mds_world = world
+	_dress_room_fade(world)
 	hud.show_message("目标：%s。按 %s 看操作说明。" % [String(chapter["objective"]), Flow.prompt_label(&"help")])
+	if _mutator != RunMutators.NONE:
+		get_tree().create_timer(3.6, false).timeout.connect(func() -> void:
+			if is_instance_valid(hud) and _chapter == chapter_index:
+				hud.show_message(RunMutators.hint(_mutator)))
+
+
+## Combat stem: on while an enemy within reach is hunting the player, held a
+## few seconds after the last one stops so the drums do not stutter.
+const COMBAT_MUSIC_RANGE := 1000.0
+const COMBAT_MUSIC_HOLD := 4.0
+var _combat_music_hold := 0.0
+
+
+func _update_music_layer(delta: float) -> void:
+	if player == null or Audio == null:
+		return
+	var hunting := false
+	for node in get_tree().get_nodes_in_group("enemies"):
+		var enemy := node as Enemy
+		if enemy == null or enemy.dead or enemy is InkArchivist:
+			continue
+		if (enemy.state == Enemy.STATE_CHASE or enemy.state == Enemy.STATE_ATTACK) 				and enemy.global_position.distance_to(player.global_position) < COMBAT_MUSIC_RANGE:
+			hunting = true
+			break
+	if hunting:
+		_combat_music_hold = COMBAT_MUSIC_HOLD
+	else:
+		_combat_music_hold = maxf(_combat_music_hold - delta, 0.0)
+	Audio.set_music_layer(1 if _combat_music_hold > 0.0 else 0)
+
+
+const INK_FADE := preload("res://resources/shaders/ink_fade.gdshader")
+
+
+## Room changes fade through spreading ink instead of a flat black: the MDS
+## fade rect keeps its alpha tween (the transition timing), the shader turns
+## that alpha into ink blooming from a few drops. Each change reseeds the drops.
+func _dress_room_fade(world: MDSWorldGame) -> void:
+	if world._fade == null:
+		return
+	var material := ShaderMaterial.new()
+	material.shader = INK_FADE
+	material.set_shader_parameter(&"seed", randf_range(0.0, 50.0))
+	world._fade.material = material
+	world.room_changed.connect(func(_from: String, _to: String) -> void:
+		if is_instance_valid(world) and world._fade != null and world._fade.material is ShaderMaterial:
+			(world._fade.material as ShaderMaterial).set_shader_parameter(&"seed", randf_range(0.0, 50.0)))
 
 
 func _teardown_mds(clear_progress := true) -> void:
@@ -2401,6 +2484,7 @@ func _apply_corruption_penalties() -> void:
 		player.damage_taken_multiplier = (
 			Difficulty.enemy_damage(Flow.difficulty)
 			* run_state.corruption_damage_taken_multiplier()
+			* RunMutators.value(RunMutators.DAMAGE_TAKEN, _mutator)
 		)
 
 
@@ -2439,6 +2523,9 @@ func _start_corruption_frenzy() -> void:
 	player.max_health = frenzy_max
 	player.health = maxi(1, mini(player.health, int(round(float(frenzy_max) * 0.75))))
 	player.health_changed.emit(player.health, player.max_health)
+	if player.is_inside_tree():
+		VFX.spawn(player.get_parent(), &"spell_poison", player.global_position + Vector2(0, -30), false, 1.4)
+		VFX.attach(player, &"status_poisoned", CORRUPTION_FRENZY_SECONDS, Vector2(0, -96))
 	player.add_shake(0.5)
 	hud.show_message("污染 100 · 发狂：生命被压到 %d，撑过 %d 秒" % [
 		player.health,
@@ -2576,11 +2663,16 @@ func _on_enemy_died(enemy: Node) -> void:
 			(enemy as Node2D).global_position + Vector2(0, ENEMY_FOOT_Y))
 		Audio.play_sfx(&"elite_die" if elite else &"enemy_die")
 	if enemy != null and enemy.has_meta(&"elite"):
-		run_state.add_pages(EncounterVariation.ELITE_PAGES)
-	run_state.add_pages(maxi(1, int(round((1 + Flow.difficulty * 0.5) * Difficulty.reward_multiplier(Flow.difficulty)))))
+		run_state.add_pages(int(round(EncounterVariation.ELITE_PAGES * RunMutators.value(RunMutators.ELITE_PAGES_SCALE, _mutator))))
+	var kill_pages := (1 + Flow.difficulty * 0.5) * Difficulty.reward_multiplier(Flow.difficulty)
+	kill_pages = kill_pages * RunMutators.value(RunMutators.KILL_PAGES_SCALE, _mutator) 		+ RunMutators.value(RunMutators.KILL_PAGES_BONUS, _mutator, 0.0)
+	run_state.add_pages(maxi(1, int(round(kill_pages))))
+	var kill_ink := int(RunMutators.value(RunMutators.KILL_INK, _mutator, 0.0))
+	if kill_ink > 0:
+		run_state.restore_ink(kill_ink)
 	relic_effects.on_kill()
 	_update_hud()
-	if enemy is Node2D and run_state.rng.randf() < WEAPON_DROP_CHANCE:
+	if enemy is Node2D and run_state.rng.randf() < WEAPON_DROP_CHANCE * RunMutators.value(RunMutators.WEAPON_DROP_SCALE, _mutator):
 		var dropped := RunLoot.dropped_weapon(run_state, Flow.profile, _chapter)
 		if dropped != null:
 			var enemy_position := (enemy as Node2D).global_position

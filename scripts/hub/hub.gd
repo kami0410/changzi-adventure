@@ -71,10 +71,13 @@ func _ready() -> void:
 		profile = Flow.profile
 	ensure_ready()
 	_connect_prompt_refresh()
+	# 闻烬 and 白榆 arrive once the first chapter is cleared (the same gate as
+	# the personal events); before that the Hub holds the first three.
 	for child in get_children():
-		if child is NPC and (child.npc_id == &"wenjin" or child.npc_id == &"baiyu"):
-			child.visible = false
-			child.process_mode = Node.PROCESS_MODE_DISABLED
+		if child is NPC and is_late_npc(child.npc_id):
+			var arrived := late_npcs_arrived()
+			child.visible = arrived
+			child.process_mode = Node.PROCESS_MODE_INHERIT if arrived else Node.PROCESS_MODE_DISABLED
 	_apply_background_art()
 	$Ground/Visual.hide()
 	_build_floor_tiles()
@@ -153,7 +156,7 @@ func _play_hub_audio() -> void:
 		return
 	var audio := get_node_or_null("/root/Audio")
 	if audio != null and audio.has_method("play_music"):
-		audio.call("play_music", "res://assets/audio/music/chapter_archive.ogg", 1.0)
+		audio.call("play_music", "res://assets/audio/music/hub.ogg", 1.0)
 
 
 func _on_title_started() -> void:
@@ -510,11 +513,19 @@ func interact_with(target: Node) -> void:
 		_use_training_dummy()
 
 
+static func is_late_npc(npc_id: StringName) -> bool:
+	return npc_id == &"wenjin" or npc_id == &"baiyu"
+
+
+func late_npcs_arrived() -> bool:
+	return profile != null and profile.demo_cleared
+
+
 func talk_to_npc(npc: NPC) -> void:
 	ensure_ready()
 	if npc == null:
 		return
-	if npc.npc_id == &"wenjin" or npc.npc_id == &"baiyu":
+	if is_late_npc(npc.npc_id) and not late_npcs_arrived():
 		return
 	# A personal event replaces the regular conversation once. It reads its own
 	# scene, then the NPC goes back to the usual greeting/attitude/function lines.
