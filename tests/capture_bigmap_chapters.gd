@@ -252,6 +252,9 @@ func _wait_lift(scene, timeout := 26.0) -> void:
 	var lift := room.get_node_or_null("Lift") as MovingPlatform
 	if lift == null:
 		return
+	# Called elevators wait at the bottom; summon it so it travels into frame.
+	if lift.call_mode:
+		lift.call_to(1)
 	var left: float = timeout
 	while left > 0.0:
 		var y: float = lift.global_position.y - room.global_position.y

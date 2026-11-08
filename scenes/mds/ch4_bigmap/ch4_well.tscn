@@ -42,3 +42,4 @@ position = Vector2(0, 2144)
 script = ExtResource("9_lift")
 size = Vector2(160, 16)
 travel = Vector2(0, -2044)
+call_mode = true

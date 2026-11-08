@@ -435,6 +435,8 @@ func _run() -> void:
 	flow.resume_requested = false
 	_cleanup_files()
 
+	# This suite checks the authored waves enemy by enemy.
+	(root.get_node("Flow") as GameFlow).encounter_variation = false
 	var scene = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
 	current_scene = scene
@@ -618,8 +620,19 @@ func _run() -> void:
 		scene.player.velocity = Vector2.ZERO
 		# The authored 70 px/s ride takes ~19 s; the test only needs the same
 		# travel, so speed the platform up for the ride itself.
-		lift.speed = 700.0
+		# Called elevator: it waits at the bottom until the rider presses
+		# interact. Speed the ride itself up so the test stays short.
+		lift.call_speed = 1400.0
+		lift.call_accel = 8000.0
 		lift.restart(0.0)
+		for _settle in 20:
+			await physics_frame
+		check(not lift.is_moving(), "branch_b_lift_waits_to_be_called")
+		Input.action_press("interact")
+		await process_frame
+		await process_frame
+		Input.action_release("interact")
+		check(lift.target_stop == 1, "branch_b_lift_rider_calls_it_up")
 		var lifted := false
 		for _frame in 900:
 			await physics_frame
@@ -768,7 +781,8 @@ func _run() -> void:
 	var barrier := mds.room_node.get_node_or_null("Barrier_shortcut") as MDSGateBarrier
 	check(barrier != null, "hub_shortcut_barrier")
 	if barrier != null:
-		check(not barrier.is_open, "hub_shortcut_starts_closed")
+		# 0.13: reaching the hub opens the shortcut (no longer status #16).
+		check(barrier.is_open and mds.has_ability("ch2_shortcut"), "hub_shortcut_opens_on_arrival")
 		mds.grant_ability("ch2_shortcut")
 		await process_frame
 		check(barrier.is_open, "hub_shortcut_opens_with_ability")

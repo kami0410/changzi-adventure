@@ -32,6 +32,31 @@ const DEFAULT_CH1_LAYOUT := "res://resources/rooms/ch1_layout.tres"
 
 enum Kind { COMBAT, REST, BOSS }
 
+## Platform layouts as [centre_x, row_index] pairs (row_index 0 = the lower
+## legal row, 1 = the upper). Every upper platform sits within 120 px of a
+## lower one, so nothing needs more than the jump budget. The first three are
+## the authored patterns; combat rooms in a live run pick any of them (and may
+## mirror it) from the run seed, so each run's Chapter 1 plays differently
+## while a reload of the same run rebuilds the same room.
+const PATTERNS: Array = [
+	[[300.0, 0], [980.0, 0]],
+	[[460.0, 0], [760.0, 1]],
+	[[640.0, 0]],
+	[[280.0, 0], [620.0, 1], [960.0, 0]],
+	[[380.0, 0], [700.0, 1]],
+	[[360.0, 0], [640.0, 1], [920.0, 0]],
+	[],
+	[[300.0, 0], [580.0, 1], [1000.0, 0]],
+]
+## Platforms never cover where the player appears: the side-gate arrivals
+## (120 px in from each wall, 16 px body radius) and, in rooms with one, the
+## vault door. A platform there would spawn the player inside its tiles.
+const ARRIVAL_CLEAR: Array = [Vector2(96.0, 160.0), Vector2(1120.0, 1184.0)]
+const VAULT_CLEAR := Vector2(860.0, 980.0)
+const PLATFORM_HALF := 120.0
+## Seed override for tests; 0 reads the live run.
+var layout_seed: int = 0
+
 @export var kind: Kind = Kind.COMBAT
 @export var chapter_index: int = 0
 @export var room_index: int = 0
@@ -137,8 +162,10 @@ func _build_ground() -> void:
 		tiles.tile_set = active.tile_set
 		for column in columns:
 			for row in range(active.floor_row + 1, bottom_row):
-				fill.set_cell(Vector2i(column, row), 0, GROUND_FILL_TILE)
-			tiles.set_cell(Vector2i(column, active.floor_row), 0, GROUND_TOP_TILE)
+				fill.set_cell(Vector2i(column, row), 0,
+					TileVariants.fill(active.tile_set, GROUND_FILL_TILE, row - active.floor_row))
+			tiles.set_cell(Vector2i(column, active.floor_row), 0,
+				TileVariants.pick(active.tile_set, GROUND_TOP_TILE, column, active.floor_row))
 		add_child(fill)
 		add_child(tiles)
 		return
@@ -167,8 +194,10 @@ func _build_platforms() -> void:
 			var start_column := int(round((float(platform[0]) - 120.0) / TILE_SIZE))
 			var row: int = platform[1]
 			for column in range(start_column, start_column + 15):
-				tiles.set_cell(Vector2i(column, row), 0, PLATFORM_TOP_TILE)
-				fill.set_cell(Vector2i(column, row + 1), 0, PLATFORM_FILL_TILE)
+				tiles.set_cell(Vector2i(column, row), 0,
+					TileVariants.pick(active.tile_set, PLATFORM_TOP_TILE, column, row))
+				fill.set_cell(Vector2i(column, row + 1), 0,
+					TileVariants.pick(active.tile_set, PLATFORM_FILL_TILE, column + 7, row))
 		add_child(fill)
 		add_child(tiles)
 		return
@@ -187,13 +216,51 @@ func _build_platforms() -> void:
 func _platform_specs(active: RoomLayoutData) -> Array:
 	var first: int = active.platform_rows[0] if active.platform_rows.size() > 0 else 30
 	var second: int = active.platform_rows[1] if active.platform_rows.size() > 1 else first
-	match platform_pattern % 3:
-		0:
-			return [[300.0, first], [980.0, first]]
-		1:
-			return [[420.0, first], [860.0, second]]
-		_:
-			return [[640.0, first]]
+	var choice := effective_pattern()
+	var specs: Array = []
+	for entry in PATTERNS[choice.x]:
+		var x: float = entry[0]
+		if choice.y == 1:
+			x = WIDTH - x
+		specs.append([x, first if int(entry[1]) == 0 else second])
+	return specs
+
+
+## (pattern index, mirrored 0/1). Authored pattern unless this is a combat
+## room in a live run, where the run seed and room index pick it.
+func effective_pattern() -> Vector2i:
+	var run_seed := layout_seed
+	if run_seed == 0 and _game_flow != null and _game_flow.current_run != null:
+		run_seed = _game_flow.current_run.run_seed
+	if run_seed == 0 or kind != Kind.COMBAT or chapter_index != 0:
+		return Vector2i(platform_pattern % 3, 0)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("ch1_layout|%d|%d" % [run_seed, room_index])
+	var allowed: Array[Vector2i] = []
+	for index in PATTERNS.size():
+		for mirrored in 2:
+			if pattern_allowed(index, mirrored == 1):
+				allowed.append(Vector2i(index, mirrored))
+	if allowed.is_empty():
+		return Vector2i(platform_pattern % 3, 0)
+	return allowed[rng.randi_range(0, allowed.size() - 1)]
+
+
+## False when a platform of the pattern would cover an arrival point (or the
+## vault door in rooms that have one).
+func pattern_allowed(index: int, mirrored: bool) -> bool:
+	var clear: Array = ARRIVAL_CLEAR.duplicate()
+	if has_vault_gate:
+		clear.append(VAULT_CLEAR)
+	for entry in PATTERNS[index]:
+		var x: float = entry[0]
+		if mirrored:
+			x = WIDTH - x
+		for span in clear:
+			var zone: Vector2 = span
+			if x + PLATFORM_HALF > zone.x and x - PLATFORM_HALF < zone.y:
+				return false
+	return true
 
 
 func _add_platform(at: Vector2) -> void:

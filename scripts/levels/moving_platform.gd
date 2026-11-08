@@ -18,6 +18,10 @@ extends AnimatableBody2D
 ## top-left corner of the walkable surface.
 
 const GROUP := &"moving_platforms"
+const HUD_THEME := preload("res://resources/ui/hud_theme.tres")
+
+## Emitted when a called elevator stops at either end (0 = home, 1 = far).
+signal arrived(stop: int)
 
 @export var size: Vector2 = Vector2(128, 16)
 ## Offset from the authored position to the far end of the route.
@@ -31,6 +35,17 @@ const GROUP := &"moving_platforms"
 @export var room_bounds: Rect2 = Rect2()
 @export var color: Color = Color("183039")
 @export var edge_color: Color = Color("74b3a7")
+@export_group("Call mode")
+## Called elevator: rests at a stop until the player calls it from a panel at
+## either end, or presses interact while riding. The auto loop above is only
+## used when this is off (ferries, decorative lifts).
+@export var call_mode: bool = false
+@export var call_speed: float = 320.0
+@export var call_accel: float = 700.0
+## How close (px, horizontal) the player must be to a call panel.
+@export var panel_radius: float = 80.0
+## Panel offset: negative x puts it left of the car, positive x right of it.
+@export var panel_offset: Vector2 = Vector2(-36, 0)
 
 ## Travel after clamping to [member room_bounds].
 var effective_travel := Vector2.ZERO
@@ -42,6 +57,17 @@ var outside_bounds := false
 var _home := Vector2.ZERO
 var _time := 0.0
 var _shape: CollisionShape2D
+## Call mode state: route progress 0..1, the stop it is heading for, speed.
+var progress := 0.0
+var target_stop := 0
+var _call_velocity := 0.0
+var _rider := false
+var _near_stop := -1
+var _prompt: Label
+var _panel_prompts: Array[Label] = []
+## Local x of each stop's call panel; NAN = no floor beside that stop.
+var _panel_x: Array[float] = [NAN, NAN]
+var _surfaces_known := false
 
 
 func _init() -> void:
@@ -56,7 +82,159 @@ func _physics_process(delta: float) -> void:
 	if not bounds_resolved:
 		resolve_bounds()
 	_time += delta
+	if call_mode:
+		step_called(delta)
+		queue_redraw()
+		return
 	position = position_at_time(_time)
+
+
+## True while a called elevator is travelling.
+func is_moving() -> bool:
+	return call_mode and not is_equal_approx(progress, float(target_stop))
+
+
+## Sends a called elevator to [param stop] (0 = home, 1 = far end). Returns
+## false when it is already resting there.
+func call_to(stop: int) -> bool:
+	stop = clampi(stop, 0, 1)
+	if target_stop == stop and is_equal_approx(progress, float(stop)):
+		return false
+	if target_stop != stop:
+		_call_velocity = 0.0
+	target_stop = stop
+	_play_sfx(&"elevator_call")
+	return true
+
+
+## Global feet position of a stop's call panel.
+func panel_position(stop: int) -> Vector2:
+	var parent_xform := (get_parent() as Node2D).global_transform if get_parent() is Node2D else Transform2D.IDENTITY
+	return parent_xform * panel_local(stop)
+
+
+## Panel feet position in the parent's space.
+func panel_local(stop: int) -> Vector2:
+	stop = clampi(stop, 0, 1)
+	var at := _home + effective_travel * float(stop)
+	if _surfaces_known and not is_nan(_panel_x[stop]):
+		return at + Vector2(_panel_x[stop], panel_offset.y)
+	return at + _panel_local_offset()
+
+
+func _panel_local_offset() -> Vector2:
+	if panel_offset.x >= 0.0:
+		return Vector2(maxf(size.x, 1.0) + panel_offset.x, panel_offset.y)
+	return panel_offset
+
+
+## True when [param stop] has a call panel. Without surface data (unit tests,
+## greybox) both stops get the authored offset.
+func has_panel(stop: int) -> bool:
+	if not _surfaces_known:
+		return true
+	return not is_nan(_panel_x[clampi(stop, 0, 1)])
+
+
+## [MDSBigRoom] hands over every walkable surface; each stop gets a panel on
+## the nearest floor that is level with it and touches the shaft.
+func set_surfaces(surfaces: Array[Rect2]) -> void:
+	_surfaces_known = true
+	var car := maxf(size.x, 1.0)
+	for stop in 2:
+		_panel_x[stop] = NAN
+		var at := _home + effective_travel * float(stop)
+		var best := INF
+		for rect in surfaces:
+			if absf(rect.position.y - at.y) > 8.0:
+				continue
+			# Left side: the surface reaches the shaft's left edge.
+			if rect.position.x < at.x - 20.0 and rect.end.x >= at.x - 24.0:
+				var x := clampf(at.x - 36.0, rect.position.x + 12.0, rect.end.x - 12.0)
+				if absf(x - at.x) < best:
+					best = absf(x - at.x)
+					_panel_x[stop] = x - at.x
+			# Right side.
+			if rect.end.x > at.x + car + 20.0 and rect.position.x <= at.x + car + 24.0:
+				var x := clampf(at.x + car + 36.0, rect.position.x + 12.0, rect.end.x - 12.0)
+				if absf(x - (at.x + car)) < best:
+					best = absf(x - (at.x + car))
+					_panel_x[stop] = x - at.x
+	if _prompt != null:
+		_refresh_prompts()
+	queue_redraw()
+
+
+## True when a player whose feet are at [param feet] (global) stands on top.
+func is_rider(feet: Vector2) -> bool:
+	var origin := global_position if is_inside_tree() else position
+	var rect := Rect2(origin, Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0)))
+	return feet.x >= rect.position.x - 6.0 and feet.x <= rect.end.x + 6.0 \
+			and absf(feet.y - rect.position.y) <= 14.0
+
+
+## Which panel the player can use (-1 for none).
+func stop_near(feet: Vector2) -> int:
+	for stop in 2:
+		if not has_panel(stop):
+			continue
+		var panel := panel_position(stop) if is_inside_tree() else panel_local(stop)
+		if absf(feet.x - panel.x) <= panel_radius and absf(feet.y - panel.y) <= 48.0:
+			return stop
+	return -1
+
+
+## Interact pressed: a rider sends it to the other end, a player at a panel
+## calls it to that stop. Returns true when the press was used.
+func try_interact(feet: Vector2) -> bool:
+	if not call_mode or effective_travel.length() <= 0.01:
+		return false
+	if is_rider(feet):
+		if is_moving():
+			call_to(1 - target_stop)
+		else:
+			call_to(0 if progress >= 0.5 else 1)
+		return true
+	var stop := stop_near(feet)
+	if stop < 0:
+		return false
+	if not call_to(stop):
+		_play_sfx(&"ui_click")
+	return true
+
+
+## game.gd feeds the player's feet every frame so prompts follow the player.
+func update_player(feet: Vector2) -> void:
+	if not call_mode:
+		return
+	_rider = is_rider(feet)
+	_near_stop = -1 if _rider else stop_near(feet)
+	_refresh_prompts()
+
+
+## Advances a called elevator. Public so tests can step it deterministically.
+func step_called(delta: float) -> void:
+	var distance := effective_travel.length()
+	if distance <= 0.01:
+		progress = 0.0
+		position = _home
+		return
+	var goal := float(target_stop)
+	var remaining := absf(goal - progress) * distance
+	if remaining <= 0.5:
+		if not is_equal_approx(progress, goal):
+			progress = goal
+			_call_velocity = 0.0
+			_play_sfx(&"elevator_call")
+			arrived.emit(target_stop)
+		position = _home + effective_travel * progress
+		return
+	# Accelerate from rest, cruise, then brake so the stop lands softly.
+	var desired := minf(call_speed, sqrt(2.0 * call_accel * remaining) + 24.0)
+	_call_velocity = move_toward(_call_velocity, desired, call_accel * delta)
+	var step := minf(_call_velocity * delta, remaining) / distance
+	progress = move_toward(progress, goal, step)
+	position = _home + effective_travel * progress
 
 
 ## Builds the collision shape and resolves the route. Safe to call before the
@@ -79,6 +257,8 @@ func build() -> void:
 	_shape.position = box.size * 0.5
 	_home = position
 	resolve_bounds()
+	if call_mode:
+		_build_prompts()
 	queue_redraw()
 
 
@@ -117,6 +297,9 @@ func resolve_bounds() -> void:
 func restart(delay: float = 0.0) -> void:
 	_time = 0.0
 	start_delay = maxf(delay, 0.0)
+	progress = 0.0
+	target_stop = 0
+	_call_velocity = 0.0
 	position = _home
 
 
@@ -192,6 +375,84 @@ func _clamp_travel() -> void:
 	effective_travel = clamped
 
 
+func _build_prompts() -> void:
+	if _prompt != null:
+		return
+	_prompt = _make_label("Prompt")
+	add_child(_prompt)
+	for stop in 2:
+		var label := _make_label("PanelPrompt%d" % stop)
+		# Panels stay put while the car moves, so their prompts ignore the
+		# platform transform.
+		label.top_level = true
+		add_child(label)
+		_panel_prompts.append(label)
+	_refresh_prompts()
+
+
+func _make_label(label_name: String) -> Label:
+	var label := Label.new()
+	label.name = label_name
+	label.visible = false
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.theme = HUD_THEME
+	label.add_theme_color_override("font_color", Color("e6c87a"))
+	label.add_theme_font_size_override("font_size", 12)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.size = Vector2(200, 24)
+	return label
+
+
+func prompt_label() -> Label:
+	return _prompt
+
+
+func panel_prompt(stop: int) -> Label:
+	return _panel_prompts[stop] if stop >= 0 and stop < _panel_prompts.size() else null
+
+
+func _key() -> String:
+	if not is_inside_tree():
+		return "E"
+	var flow := get_node_or_null("/root/Flow") as GameFlow
+	return flow.prompt_label(&"interact") if flow != null else "E"
+
+
+func _refresh_prompts() -> void:
+	if _prompt == null:
+		return
+	var key := _key()
+	var far_is_up := effective_travel.y < 0.0
+	_prompt.visible = _rider
+	if _rider:
+		var heading_far := (progress < 0.5) if not is_moving() else (target_stop == 0)
+		var up := heading_far == far_is_up
+		_prompt.text = "按 %s %s" % [key, "上升" if up else "下降"]
+		_prompt.position = Vector2(maxf(size.x, 1.0) * 0.5 - 100.0, -100.0)
+	for stop in _panel_prompts.size():
+		var label := _panel_prompts[stop]
+		label.visible = _near_stop == stop
+		if not label.visible:
+			continue
+		var here := is_equal_approx(progress, float(stop)) and target_stop == stop
+		if here:
+			label.text = "电梯已到达"
+		elif is_moving() and target_stop == stop:
+			label.text = "电梯运行中…"
+		else:
+			label.text = "按 %s 召唤电梯" % key
+		var anchor := panel_position(stop) if is_inside_tree() else panel_local(stop)
+		label.global_position = anchor + Vector2(-100.0, -96.0)
+
+
+func _play_sfx(id: StringName) -> void:
+	if not is_inside_tree():
+		return
+	var audio := get_node_or_null("/root/Audio")
+	if audio != null:
+		audio.call("play_sfx", id)
+
+
 func _smoothstep(value: float) -> float:
 	var x := clampf(value, 0.0, 1.0)
 	return x * x * (3.0 - 2.0 * x)
@@ -199,6 +460,9 @@ func _smoothstep(value: float) -> float:
 
 func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0)))
+	if call_mode:
+		_draw_elevator(rect)
+		return
 	draw_rect(rect, color)
 	draw_rect(Rect2(rect.position, Vector2(rect.size.x, minf(4.0, rect.size.y))), edge_color)
 	# End markers make the route readable while authoring; both stay inside the
@@ -208,3 +472,61 @@ func _draw() -> void:
 	draw_circle(near, 2.0, Color(edge_color, 0.7))
 	draw_circle(far, 2.0, Color(edge_color, 0.7))
 	draw_line(near, far, Color(edge_color, 0.22), 1.0)
+
+
+## Called elevator art: guide rails and cable up the shaft, a cage car with a
+## status lamp, and a call panel at both stops. Drawn in the car's local
+## space, so the fixed parts subtract the car's current offset.
+func _draw_elevator(rect: Rect2) -> void:
+	var offset := position - _home
+	var top_y := -offset.y + minf(effective_travel.y, 0.0)
+	var bottom_y := -offset.y + maxf(effective_travel.y, 0.0)
+	var rail := Color(0.05, 0.08, 0.09, 0.6)
+	var rail_hi := Color(edge_color, 0.18)
+	var shaft_h := bottom_y - top_y + 56.0
+	for x in [6.0, rect.size.x - 10.0]:
+		draw_rect(Rect2(Vector2(x, top_y - 40.0), Vector2(4.0, shaft_h)), rail)
+		draw_rect(Rect2(Vector2(x, top_y - 40.0), Vector2(1.0, shaft_h)), rail_hi)
+	var mid := rect.size.x * 0.5
+	draw_line(Vector2(mid, top_y - 40.0), Vector2(mid, -38.0), Color(0.55, 0.6, 0.55, 0.5), 2.0)
+	draw_circle(Vector2(mid, top_y - 44.0), 9.0, Color("1b262a"))
+	draw_arc(Vector2(mid, top_y - 44.0), 9.0, 0.0, TAU, 16, Color(edge_color, 0.5), 2.0)
+	var frame := Color("2a3b40")
+	draw_rect(Rect2(Vector2(0, -36), Vector2(3, 36)), frame)
+	draw_rect(Rect2(Vector2(rect.size.x - 3.0, -36), Vector2(3, 36)), frame)
+	draw_rect(Rect2(Vector2(0, -38), Vector2(rect.size.x, 3)), frame)
+	draw_line(Vector2(3, -35), Vector2(rect.size.x * 0.5, 0), Color(frame, 0.6), 1.0)
+	draw_line(Vector2(rect.size.x - 3.0, -35), Vector2(rect.size.x * 0.5, 0), Color(frame, 0.6), 1.0)
+	draw_rect(rect, color)
+	draw_rect(Rect2(rect.position, Vector2(rect.size.x, minf(3.0, rect.size.y))), edge_color)
+	for i in int(rect.size.x / 20.0):
+		draw_rect(Rect2(Vector2(10.0 + i * 20.0, 8.0), Vector2(2, 2)), Color(edge_color, 0.55))
+	var moving := is_moving()
+	var lamp := Color("f3cf87") if moving else Color("8fe8a8")
+	var pulse := 0.6 + 0.4 * sin(_time * 8.0) if moving else 1.0
+	draw_circle(Vector2(mid, -44.0), 3.0, Color(lamp, pulse))
+	draw_circle(Vector2(mid, -44.0), 7.0, Color(lamp, 0.18 * pulse))
+	for stop in 2:
+		if has_panel(stop):
+			_draw_panel(panel_local(stop) - position, stop)
+
+
+func _draw_panel(feet: Vector2, stop: int) -> void:
+	var here := is_equal_approx(progress, float(stop)) and not is_moving()
+	var coming := is_moving() and target_stop == stop
+	draw_rect(Rect2(feet + Vector2(-3, -44), Vector2(6, 44)), Color("1f2b2f"))
+	draw_rect(Rect2(feet + Vector2(-10, -62), Vector2(20, 22)), Color("2a3b40"))
+	draw_rect(Rect2(feet + Vector2(-10, -62), Vector2(20, 2)), edge_color)
+	var light := Color("f3cf87") if coming else (Color("8fe8a8") if here else Color("c86b5a"))
+	var glow := 0.55 + 0.45 * sin(_time * 9.0) if coming else 1.0
+	draw_circle(feet + Vector2(0, -51), 3.5, Color(light, glow))
+	if _near_stop == stop:
+		draw_circle(feet + Vector2(0, -51), 11.0, Color(light, 0.22))
+	# The bottom panel's arrow points up, the top one down.
+	var stop_is_top := (stop == 1) == (effective_travel.y < 0.0)
+	var dir := 1.0 if stop_is_top else -1.0
+	var tip := feet + Vector2(0, -74.0 if not stop_is_top else -66.0)
+	tip.y += 0.0
+	var a := tip + Vector2(-5, -dir * 6.0)
+	var b := tip + Vector2(5, -dir * 6.0)
+	draw_colored_polygon(PackedVector2Array([tip, a, b]), Color(edge_color, 0.75))

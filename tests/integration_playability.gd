@@ -565,7 +565,8 @@ func _test_ch2_big_map(scene) -> void:
 				var barrier := room.get_node_or_null("Barrier_shortcut") as MDSGateBarrier
 				check(barrier != null, "chapter_2_hub_shortcut_barrier")
 				if barrier != null:
-					check(not barrier.is_open, "chapter_2_hub_shortcut_starts_closed")
+					# 0.13: reaching the hub opens the shortcut.
+					check(barrier.is_open, "chapter_2_hub_shortcut_open_on_arrival")
 					mds.grant_ability("ch2_shortcut")
 					check(barrier.is_open, "chapter_2_hub_shortcut_opens")
 					check(mds.get_save_data().get("stored", []).has(mds.object_id(barrier)),
@@ -2092,6 +2093,9 @@ func _test_mds_chapter(scene, chapter_index: int) -> void:
 		"chapter_2_intro_voice_on_handoff")
 
 func _run() -> void:
+	# Checks authored waves and exact player state; per-run encounter
+	# variation (EncounterVariation) is covered by test_map_variety.
+	(root.get_node("Flow") as GameFlow).encounter_variation = false
 	var flow := root.get_node("Flow") as GameFlow
 	flow.auto_save = false
 	# Production-line fixture first: it owns its own MDS world and player, and

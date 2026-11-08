@@ -279,6 +279,7 @@ func _ready() -> void:
 	add_child(_hit_stop)
 	player.damaged.connect(_on_player_damaged)
 	player.hit_landed.connect(_on_melee_hit)
+	player.perfect_dodged.connect(_on_perfect_dodge)
 	phrase_caster.cast_succeeded.connect(_on_cast_succeeded)
 	for biome in [level, level2, level3]:
 		var backdrop := LivingBackdrop.new()
@@ -667,7 +668,7 @@ func _process(delta: float) -> void:
 		_try_cast(1)
 	if Input.is_action_just_pressed("interact"):
 		if not _try_open_shop() and not _try_open_chest() and not _try_pickup_nearest() \
-				and not _try_use_bench():
+				and not _try_call_elevator() and not _try_use_bench():
 			_claim_nearest_stele()
 	if not _mds_active:
 		var left := _chapter_level().position.x
@@ -687,6 +688,9 @@ func _process(delta: float) -> void:
 		# A checkpoint may sit on a collapsing platform; restore every platform
 		# in the group before the player lands back on it.
 		_reset_collapsing_platforms()
+		# A fall is not a dodgeable hit: end any roll so it cannot count as a
+		# perfect dodge and cancel the fall damage.
+		player.cancel_dodge()
 		player.take_damage(15)
 
 func _input(event: InputEvent) -> void:
@@ -1127,10 +1131,36 @@ func _setup_campaign() -> void:
 		})
 
 
+## Off switch for scripted checks that need the authored waves verbatim.
+var encounter_variation_enabled := true
+## Variation rolled for the arena being populated (see EncounterVariation).
+var _last_variation: Dictionary = {}
+
 func _populate_room(room: ArenaRoom, ids: Array, wave_ids: Array = []) -> void:
-	_spawn_group(room, ids, -140.0)
-	if not wave_ids.is_empty():
-		room.queue_wave(func(): _spawn_group(room, wave_ids, -110.0))
+	var variation := _roll_variation(room, ids, wave_ids)
+	_last_variation = variation
+	var first: Array = variation.get("first", ids)
+	var rest: Array = variation.get("rest", wave_ids)
+	_spawn_group(room, first, -140.0, variation, 0)
+	if not rest.is_empty():
+		var base := first.size()
+		room.queue_wave(func(): _spawn_group(room, rest, -110.0, variation, base))
+	var modifier: StringName = variation.get("modifier", EncounterVariation.NONE)
+	if modifier != EncounterVariation.NONE and hud != null:
+		hud.show_message(EncounterVariation.modifier_hint(modifier))
+
+
+func _roll_variation(room: ArenaRoom, ids: Array, wave_ids: Array) -> Dictionary:
+	if not encounter_variation_enabled or not Flow.encounter_variation \
+			or run_state == null or run_state.run_seed == 0:
+		return {}
+	var key := "%d/%s" % [_chapter, String(room.get_meta(&"encounter_id", room.name))]
+	var pool := EncounterVariation.roster(ROOM_WAVES[clampi(_chapter, 0, ROOM_WAVES.size() - 1)])
+	var usable: Array[StringName] = []
+	for id in pool:
+		if ENEMY_SCENES.has(id):
+			usable.append(id)
+	return EncounterVariation.roll(ids, wave_ids, usable, run_state.run_seed, key, _chapter)
 
 
 ## Legacy linear arenas sit 250 px above their ground and keep the historical
@@ -1142,23 +1172,53 @@ func _enemy_spawn_y() -> float:
 	return 250.0
 
 
-func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float) -> void:
+func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
+		variation: Dictionary = {}, base_index: int = 0) -> void:
 	var offset := start_offset
 	var spawn_y := _enemy_spawn_y()
+	var modifier: StringName = variation.get("modifier", EncounterVariation.NONE)
+	var index := -1
 	for id in ids:
+		index += 1
 		if not ENEMY_SCENES.has(id):
 			continue
-		var enemy := room.spawn_enemy(ENEMY_SCENES[id], Vector2(offset, spawn_y)) as Enemy
+		var at_x := offset
+		if not variation.is_empty():
+			at_x = clampf(EncounterVariation.spawn_offset(variation, index,
+				start_offset + 140.0), -480.0, 480.0)
+		var enemy := room.spawn_enemy(ENEMY_SCENES[id], Vector2(at_x, spawn_y)) as Enemy
 		if enemy == null:
 			continue
 		var art_id: StringName = ENEMY_ART_FALLBACK.get(id, id)
 		var tint := ENEMY_FALLBACK_TINT if ENEMY_ART_FALLBACK.has(id) else Color.WHITE
 		_apply_art(enemy, ENEMY_ART[art_id], float(ENEMY_ART_SCALE.get(id, 1.0)), tint)
 		var health_scale := Difficulty.enemy_health(Flow.difficulty)
-		if not is_equal_approx(health_scale, 1.0):
+		var damage_scale := 1.0
+		var speed_scale := 1.0
+		var elite := modifier == EncounterVariation.ELITE \
+			and int(variation.get("elite", -1)) == base_index + index
+		if elite:
+			health_scale *= EncounterVariation.ELITE_HEALTH
+			damage_scale = EncounterVariation.ELITE_DAMAGE
+			speed_scale = 1.1
+		elif modifier == EncounterVariation.SWIFT:
+			speed_scale = EncounterVariation.SWIFT_SPEED
+		elif modifier == EncounterVariation.HORDE:
+			health_scale *= EncounterVariation.HORDE_HEALTH
+		if not is_equal_approx(health_scale, 1.0) or not is_equal_approx(damage_scale, 1.0) \
+				or not is_equal_approx(speed_scale, 1.0):
 			var scaled := enemy.data.duplicate() as EnemyData
 			scaled.max_health = maxi(int(round(scaled.max_health * health_scale)), 1)
+			scaled.contact_damage = maxi(int(round(scaled.contact_damage * damage_scale)), 1)
+			scaled.speed *= speed_scale
 			enemy.data = scaled
+		if elite:
+			enemy.set_meta(&"elite", true)
+			if enemy.sprite_visual != null:
+				enemy.sprite_base_modulate = EncounterVariation.ELITE_TINT
+				enemy.sprite_visual.modulate = EncounterVariation.ELITE_TINT
+		elif modifier == EncounterVariation.SWIFT:
+			enemy.attack_cooldown *= 0.85
 		enemy.deaggro_range = 1150
 		enemy.aggro_range = 600
 		enemy.set_target(player)
@@ -1391,6 +1451,11 @@ func _on_mds_room_loaded(room_id: String) -> void:
 	var plan_room := _plan_room(room_id)
 	var room_type := String(plan_room.get("type", ""))
 	var big_map := _chapter_plan != null and _chapter_plan.big_map
+	# Big-map rooms draw ground below their floor so the camera can clear
+	# the bottom HUD strip; Chapter 1's single-screen rooms keep the frame.
+	player.hud_bottom_pad = HUD_BOTTOM_PAD if big_map else 0.0
+	if big_map:
+		_open_hub_shortcut(room_id)
 	if arenas.is_empty():
 		var is_vault := room_id.ends_with("_vault")
 		# Big-map entrance regions have neither combat nor rest facilities, so
@@ -2043,6 +2108,33 @@ func _on_boss_phase(chapter: Dictionary, phase: int) -> void:
 	Audio.play_voice("boss_%s_phase%d" % [chapter["boss_voice"], phase])
 
 
+## Ink paid for slipping a hit inside the roll's invulnerable window.
+const PERFECT_DODGE_INK := 6
+## Big-map chapters author a one-way door from the hub back to the entrance
+## behind `ch<N>_shortcut`, but nothing ever granted it, so the door stayed
+## shut for good. Reaching the hub now opens it (stored in the MDS save, so
+## it stays open after a reload).
+func _open_hub_shortcut(room_id: String) -> void:
+	if _mds_world == null or not room_id.ends_with("_hub"):
+		return
+	var flag := "ch%d_shortcut" % (_chapter + 1)
+	if _mds_world.has_ability(flag):
+		return
+	_mds_world.grant_ability(flag)
+	hud.show_message("捷径已打通：枢纽的暗门可直接回到入口")
+
+
+## Camera room under the floor so the bottom HUD does not cover the ground.
+const HUD_BOTTOM_PAD := 96.0
+
+func _on_perfect_dodge() -> void:
+	if _hit_stop != null:
+		_hit_stop.freeze(0.07, 0.15)
+	run_state.restore_ink(PERFECT_DODGE_INK)
+	if _screen_fx != null:
+		_screen_fx.flash(Color(0.95, 0.82, 0.45, 0.18), 0.12)
+
+
 func _on_melee_hit() -> void:
 	if _hit_stop != null:
 		_hit_stop.freeze(0.035, 0.3)
@@ -2187,6 +2279,8 @@ func _on_cast_succeeded(slot: int) -> void:
 
 func _on_enemy_died(enemy: Node) -> void:
 	_kills += 1
+	if enemy != null and enemy.has_meta(&"elite"):
+		run_state.add_pages(EncounterVariation.ELITE_PAGES)
 	run_state.add_pages(maxi(1, int(round((1 + Flow.difficulty * 0.5) * Difficulty.reward_multiplier(Flow.difficulty)))))
 	relic_effects.on_kill()
 	_update_hud()
@@ -2400,6 +2494,11 @@ func _update_stele_prompts() -> void:
 			var bench := node as BenchCheckpoint
 			if bench != null and is_instance_valid(bench):
 				bench.set_player_near(bench.can_use(player.global_position))
+		var feet := player.global_position + Vector2(0, Player.FOOT_Y)
+		for node in get_tree().get_nodes_in_group(MovingPlatform.GROUP):
+			var lift := node as MovingPlatform
+			if lift != null and lift.call_mode and is_instance_valid(lift):
+				lift.update_player(feet)
 
 
 func _try_pickup_nearest() -> bool:
@@ -2523,6 +2622,19 @@ func _on_shop_closed() -> void:
 ## no-op there and the demo's room-entry checkpoint stays exactly as it was.
 ## The run save keeps its existing shape: the bench writes the same checkpoint
 ## (current room + player position) every other checkpoint writes.
+## Interact next to a call panel summons the elevator; on the car it rides to
+## the other end.
+func _try_call_elevator() -> bool:
+	if not is_inside_tree() or player == null:
+		return false
+	var feet := player.global_position + Vector2(0, Player.FOOT_Y)
+	for node in get_tree().get_nodes_in_group(MovingPlatform.GROUP):
+		var lift := node as MovingPlatform
+		if lift != null and lift.call_mode and is_instance_valid(lift) and lift.try_interact(feet):
+			return true
+	return false
+
+
 func _try_use_bench() -> bool:
 	if not is_inside_tree() or player == null:
 		return false

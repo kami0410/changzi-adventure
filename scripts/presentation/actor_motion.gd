@@ -151,6 +151,11 @@ func _update_springs(delta: float) -> void:
 			&"land":
 				squash_target = Vector2(1.0 + (1.0 - p) * 0.16, 1.0 - (1.0 - p) * 0.15)
 				bob_target = (1.0 - p) * 3.0
+			&"roll":
+				squash_target = Vector2(0.94, 0.9)
+				lean_target = 0.0
+				bob_target = 0.0
+				tail_target = -direction * 0.5
 			&"dodge":
 				squash_target = Vector2(1.18, 0.82)
 				lean_target = direction * p * TAU
@@ -259,11 +264,32 @@ func _draw_body(texture: Texture2D, top_left: Vector2, foot_texel: float, feet: 
 
 
 func _draw_humanoid(texture: Texture2D, top_left: Vector2, foot_texel: float, feet: Vector2, lift: float, scale: Vector2, height: float, color: Color) -> void:
+	if _action_left > 0.0 and _action == &"roll":
+		_draw_roll(texture, top_left, foot_texel, feet, scale, height, color)
+		return
 	# A run reads through bob, lean and stride squash; legs are not cut out.
 	_draw_body(texture, top_left, foot_texel, feet, lift, scale, _lean * 0.5 + _stride * 0.025, color)
 	if gait == &"run" and absf(_stride) > 0.6:
 		var dust := feet + Vector2(-direction * 10.0, -2.0)
 		draw_circle(dust, 2.0 + absf(_stride), Color(0.6, 0.7, 0.66, 0.18 * color.a))
+
+
+## Ground roll: the tucked pose spins one full turn around its own centre,
+## which sits low so the ball stays on the floor line. Eased so most of the
+## turn happens early, matching the roll's speed curve.
+func _draw_roll(texture: Texture2D, top_left: Vector2, foot_texel: float, feet: Vector2, scale: Vector2, height: float, color: Color) -> void:
+	var p := clampf(1.0 - _action_left / _action_duration, 0.0, 1.0)
+	var turn := 1.0 - pow(1.0 - p, 1.8)
+	var ball := height * 0.36
+	var pivot := feet + Vector2(0, -ball)
+	var angle := direction * turn * TAU
+	var local_pivot := Vector2(0, -ball / maxf(absf(scale.y), 0.001))
+	draw_set_transform(_snap(pivot), angle, scale)
+	draw_texture_rect(texture, Rect2(top_left - Vector2(0, foot_texel) - local_pivot, texture.get_size()), false, color)
+	draw_set_transform(Vector2.ZERO)
+	# Speed arc trailing the ball.
+	var trail := Color(accent, color.a * 0.45 * (1.0 - p))
+	draw_arc(pivot, ball + 6.0, -direction * PI * 0.5, -direction * PI * 0.5 - direction * PI * 0.9, 12, trail, 3.0)
 
 
 func _draw_beast(texture: Texture2D, top_left: Vector2, foot_texel: float, feet: Vector2, lift: float, scale: Vector2, height: float, color: Color) -> void:

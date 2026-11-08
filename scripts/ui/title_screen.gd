@@ -67,7 +67,7 @@ func _build() -> void:
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(tagline)
 	var version := Label.new()
-	version.text = "0.11.0-demo"
+	version.text = String(ProjectSettings.get_setting("application/config/version", "0.14.0-demo"))
 	version.add_theme_font_size_override("font_size", 12)
 	version.add_theme_color_override("font_color", UIPalette.BONE_DIM)
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

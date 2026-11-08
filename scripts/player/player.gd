@@ -7,13 +7,30 @@ signal attack_requested
 signal weapon_changed(slot: int)
 signal damaged(amount: int)
 signal hit_landed
+## A hit landed inside the roll's invulnerable window (once per roll).
+signal perfect_dodged
 
 @export var move_speed: float = 300.0
 @export var jump_velocity: float = -500.0
 @export var gravity: float = 1350.0
-@export var dodge_speed: float = 600.0
-@export var dodge_duration: float = 0.22
-@export var dodge_cooldown: float = 0.58
+## Ground roll: a low, fast tumble that starts quick and eases out.
+@export var dodge_speed: float = 560.0
+@export var dodge_duration: float = 0.36
+## Cooldown counts from the start of the roll.
+@export var dodge_cooldown: float = 0.52
+## Invulnerable part of the roll; the last few frames are a vulnerable recovery.
+@export var roll_iframes: float = 0.3
+## Capsule height while rolling (standing is 76): projectiles aimed at the
+## chest pass over a rolling player.
+@export var roll_height: float = 40.0
+## One short air dash per airtime instead of a roll.
+@export var air_dash_speed: float = 540.0
+@export var air_dash_duration: float = 0.18
+## A dodge pressed this early (mid-swing, just before landing) still fires.
+@export var dodge_buffer: float = 0.16
+## Attacking at the end of a roll (or just after) turns the next swing into
+## the heavy finisher.
+@export var roll_strike_window: float = 0.22
 @export var coyote_time: float = 0.1
 @export var jump_buffer: float = 0.12
 @export var max_health: int = 100
@@ -47,6 +64,10 @@ const DODGE_FRAMES: Array[Texture2D] = [
 	preload("res://assets/sprites/player/frames/dodge_0.png"),
 	preload("res://assets/sprites/player/frames/dodge_1.png"),
 ]
+## The tucked jump pose doubles as the roll ball; ActorMotion spins it.
+const ROLL_FRAMES: Array[Texture2D] = [
+	preload("res://assets/sprites/player/frames/jump_1.png"),
+]
 ## Run cycle speed; four poses at 12 fps complete a stride in 0.33 s.
 const RUN_FPS := 12.0
 ## Whole-number display scale keeps pixel art crisp (see docs/memory/decisions/2026-11-02-art-spec.md).
@@ -54,6 +75,11 @@ const RUN_FPS := 12.0
 ## How far the camera leans toward the facing direction. Single-screen rooms
 ## set this to 0 so the whole frame does not slide when the player turns.
 @export var camera_look_ahead: float = 32.0
+## Extra room under the floor when the camera sits on a room's bottom limit,
+## so the bottom HUD strip does not cover the ground. game.gd turns it on in
+## the big-map rooms, which draw extra ground below their floor for it.
+var hud_bottom_pad: float = 0.0
+var _hud_pad := 0.0
 ## Multiplier applied to every incoming hit; game.gd raises it with corruption.
 var damage_taken_multiplier: float = 1.0
 ## Multiplier applied to every weapon hit; game.gd sets it from run authorities.
@@ -70,6 +96,18 @@ var weapons: Array[Weapon] = [null, null]
 var active_weapon_slot: int = 0
 var _dodge_left := 0.0
 var _dodge_cooldown_left := 0.0
+var _dodge_buffer_left := 0.0
+var _roll_iframes_left := 0.0
+var _roll_strike_left := 0.0
+var _roll_dir := 1.0
+var _roll_total := 0.36
+var _air_dash_used := false
+var _perfect_used := false
+## "roll" on the ground, "air" for the air dash, empty when not dodging.
+var dodge_kind: StringName = &""
+var _capsule: CapsuleShape2D
+var _collision: CollisionShape2D
+const STAND_HEIGHT := 76.0
 var _invulnerable_left := 0.0
 var _coyote_left := 0.0
 var _jump_buffer_left := 0.0
@@ -121,9 +159,11 @@ func _ready() -> void:
 	if collision != null:
 		var capsule := CapsuleShape2D.new()
 		capsule.radius = 16
-		capsule.height = 76
+		capsule.height = STAND_HEIGHT
 		collision.shape = capsule
 		collision.position.y = -22
+		_capsule = capsule
+		_collision = collision
 	if sprite_visual != null:
 		# Feet on the capsule bottom (local y 16), crisp at any scale.
 		_idle_texture = sprite_visual.texture
@@ -144,6 +184,9 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_dodge_left = maxf(_dodge_left - delta, 0.0)
 	_dodge_cooldown_left = maxf(_dodge_cooldown_left - delta, 0.0)
+	_dodge_buffer_left = maxf(_dodge_buffer_left - delta, 0.0)
+	_roll_iframes_left = maxf(_roll_iframes_left - delta, 0.0)
+	_roll_strike_left = maxf(_roll_strike_left - delta, 0.0)
 	_invulnerable_left = maxf(_invulnerable_left - delta, 0.0)
 	_shield_left = maxf(_shield_left - delta, 0.0)
 	_haste_left = maxf(_haste_left - delta, 0.0)
@@ -159,12 +202,17 @@ func _physics_process(delta: float) -> void:
 		_haste = 1.0
 	if health <= 0:
 		return
+	var was_dodging := is_dodging
 	is_dodging = _dodge_left > 0.0
+	if was_dodging and not is_dodging:
+		_end_dodge()
 	set_collision_mask_value(2, not is_dodging)
 	var grounded := is_on_floor()
+	if grounded:
+		_air_dash_used = false
 	_coyote_left = coyote_time if grounded else maxf(_coyote_left - delta, 0.0)
 	_jump_buffer_left = maxf(_jump_buffer_left - delta, 0.0)
-	if not grounded:
+	if not grounded and dodge_kind != &"air":
 		velocity.y += gravity * delta
 	var direction := Input.get_axis("move_left", "move_right")
 	if not is_zero_approx(direction) and not is_dodging:
@@ -194,9 +242,13 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_released("jump") and velocity.y < -150:
 		velocity.y *= 0.5
 	if Input.is_action_just_pressed("dodge"):
-		start_dodge()
+		_dodge_buffer_left = dodge_buffer
+	if _dodge_buffer_left > 0.0 and start_dodge(direction):
+		_dodge_buffer_left = 0.0
 	if is_dodging:
-		velocity.x = facing.x * dodge_speed
+		velocity.x = _roll_dir * _dodge_velocity()
+		if dodge_kind == &"air":
+			velocity.y = 0.0
 	elif _attack_lunge_left > 0.0:
 		velocity.x = facing.x * (240.0 if _combo_index >= 3 else 135.0)
 	else:
@@ -210,8 +262,13 @@ func _physics_process(delta: float) -> void:
 	if grounded and absf(velocity.x) > 80.0 and _step_timer <= 0.0:
 		_step_timer = 0.24
 		_effect(&"dust", Color("7fa9a4"), 14)
-	if Input.is_action_pressed("attack") and not is_dodging:
-		attack_requested.emit()
+	if Input.is_action_pressed("attack"):
+		if not is_dodging:
+			attack_requested.emit()
+		elif _dodge_left <= _roll_total * 0.4:
+			# Pressed in the roll's tail: cut the recovery and strike.
+			_end_dodge()
+			attack_requested.emit()
 	if Input.is_action_just_pressed("weapon_1"):
 		switch_weapon(0)
 	elif Input.is_action_just_pressed("weapon_2"):
@@ -239,6 +296,10 @@ func _update_frames(delta: float) -> void:
 	if action == &"hit":
 		_frame_anim = &"hit"
 		_set_frame(HURT_FRAMES[0])
+		return
+	if action == &"roll":
+		_frame_anim = &"roll"
+		_set_frame(_progress_frame(ROLL_FRAMES))
 		return
 	if action == &"dodge":
 		_frame_anim = &"dodge"
@@ -282,20 +343,93 @@ func _set_frame(texture: Texture2D) -> void:
 		sprite_visual.texture = texture
 
 
-func start_dodge() -> void:
+## Starts a roll (on the ground) or an air dash. [param direction] is the
+## held move axis; zero rolls toward the facing side, so the player can roll
+## back out of a fight. Returns false when the dodge is not available yet.
+func start_dodge(direction: float = 0.0) -> bool:
 	if is_dodging or _dodge_cooldown_left > 0 or health <= 0:
-		return
+		return false
+	var grounded := is_on_floor() or _coyote_left > 0.0 or not is_inside_tree()
+	if not grounded and _air_dash_used:
+		return false
+	_roll_dir = signf(direction) if not is_zero_approx(direction) else facing.x
+	facing = Vector2(_roll_dir, 0.0)
 	is_dodging = true
+	_perfect_used = false
 	set_collision_mask_value(2, false)
-	_dodge_left = dodge_duration
 	_dodge_cooldown_left = dodge_cooldown
-	_invulnerable_left = maxf(_invulnerable_left, dodge_duration)
-	velocity = Vector2(facing.x * dodge_speed, 0.0)
+	_attack_lunge_left = 0.0
+	if grounded:
+		dodge_kind = &"roll"
+		_roll_total = dodge_duration
+		_set_roll_shape(true)
+	else:
+		dodge_kind = &"air"
+		_roll_total = air_dash_duration
+		_air_dash_used = true
+	_dodge_left = _roll_total
+	var iframes := roll_iframes if dodge_kind == &"roll" else air_dash_duration
+	_roll_iframes_left = iframes
+	_invulnerable_left = maxf(_invulnerable_left, iframes)
+	velocity = Vector2(_roll_dir * _dodge_velocity(), 0.0 if dodge_kind == &"air" else velocity.y)
 	if _motion != null:
-		_motion.play(&"dodge", dodge_duration)
+		_motion.direction = _roll_dir
+		_motion.play(&"roll" if dodge_kind == &"roll" else &"dodge", _roll_total)
 	_effect(&"dust", Color("70d8cc"), 40)
 	_play_sfx(&"dodge")
 	_dodge_trail()
+	return true
+
+
+## Horizontal speed at the current point of the dodge: fast out of the gate,
+## easing into a short recovery so the roll reads as weight, not a teleport.
+func _dodge_velocity() -> float:
+	if dodge_kind == &"air":
+		return air_dash_speed
+	var p := 1.0 - _dodge_left / maxf(_roll_total, 0.001)
+	return dodge_speed * lerpf(1.2, 0.45, clampf(p, 0.0, 1.0))
+
+
+func _end_dodge() -> void:
+	if dodge_kind == &"roll":
+		_roll_strike_left = roll_strike_window
+		_set_roll_shape(false)
+		_effect(&"dust", Color("9fbfb9"), 18)
+	elif dodge_kind == &"air":
+		# Keep a little momentum out of the dash instead of stopping dead.
+		velocity.x = _roll_dir * move_speed
+	if _motion != null and _motion.current_action() in [&"roll", &"dodge"]:
+		_motion.play(&"land", 0.1)
+	dodge_kind = &""
+	is_dodging = false
+	_dodge_left = 0.0
+	_roll_iframes_left = 0.0
+
+
+## Shrinks the capsule to [member roll_height] keeping the feet on the floor.
+func _set_roll_shape(rolling: bool) -> void:
+	if _capsule == null or _collision == null:
+		return
+	var height := roll_height if rolling else STAND_HEIGHT
+	_capsule.height = height
+	_collision.position.y = FOOT_Y - height * 0.5
+
+
+## Ends a roll/air dash immediately (fall recovery, cutscenes).
+func cancel_dodge() -> void:
+	if not is_dodging:
+		return
+	# Drop only the invulnerability the roll granted; a longer window (a
+	# recent hit, a revive, a cutscene guard) stays.
+	if _invulnerable_left <= _roll_iframes_left + 0.001:
+		_invulnerable_left = 0.0
+	_end_dodge()
+
+
+## True while the roll's invulnerable window is open.
+func is_rolling_invulnerable() -> bool:
+	return is_dodging and _roll_iframes_left > 0.0
+
 
 func is_invulnerable() -> bool:
 	return _invulnerable_left > 0.0
@@ -380,6 +514,10 @@ func _on_attack_requested() -> void:
 		return
 	_combo_index = _combo_index + 1 if _combo_window_left > 0.0 else 1
 	_combo_index = ((_combo_index - 1) % 3) + 1
+	if _roll_strike_left > 0.0:
+		# Roll into a strike: the swing out of a roll is always the finisher.
+		_combo_index = 3
+		_roll_strike_left = 0.0
 	_combo_window_left = 0.55
 	weapon.damage_multiplier = [1.0, 1.18, 1.55][_combo_index - 1]
 	_attack_lunge_left = 0.1 if _combo_index < 3 else 0.16
@@ -404,6 +542,9 @@ func add_shake(amount: float) -> void:
 		_shake = clampf(_shake + amount, 0.0, 1.0)
 
 func take_damage(amount: int, source_position: Vector2 = Vector2.INF) -> void:
+	if amount > 0 and health > 0 and is_rolling_invulnerable() and not _perfect_used:
+		_perfect_dodge()
+		return
 	if amount <= 0 or health <= 0 or is_invulnerable():
 		return
 	if not is_zero_approx(damage_taken_multiplier - 1.0):
@@ -429,6 +570,19 @@ func take_damage(amount: int, source_position: Vector2 = Vector2.INF) -> void:
 		_set_frame(HURT_FRAMES[1])
 		if _motion != null:
 			_motion.play(&"death", 0.6)
+
+## A hit that the roll slipped through: refund the cooldown, flash gold and
+## let game.gd pay out the reward (hit stop + ink).
+func _perfect_dodge() -> void:
+	_perfect_used = true
+	_dodge_cooldown_left = 0.0
+	_roll_strike_left = maxf(_roll_strike_left, roll_strike_window + _dodge_left)
+	if is_inside_tree():
+		CombatFX.spawn(get_parent(), global_position + Vector2(0, -24), &"ring", Color("f3cf87"), facing.x, 64)
+		spawn_afterimage()
+	_play_sfx(&"perfect_dodge")
+	perfect_dodged.emit()
+
 
 func heal(amount: int) -> void:
 	if amount <= 0 or health <= 0:
@@ -467,7 +621,14 @@ func _update_camera(delta: float) -> void:
 	var flow := get_node_or_null("/root/Flow") as GameFlow
 	if flow != null:
 		shake_scale = flow.shake_scale
-	_camera.offset = _look_ahead + Vector2(sin(_shake_time * 1.7), cos(_shake_time * 2.3)) * _shake * _shake * 9.0 * shake_scale
+	var pad_target := 0.0
+	if hud_bottom_pad > 0.0 and _camera.limit_bottom < 1000000:
+		var view_h := get_viewport_rect().size.y / maxf(_camera.zoom.y, 0.01)
+		if _camera.global_position.y + view_h * 0.5 >= float(_camera.limit_bottom) - 4.0:
+			pad_target = hud_bottom_pad
+	_hud_pad = lerpf(_hud_pad, pad_target, 1.0 - exp(-6.0 * delta))
+	_camera.offset = _look_ahead + Vector2(0.0, _hud_pad) \
+		+ Vector2(sin(_shake_time * 1.7), cos(_shake_time * 2.3)) * _shake * _shake * 9.0 * shake_scale
 
 ## Chapters 2–4 one-way platforms live in this group and let the player drop
 ## through with down+jump. Chapter 1 has none, so the branch never fires there.

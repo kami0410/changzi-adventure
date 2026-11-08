@@ -157,7 +157,7 @@ func _refresh_key_hints() -> void:
 	_add_line(_explore_content, "移动", "move_left / move_right")
 	_add_line(_explore_content, "跳跃", "jump")
 	_add_line(_explore_content, "翻滚（无敌帧）", "dodge")
-	_add_line(_explore_content, "交互 / 开箱", "interact")
+	_add_line(_explore_content, "交互 / 开箱 / 呼叫电梯", "interact")
 	_add_line(_explore_content, "背包", "inventory")
 	_add_line(_explore_content, "造句台", "codex")
 	_add_line(_explore_content, "设置", "settings")
@@ -170,6 +170,7 @@ func _refresh_key_hints() -> void:
 	_add_line(_combat_content, "对 NPC 言灵", "npc_inspire")
 	_add_line(_combat_content, "暂停", "pause")
 	_add_hint(_combat_content, "提示：黄色预警＝攻击前摇；紫色＝深渊污染")
+	_add_hint(_combat_content, "翻滚：可按方向向后滚；无敌帧内被击中＝完美闪避（回墨、重置冷却）；翻滚末尾出手必是重击")
 
 
 func _add_line(parent: VBoxContainer, label_text: String, action_text: String) -> void:

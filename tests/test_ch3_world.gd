@@ -19,7 +19,7 @@ const CH2_WORLD_PATH := "res://scenes/mds/chapter_2_bigmap.mdsworld.json"
 const OLD_CH3_WORLD_PATH := "res://scenes/mds/chapter_3.mdsworld.json"
 const OLD_CH3_SCENE_PATH := "res://scenes/mds/chapter_3_world.tscn"
 const GAME_SCRIPT_PATH := "res://scripts/game.gd"
-const TILES_PATH := "res://resources/tiles/ch1_tiles.tres"
+const TILES_PATH := "res://resources/tiles/ch3_tiles.tres"
 const BACKDROP_PATH := "res://assets/backgrounds/lightless_sea.png"
 const FALL_MARGIN := 240.0
 ## MovingPlatform.speed default in scripts/levels/moving_platform.gd. Chapter 3

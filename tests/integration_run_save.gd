@@ -93,6 +93,9 @@ func _wait_vulnerable(scene, timeout := 3.0) -> bool:
 
 
 func _run() -> void:
+	# Checks authored waves and exact player state; per-run encounter
+	# variation (EncounterVariation) is covered by test_map_variety.
+	(root.get_node("Flow") as GameFlow).encounter_variation = false
 	var flow := root.get_node("Flow") as GameFlow
 	flow.auto_save = true
 	flow.profile_path = PROFILE_PATH
@@ -158,6 +161,10 @@ func _run() -> void:
 	var safe: Vector2 = scene._last_checkpoint
 	scene.player.global_position = safe + Vector2(40, 0)
 	scene.player.velocity = Vector2.ZERO
+	# Chapter 1 layouts are seeded per run (0.14); on an open-floor layout the
+	# room's enemies can reach the player during the settle wait. Keep the
+	# saved health exact.
+	scene.player._invulnerable_left = 2.0
 	await create_timer(0.3).timeout
 	var saved_position: Vector2 = scene.player.global_position
 	check(scene.save_run_now(), "run_save_explicit_write")

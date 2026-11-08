@@ -68,6 +68,7 @@ func build() -> void:
 	_build_backdrop()
 	_build_ground()
 	_build_platforms()
+	_notify_child_surfaces()
 	_build_ambient()
 	_build_gates()
 	_publish_fall_plane()
@@ -225,9 +226,27 @@ func _build_backdrop() -> void:
 			tile.z_index = -20
 			tile.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST \
 				if pixel_art else CanvasItem.TEXTURE_FILTER_LINEAR
-			tile.modulate = modulate
+			tile.modulate = modulate * backdrop_depth_tint(from_bottom)
 			holder.add_child(tile)
 			backdrop_tiles.append(tile)
+
+
+## The painted backdrops are as bright and busy as the foreground, so the
+## player and platforms got lost in them. Every row is pushed back (dimmer,
+## slightly cooler), and the mirrored rows above the floor row fade further
+## toward darkness, so a tall shaft reads as depth instead of a reflection.
+const BACKDROP_DEPTH := Color(0.7, 0.72, 0.8, 1.0)
+const BACKDROP_ROW_FADE := 0.62
+const BACKDROP_MIN_FADE := 0.28
+
+
+static func backdrop_depth_tint(from_bottom: int) -> Color:
+	var fade := maxf(pow(BACKDROP_ROW_FADE, float(maxi(from_bottom, 0))), BACKDROP_MIN_FADE)
+	return Color(BACKDROP_DEPTH.r * fade, BACKDROP_DEPTH.g * fade, BACKDROP_DEPTH.b * fade, 1.0)
+
+
+## Visual-only ground rows drawn under a floor that sits on the room bottom.
+const UNDERFLOOR_ROWS := 8
 
 
 func _build_ground() -> void:
@@ -244,10 +263,15 @@ func _build_ground() -> void:
 			var first := int(floorf(rect.position.x / BigRoomData.TILE_SIZE))
 			var last := int(ceilf(rect.end.x / BigRoomData.TILE_SIZE)) - 1
 			var rows := maxi(1, int(roundf(rect.size.y / BigRoomData.TILE_SIZE)))
+			# Ground on the room's bottom edge continues below it (visual only):
+			# the camera may look past the floor to clear the bottom HUD.
+			if rect.end.y >= room_bounds.end.y - 1.0:
+				rows += UNDERFLOOR_ROWS
 			for column in range(first, last + 1):
-				tiles.set_cell(Vector2i(column, row), 0, data.ground_tile)
+				tiles.set_cell(Vector2i(column, row), 0, TileVariants.pick(data.tile_set, data.ground_tile, column, row))
 				for extra in range(1, rows):
-					fill.set_cell(Vector2i(column, row + extra), 0, data.ground_fill_tile)
+					fill.set_cell(Vector2i(column, row + extra), 0,
+						TileVariants.fill(data.tile_set, data.ground_fill_tile, extra))
 	else:
 		var visual := Node2D.new()
 		visual.name = "GroundVisual"
@@ -272,8 +296,9 @@ func _build_platforms() -> void:
 			var first := int(floorf(rect.position.x / BigRoomData.TILE_SIZE))
 			var last := int(ceilf(rect.end.x / BigRoomData.TILE_SIZE)) - 1
 			for column in range(first, last + 1):
-				tiles.set_cell(Vector2i(column, row), 0, data.platform_tile)
-				fill.set_cell(Vector2i(column, row + 1), 0, data.platform_fill_tile)
+				tiles.set_cell(Vector2i(column, row), 0, TileVariants.pick(data.tile_set, data.platform_tile, column, row))
+				fill.set_cell(Vector2i(column, row + 1), 0,
+					TileVariants.pick(data.tile_set, data.platform_fill_tile, column + 7, row))
 	else:
 		var visual := Node2D.new()
 		visual.name = "PlatformVisual"
@@ -493,6 +518,17 @@ func _notify_child_bounds() -> void:
 	for child in get_children():
 		if child.has_method(&"set_room_bounds"):
 			child.call(&"set_room_bounds", room_bounds)
+
+
+## Called elevators place their call panels next to a real floor at each
+## stop, so they get every walkable surface (room-local, like their position).
+func _notify_child_surfaces() -> void:
+	var surfaces: Array[Rect2] = []
+	surfaces.append_array(data.ground_rects(room_bounds))
+	surfaces.append_array(data.platform_rects(room_bounds))
+	for child in get_children():
+		if child.has_method(&"set_surfaces"):
+			child.call(&"set_surfaces", surfaces)
 
 
 func _interact_key() -> String:
