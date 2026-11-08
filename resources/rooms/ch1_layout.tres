@@ -6,5 +6,5 @@
 [resource]
 script = ExtResource("1_script")
 floor_row = 35
-platform_rows = Array[int]([30, 28])
+platform_rows = Array[int]([27, 24])
 tile_set = ExtResource("2_tiles")

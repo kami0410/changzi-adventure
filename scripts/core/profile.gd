@@ -50,6 +50,11 @@ var legacy_discovered_phrases: Array[String] = []
 const GRIMOIRE_MAX := 12
 ## Settings page: the window mode survives a restart (1.0).
 var fullscreen: bool = false
+## Touch controls (1.0.1): 0 = auto (shown while a finger is the device),
+## 1 = always, 2 = never; button size and opacity.
+var touch_mode: int = 0
+var touch_scale: float = 1.0
+var touch_opacity: float = 0.6
 var grimoire: Array[Dictionary] = []
 var endings: Array[String] = []
 var runs_completed: int = 0
@@ -358,6 +363,9 @@ func save_profile(path: String = "user://profile.cfg") -> void:
 	config.set_value("settings", "flash_scale", flash_scale)
 	config.set_value("settings", "master_volume", master_volume)
 	config.set_value("settings", "fullscreen", fullscreen)
+	config.set_value("settings", "touch_mode", touch_mode)
+	config.set_value("settings", "touch_scale", touch_scale)
+	config.set_value("settings", "touch_opacity", touch_opacity)
 	config.set_value("npc", "blessings", npc_blessings)
 	config.set_value("npc", "trust", npc_trust)
 	config.set_value("npc", "events", npc_events)
@@ -482,6 +490,9 @@ func load_profile(path: String = "user://profile.cfg") -> bool:
 	flash_scale = clampf(_as_float(config.get_value("settings", "flash_scale", 1.0), 1.0), 0.0, 1.0)
 	master_volume = clampf(_as_float(config.get_value("settings", "master_volume", 1.0), 1.0), 0.0, 1.0)
 	fullscreen = _as_bool(config.get_value("settings", "fullscreen", false), false)
+	touch_mode = clampi(_as_int(config.get_value("settings", "touch_mode", 0), 0), 0, 2)
+	touch_scale = clampf(_as_float(config.get_value("settings", "touch_scale", 1.0), 1.0), 0.7, 1.4)
+	touch_opacity = clampf(_as_float(config.get_value("settings", "touch_opacity", 0.6), 0.6), 0.25, 0.95)
 
 	grimoire.clear()
 	for value in _as_array(config.get_value("codex", "grimoire", [])):

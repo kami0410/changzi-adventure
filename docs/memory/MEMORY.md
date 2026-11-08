@@ -6,18 +6,19 @@
 ## 游戏概览
 
 - **昌子大冒险**（`changzi-adventure`）：2D 横版动作 Roguelite，语言同时是构筑核心与叙事核心。
-- 版本 **`1.0.0` 正式版**（用户 2026-11-08 确认）；之后修复走 1.0.x，新内容走 1.x（[版本策略](decisions/2026-11-02-versioning.md)）。
+- 版本 **`1.0.1`**（1.0 正式版 2026-11-08 确认；1.0.1 手机触屏、屏幕适配、二段跳、平台单向）；修复走 1.0.x，新内容走 1.x（[版本策略](decisions/2026-11-02-versioning.md)）。
 - 第 1–4 章全线可玩 + 五个结局；Hub 五位 NPC（闻烬/白榆在通关第一章后登场）。
 - 事实来源：[GDD](../GDD.md)（顶部「1.0.0 规则」最新）· [剧情圣经](../story-bible.md) · [AI 言灵](../ai-skill-hook.md) · [素材许可](../../ASSETS.md) · [README](../../README.md)。
 
 ## 系统速查（细节见 GDD 对应节）
 
 - **关卡**：第 1 章线性 9 房（`MDSChapterRoom`，8×2 随机布局）；第 2–4 章大图（`ChapterPlanData` + `MDSBigRoom`，9 区 22 门、召唤电梯、单向落台、长椅、枢纽开捷径）。路由在 `game.gd` 的 `MDS_*`/`CHAPTER_PLAN_PATHS`。
-- **战斗**：游荡式普通战（精英/Boss 锁门）；翻滚 + 完美闪避 + 空中冲刺；遭遇变数 + 章节异象（`RunMutators`）+ 每日挑战（`GameFlow.daily_seed`）。
+- **战斗**：游荡式普通战（精英/Boss 锁门）；翻滚 + 完美闪避 + 空中冲刺 + 二段跳；平台单向可穿越；遭遇变数 + 章节异象（`RunMutators`）+ 每日挑战（`GameFlow.daily_seed`）。
 - **敌人**：24 种 `EnemyData`；10 种生物怪逐帧动作（`CreatureArt` + `assets/sprites/creatures/`），每章一种主打新怪。
 - **言灵**：离线推演 + 可选 AI；13 形态；言灵权能（`WorldPowers`：时停/处决/改写敌名/瞬移/无敌/墨阶/揭图/破封/写残页）；法典（`Profile.grimoire`）。
 - **成长与 Hub**：档案馆祭坛、词条熟练度、信任四档、NPC 个人事件（五位）、AI NPC 白名单职能（AI 数值不受离线上限）。
 - **表现**：pixelfx 像素特效（`VFX`）、墨晕转场（`ink_fade.gdshader`）、纸纹（`PaperGrain`）、配乐 v2（名册动机 + 四章战斗层）。
+- **输入与屏幕**：键盘/手柄/触屏（`TouchOverlay` + `Flow.using_touch`）；按比例缩放，逻辑高 720。
 - **存档**：`user://profile.cfg`（Profile）+ 局内 run save（`RunSave`，含 `daily`）。
 
 ## 管线与工具
@@ -38,7 +39,7 @@
 ## 已知问题 / 需要项目方
 
 - 中文语音为 Windows SAPI 原型，商业发行前需换真人或授权 TTS。
-- Android 发行包为调试签名（仓库不含 keystore）。
+- Android 发行包为调试签名（仓库不含 keystore）；安卓实测用雷电模拟器 + adb（只能模拟单指）。
 - [角色浮空/像素发糊](issues/2026-11-02-sprite-float-blur.md)（0.9 已修，留作排障参考）。
 
 ## 调研
@@ -52,3 +53,4 @@
 - 2026-11-08 [0.14.0](sessions/2026-11-08-roll-lift-variety-0.14.md)：翻滚、召唤电梯、随机性、地块与区域美术。
 - 2026-11-08 [0.15.0](sessions/2026-11-08-roaming-creatures-vfx-0.15.md)：游荡战斗、6 新怪、像素特效、美术需求 PDF。
 - 2026-11-08 **[1.0.0](sessions/2026-11-08-release-1.0.md)**：全套美术、4 新怪、言灵权能/法典、章节异象、每日挑战、墨晕转场、配乐 v2、闻烬/白榆、记忆索引精简。
+- 2026-11-09 **[1.0.1](sessions/2026-11-09-mobile-1.0.1.md)**：触屏重写（多点触控、Hub 通用）、按比例缩放与宽屏延伸、二段跳、平台单向与抬高；雷电模拟器实测。

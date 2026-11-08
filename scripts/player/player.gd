@@ -32,6 +32,10 @@ signal perfect_dodged
 ## the heavy finisher.
 @export var roll_strike_window: float = 0.22
 @export var coyote_time: float = 0.1
+## Double jump (1.0.1): one extra jump in the air, refreshed on landing. The
+## first jump peaks near 93 px; with the air jump the reach is about 185 px.
+@export var air_jumps: int = 1
+@export var double_jump_velocity: float = -470.0
 @export var jump_buffer: float = 0.12
 @export var max_health: int = 100
 @export var invulnerability_time: float = 0.6
@@ -143,6 +147,11 @@ var _collision: CollisionShape2D
 const STAND_HEIGHT := 76.0
 var _invulnerable_left := 0.0
 var _coyote_left := 0.0
+var _air_jumps_left := 1
+## Down+jump through a jump-through tile ledge: terrain collision is off for
+## this long (horizontal motion frozen so no wall can be crossed meanwhile).
+const TILE_DROP_TIME := 0.16
+var _tile_drop_left := 0.0
 var _jump_buffer_left := 0.0
 var _motion: ActorMotion
 var _ribbon: ScarfRibbon
@@ -250,6 +259,11 @@ func _physics_process(delta: float) -> void:
 	var grounded := is_on_floor()
 	if grounded:
 		_air_dash_used = false
+		_air_jumps_left = air_jumps
+	if _tile_drop_left > 0.0:
+		_tile_drop_left = maxf(_tile_drop_left - delta, 0.0)
+		if _tile_drop_left <= 0.0:
+			set_collision_mask_value(1, true)
 	_coyote_left = coyote_time if grounded else maxf(_coyote_left - delta, 0.0)
 	_jump_buffer_left = maxf(_jump_buffer_left - delta, 0.0)
 	if not grounded and dodge_kind != &"air":
@@ -267,8 +281,13 @@ func _physics_process(delta: float) -> void:
 	if jump_pressed and grounded and _drop_left <= 0.0 \
 			and Input.is_action_pressed("move_down"):
 		drop_platform = _one_way_platform_below()
+	var tile_drop := jump_pressed and drop_platform == null and grounded and _drop_left <= 0.0 		and Input.is_action_pressed("move_down") and not is_dodging and standing_on_one_way_tile()
 	if jump_pressed and drop_platform != null and not is_dodging:
 		_begin_drop_through(drop_platform)
+	elif tile_drop:
+		_begin_tile_drop()
+	elif jump_pressed and not grounded and _coyote_left <= 0.0 and _air_jumps_left > 0 and not is_dodging:
+		_double_jump()
 	elif jump_pressed:
 		_jump_buffer_left = jump_buffer
 		if _motion != null and grounded:
@@ -291,6 +310,8 @@ func _physics_process(delta: float) -> void:
 			velocity.y = 0.0
 	elif _attack_lunge_left > 0.0:
 		velocity.x = facing.x * (240.0 if _combo_index >= 3 else 135.0)
+	elif _tile_drop_left > 0.0:
+		velocity.x = 0.0
 	else:
 		velocity.x = move_toward(velocity.x, direction * move_speed * _haste, 2400.0 * delta)
 	var fall_speed := velocity.y
@@ -745,6 +766,44 @@ func _one_way_platform_below() -> PhysicsBody2D:
 				and bool((body as Object).call(&"allows_drop_through")):
 			return body as PhysicsBody2D
 	return null
+
+
+func _double_jump() -> void:
+	_air_jumps_left -= 1
+	velocity.y = double_jump_velocity
+	_jump_buffer_left = 0.0
+	_play_sfx(&"jump")
+	if _motion != null:
+		_motion.play(&"windup", 0.06)
+	if is_inside_tree():
+		VFX.spawn(get_parent(), &"mana_burst", global_position + Vector2(0, FOOT_Y), false, 0.45)
+
+
+func can_double_jump() -> bool:
+	return _air_jumps_left > 0
+
+
+## True when the floor under the feet is a jump-through tile ledge (the
+## chapter tilesets mark platform tiles one-way).
+func standing_on_one_way_tile() -> bool:
+	for i in get_slide_collision_count():
+		var hit := get_slide_collision(i)
+		var layer := hit.get_collider() as TileMapLayer
+		if layer == null or hit.get_normal().y > -0.5:
+			continue
+		var cell := layer.local_to_map(layer.to_local(hit.get_position() + Vector2(0, 2)))
+		var data := layer.get_cell_tile_data(cell)
+		if data != null and data.get_collision_polygons_count(0) > 0 and data.is_collision_polygon_one_way(0, 0):
+			return true
+	return false
+
+
+func _begin_tile_drop() -> void:
+	_tile_drop_left = TILE_DROP_TIME
+	set_collision_mask_value(1, false)
+	_jump_buffer_left = 0.0
+	_coyote_left = 0.0
+	velocity.y = maxf(velocity.y, 60.0)
 
 
 func _begin_drop_through(platform: PhysicsBody2D) -> void:

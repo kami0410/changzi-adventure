@@ -123,6 +123,37 @@ func _fade_controls_hint(hint: Label) -> void:
 func _on_input_device_changed(_using_gamepad: bool) -> void:
 	_refresh_controls_hint()
 	set_active_weapon(_active_weapon)
+	apply_input_layout()
+
+
+## Touch mode (1.0.1): the bottom of the screen belongs to the thumbs, so the
+## weapon/言灵 cards move to the top centre (under a boss bar, scaled down)
+## and the keyboard footer hides. Other devices get the authored layout back.
+func apply_input_layout() -> void:
+	var flow := _flow_node()
+	var touch := flow != null and flow.using_touch
+	var slots := find_child("BottomSlots", true, false) as Control
+	var hint := find_child("ControlsHint", true, false) as Control
+	if slots == null:
+		return
+	if touch:
+		slots.anchor_top = 0.0
+		slots.anchor_bottom = 0.0
+		slots.offset_top = 66.0
+		slots.offset_bottom = 118.0
+		slots.scale = Vector2(0.8, 0.8)
+		slots.pivot_offset = Vector2(slots.custom_minimum_size.x * 0.5, 0.0)
+	else:
+		slots.anchor_top = 1.0
+		slots.anchor_bottom = 1.0
+		slots.offset_top = -80.0
+		slots.offset_bottom = -28.0
+		slots.scale = Vector2.ONE
+	if hint != null:
+		hint.visible = not touch
+	if message_label != null:
+		message_label.offset_top = 150.0 if touch else 128.0
+		message_label.offset_bottom = 182.0 if touch else 160.0
 
 
 func _on_keybinds_changed() -> void:
@@ -182,11 +213,7 @@ func _ready() -> void:
 		flow.input_device_changed.connect(_on_input_device_changed)
 	if flow != null and not flow.keybinds_changed.is_connected(_on_keybinds_changed):
 		flow.keybinds_changed.connect(_on_keybinds_changed)
-	if OS.has_feature("mobile"):
-		var slots := find_child("BottomSlots", true, false) as Control
-		slots.offset_top = -212
-		slots.offset_bottom = -134
-		(find_child("ControlsHint", true, false) as Control).hide()
+	apply_input_layout()
 	if _pending_message != "" and message_label != null:
 		message_label.text = _pending_message
 

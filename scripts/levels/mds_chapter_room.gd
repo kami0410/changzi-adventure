@@ -29,6 +29,10 @@ const GROUND_FILL_TILE := Vector2i(1, 0)
 const PLATFORM_TOP_TILE := Vector2i(2, 0)
 const PLATFORM_FILL_TILE := Vector2i(3, 0)
 const DEFAULT_CH1_LAYOUT := "res://resources/rooms/ch1_layout.tres"
+## Wide screens (1.0.1): the view keeps 720 px of height, so a 20:9 phone sees
+## ~1600 px across a 1280 px room. Backdrop and ground continue this far past
+## each wall (visual only) instead of showing the clear colour.
+const SIDE_BLEED := 320.0
 
 enum Kind { COMBAT, REST, BOSS }
 
@@ -164,6 +168,15 @@ func _add_pixel_layer(layer_name: String, path: String, depth: int) -> void:
 	sprite.position = Vector2(WIDTH * 0.5, 360)
 	sprite.z_index = depth
 	add_child(sprite)
+	# Mirrored copies either side, so a wide view never runs off the painting.
+	if sprite.texture != null:
+		var w := float(sprite.texture.get_width())
+		for side in [-1.0, 1.0]:
+			var copy := sprite.duplicate() as Sprite2D
+			copy.name = "%s_%s" % [layer_name, "L" if side < 0.0 else "R"]
+			copy.flip_h = true
+			copy.position.x += side * w
+			add_child(copy)
 
 
 func _active_layout() -> RoomLayoutData:
@@ -195,6 +208,16 @@ func _build_ground() -> void:
 					TileVariants.fill(active.tile_set, GROUND_FILL_TILE, row - active.floor_row))
 			tiles.set_cell(Vector2i(column, active.floor_row), 0,
 				TileVariants.pick(active.tile_set, GROUND_TOP_TILE, column, active.floor_row))
+		# Visual ground past both walls for wide screens (no collision).
+		var bleed := int(SIDE_BLEED / TILE_SIZE)
+		for column in range(-bleed, columns + bleed):
+			if column >= 0 and column < columns:
+				continue
+			fill.set_cell(Vector2i(column, active.floor_row), 0,
+				TileVariants.pick(active.tile_set, GROUND_TOP_TILE, column, active.floor_row))
+			for row in range(active.floor_row + 1, bottom_row):
+				fill.set_cell(Vector2i(column, row), 0,
+					TileVariants.fill(active.tile_set, GROUND_FILL_TILE, row - active.floor_row))
 		add_child(fill)
 		add_child(tiles)
 		return

@@ -67,6 +67,10 @@ func build() -> void:
 	box.size = Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0))
 	_shape.shape = box
 	_shape.position = box.size * 0.5
+	# Jump-through like every other ledge (1.0.1): bodies pass from below, so
+	# an enemy walking under a low ledge is never wedged against it.
+	_shape.one_way_collision = true
+	_shape.one_way_collision_margin = 2.0
 	if _stand_area == null:
 		_stand_area = get_node_or_null("StandArea") as Area2D
 	if _stand_area == null:

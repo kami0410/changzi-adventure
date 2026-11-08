@@ -13,7 +13,11 @@ func run(t: Callable) -> void:
 
 func _test_integer_scaling(t: Callable) -> void:
 	var project := FileAccess.get_file_as_string("res://project.godot")
-	t.call(project.contains("window/stretch/scale_mode=\"integer\""), true, "integer_pixel_scaling")
+	# 1.0.1: integer scaling made 1080p screens and phones show a 1:1 view
+	# (tiny UI, wider camera). Fractional keeps the logical height at 720.
+	# Fractional is Godot's default, so the editor drops the key from the file.
+	t.call(ProjectSettings.get_setting("display/window/stretch/scale_mode", ""), "fractional", "fractional_scaling_keeps_720")
+	t.call(project.contains("window/stretch/mode=\"canvas_items\""), true, "canvas_items_stretch")
 	t.call(project.contains("window/size/viewport_width=1280"), true, "native_width_1280")
 
 

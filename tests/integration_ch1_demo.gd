@@ -127,12 +127,16 @@ func _run() -> void:
 			# blow up (墨火); hold the target so the swing is what is tested.
 			first_enemy.apply_stun(3.0)
 			first_enemy.velocity = Vector2.ZERO
+			# Hold it in place for the swing (no fall, shove or patrol drift).
+			first_enemy.set_physics_process(false)
 			before[first_enemy] = first_enemy.health
 			scene.player.facing = Vector2.RIGHT
 		Input.action_press("attack")
 		await create_timer(1.4).timeout
 		Input.action_release("attack")
 		await create_timer(0.2).timeout
+		if first_enemy != null and is_instance_valid(first_enemy):
+			first_enemy.set_physics_process(true)
 		var damaged := false
 		for enemy in before:
 			if not is_instance_valid(enemy) or enemy.health < int(before[enemy]):

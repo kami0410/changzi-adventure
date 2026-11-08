@@ -15,9 +15,11 @@ extends RefCounted
 const MIN_COUNT := 3
 const MAX_COUNT := 6
 const ATTEMPTS := 70
-## Rise from the supporting surface (BigRoomData.MAX_STEP is 80).
-const RISE_MIN := 48.0
-const RISE_MAX := 80.0
+## Rise from the supporting surface. Since 1.0.1 the hero has a double jump
+## (reach ~185 px), so the extra ledges sit high enough for a walker to pass
+## under them (clearance >= 96 px below a 16 px ledge) instead of 48-80 px.
+const RISE_MIN := 112.0
+const RISE_MAX := 144.0
 const MAX_GAP := 104.0
 const HEADROOM := 104.0
 const BELOW_CLEAR := 56.0

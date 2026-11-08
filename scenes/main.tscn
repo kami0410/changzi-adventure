@@ -7,7 +7,6 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="5_pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/inventory_ui.tscn" id="6_inventory"]
 [ext_resource type="PackedScene" path="res://scenes/ui/codex.tscn" id="7_codex"]
-[ext_resource type="PackedScene" path="res://scenes/ui/touch_controls.tscn" id="8_touch"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="9_settings"]
 [ext_resource type="PackedScene" path="res://scenes/levels/biome_breathing.tscn" id="12_level2"]
 [ext_resource type="PackedScene" path="res://scenes/levels/lightless_sea.tscn" id="13_level3"]
@@ -53,8 +52,6 @@ process_mode = 3
 [node name="UI" type="CanvasLayer" parent="."]
 layer = 20
 process_mode = 3
-
-[node name="Touch" parent="UI" instance=ExtResource("8_touch")]
 
 [node name="Inventory" parent="UI" instance=ExtResource("6_inventory")]
 visible = false

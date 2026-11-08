@@ -258,6 +258,10 @@ func build() -> void:
 	box.size = Vector2(maxf(size.x, 1.0), maxf(size.y, 1.0))
 	_shape.shape = box
 	_shape.position = box.size * 0.5
+	# Stage rigs are jump-through (1.0.1); called elevators stay solid so a
+	# rider is never dropped through the car.
+	_shape.one_way_collision = not call_mode
+	_shape.one_way_collision_margin = 2.0
 	_home = position
 	resolve_bounds()
 	if call_mode:

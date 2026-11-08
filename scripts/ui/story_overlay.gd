@@ -146,10 +146,12 @@ func _show_common() -> void:
 
 
 func _refresh_device_prompts() -> void:
+	var flow := _flow_node()
+	var touch := flow != null and flow.using_touch
 	if _hint != null:
-		_hint.text = "方向键选择，%s 确认" % _prompt(&"ui_accept")
+		_hint.text = "点按选项" if touch else "方向键选择，%s 确认" % _prompt(&"ui_accept")
 	if _continue != null:
-		_continue.text = "继续  [%s]" % _prompt(&"interact")
+		_continue.text = "继续" if touch else "继续  [%s]" % _prompt(&"interact")
 
 
 func _on_input_device_changed(_using_gamepad: bool) -> void:
@@ -214,7 +216,7 @@ func _build() -> void:
 	_continue.pressed.connect(close)
 	column.add_child(_continue)
 	_hint = Label.new()
-	_hint.text = "方向键选择，Enter 确认"
+	_refresh_device_prompts()
 	_hint.add_theme_color_override("font_color", UIPalette.INK_FAINT)
 	_hint.add_theme_font_size_override("font_size", 12)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

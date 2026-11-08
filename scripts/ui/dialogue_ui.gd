@@ -156,11 +156,16 @@ func _refresh() -> void:
 		_line_label.text = _lines[_index] if _index >= 0 and _index < _lines.size() else ""
 	if _progress_label != null:
 		_progress_label.text = "%d / %d" % [_index + 1, _lines.size()]
+	# On a touch screen the on-screen controls hide behind this page, so the
+	# buttons are tapped directly: no key hint.
+	var flow := _flow_node()
+	var touch := flow != null and flow.using_touch
 	if _continue_button != null:
 		var key := _prompt(&"interact")
-		_continue_button.text = "结束  [%s]" % key if _index + 1 >= _lines.size() else "继续  [%s]" % key
+		var verb := "结束" if _index + 1 >= _lines.size() else "继续"
+		_continue_button.text = verb if touch else "%s  [%s]" % [verb, key]
 	if _inspire_button != null:
-		_inspire_button.text = "言灵对话  [%s]" % _prompt(&"npc_inspire")
+		_inspire_button.text = "言灵对话" if touch else "言灵对话  [%s]" % _prompt(&"npc_inspire")
 
 
 func _on_input_device_changed(_using_gamepad: bool) -> void:

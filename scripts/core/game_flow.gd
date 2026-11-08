@@ -40,6 +40,19 @@ var shake_scale: float = 1.0
 var flash_scale: float = 1.0
 ## Last device used. Menus and HUD read this through prompt_label().
 var using_gamepad := false
+## The touch screen is the device in the player's hands (1.0.1): set by a real
+## finger, cleared by a key, a physical mouse click or a controller.
+var using_touch := false
+var touch_overlay: TouchOverlay
+## Prompt names for the on-screen buttons (TouchOverlay labels).
+const TOUCH_LABELS := {
+	&"jump": "「跳」", &"attack": "「攻」", &"dodge": "「滚」", &"interact": "「交互」",
+	&"cast_1": "「言1」", &"cast_2": "「言2」", &"inventory": "「背包」", &"codex": "「图鉴」",
+	&"map": "「地图」", &"help": "「说明」", &"pause": "「暂停」", &"weapon_1": "「换武」",
+	&"weapon_2": "「换武」", &"move_left": "摇杆←", &"move_right": "摇杆→",
+	&"move_up": "摇杆↑", &"move_down": "摇杆↓", &"settings": "「暂停」→设置",
+	&"npc_inspire": "对话里的「言灵」", &"restart": "点按",
+}
 ## Set while the keybind page waits for the next button, so gameplay does not
 ## interpret the same press as an action.
 var input_capture_active := false
@@ -100,6 +113,11 @@ func _ready() -> void:
 	apply_master_volume()
 	apply_window_mode()
 	ensure_actions()
+	touch_overlay = TouchOverlay.new()
+	touch_overlay.name = "TouchOverlay"
+	add_child(touch_overlay)
+	apply_touch_settings()
+	using_touch = OS.has_feature("mobile") and profile.touch_mode != 2
 	apply_keybinds(profile)
 	# The window close button must first give the active run a chance to save.
 	# Explicit quit() calls (pause menu, tests) still exit immediately.
@@ -110,18 +128,49 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	# Observe only: never consume. This keeps menu prompts in sync with the
 	# device the player actually touched.
-	if event is InputEventKey:
+	if event is InputEventScreenTouch:
+		if (event as InputEventScreenTouch).pressed:
+			_set_using_touch(true)
+	elif event is InputEventKey:
 		if (event as InputEventKey).pressed:
+			_set_using_touch(false)
 			_set_using_gamepad(false)
 	elif event is InputEventMouseButton:
-		if (event as InputEventMouseButton).pressed:
+		# Fingers also arrive as emulated mouse clicks (device -1); only a
+		# physical mouse leaves touch mode.
+		if (event as InputEventMouseButton).pressed and event.device != InputEvent.DEVICE_ID_EMULATION:
+			_set_using_touch(false)
 			_set_using_gamepad(false)
 	elif event is InputEventJoypadButton:
 		if (event as InputEventJoypadButton).pressed:
+			_set_using_touch(false)
 			_set_using_gamepad(true)
 	elif event is InputEventJoypadMotion:
 		if absf((event as InputEventJoypadMotion).axis_value) > 0.5:
 			_set_using_gamepad(true)
+
+
+func _set_using_touch(value: bool) -> void:
+	if profile != null and profile.touch_mode == 2:
+		value = false
+	if using_touch == value:
+		return
+	using_touch = value
+	if value:
+		using_gamepad = false
+	input_device_changed.emit(using_gamepad)
+
+
+## Settings → touch controls: size, opacity, and auto / always / never.
+func apply_touch_settings() -> void:
+	if touch_overlay == null or profile == null:
+		return
+	touch_overlay.size_scale = clampf(profile.touch_scale, 0.7, 1.4)
+	touch_overlay.opacity = clampf(profile.touch_opacity, 0.25, 0.95)
+	touch_overlay.force_visible = profile.touch_mode == 1
+	if profile.touch_mode == 2 and using_touch:
+		_set_using_touch(false)
+	touch_overlay.layout()
 
 
 func _set_using_gamepad(value: bool) -> void:
@@ -370,6 +419,8 @@ static func input_label(action: StringName) -> String:
 
 ## The single prompt for the device currently in the player's hands.
 func prompt_label(action: StringName) -> String:
+	if using_touch and TOUCH_LABELS.has(action):
+		return String(TOUCH_LABELS[action])
 	if using_gamepad:
 		var pad := joypad_label(action)
 		if not pad.is_empty():
@@ -380,6 +431,8 @@ func prompt_label(action: StringName) -> String:
 ## Prompt for leaving a modal page. Controller B is ui_cancel; keyboard pages
 ## may offer their own shortcuts (C, Tab, M...) plus Esc.
 func close_prompt(keyboard_alts: String = "Esc") -> String:
+	if using_touch:
+		return "点按"
 	if using_gamepad:
 		var pad := joypad_label(&"ui_cancel")
 		if not pad.is_empty():
@@ -478,6 +531,9 @@ func reset_profile() -> void:
 		profile.text_scale = old.text_scale
 		profile.master_volume = old.master_volume
 		profile.fullscreen = old.fullscreen
+		profile.touch_mode = old.touch_mode
+		profile.touch_scale = old.touch_scale
+		profile.touch_opacity = old.touch_opacity
 		profile.grimoire = old.grimoire.duplicate(true)
 		profile.keybinds = old.keybinds.duplicate()
 		profile.joybinds = old.joybinds.duplicate()

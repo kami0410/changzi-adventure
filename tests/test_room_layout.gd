@@ -19,8 +19,11 @@ func _test_layout_resource(t: Callable) -> void:
 	if layout == null:
 		return
 	t.call(layout.floor_row, 35, "ch1_floor_row_is_35")
-	var expected_rows: Array[int] = [30, 28]
-	t.call(layout.platform_rows, expected_rows, "ch1_platform_rows_are_30_and_28")
+	# 1.0.1: raised so walkers pass under the lower ledge (double jump reach).
+	var expected_rows: Array[int] = [27, 24]
+	t.call(layout.platform_rows, expected_rows, "ch1_platform_rows_are_27_and_24")
+	var clearance := (layout.floor_row - layout.platform_rows[0] - 1) * 16
+	t.call(clearance >= 96, true, "ch1_lower_ledge_clearance")
 	t.call(layout.tile_set != null, true, "ch1_layout_has_tileset")
 
 
@@ -51,12 +54,21 @@ func _test_room_geometry(t: Callable) -> void:
 		t.call(ground.get_used_cells().size(), 80, "ch1_ground_collision_is_one_surface_row")
 	if ground_fill != null:
 		t.call(ground_fill.collision_enabled, false, "ch1_ground_fill_has_no_collision")
-		t.call(ground_fill.get_used_cells().size(), 720, "ch1_ground_fill_covers_nine_rows")
+		var inside := 0
+		var outside := 0
+		for cell in ground_fill.get_used_cells():
+			if cell.x >= 0 and cell.x < 80:
+				inside += 1
+			else:
+				outside += 1
+		t.call(inside, 720, "ch1_ground_fill_covers_nine_rows")
+		# 1.0.1: wide screens see ground continue past both walls.
+		t.call(outside > 0, true, "ch1_ground_bleeds_past_walls")
 	if platforms != null:
 		var top_row := 999
 		for cell in platforms.get_used_cells():
 			top_row = mini(top_row, cell.y)
-		t.call(top_row, 30, "ch1_first_platform_surface_row_30")
+		t.call(top_row in [24, 27], true, "ch1_platform_surface_on_layout_rows")
 		t.call(platforms.get_used_cells().size(), 30, "ch1_platform_collision_is_surface_only")
 	if platforms_fill != null:
 		t.call(platforms_fill.collision_enabled, false, "ch1_platform_fill_has_no_collision")

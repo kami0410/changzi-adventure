@@ -114,7 +114,8 @@ func _build_floor_tiles() -> void:
 	top.name = "FloorTiles"
 	top.tile_set = tiles_set
 	top.collision_enabled = false
-	for column in 80:
+	# 20 extra columns either side: wide (20:9) screens see the floor go on.
+	for column in range(-20, 100):
 		top.set_cell(Vector2i(column, top_row), 0,
 			TileVariants.pick(tiles_set, Vector2i(0, 0), column, top_row))
 		for row in range(top_row + 1, 46):
@@ -145,6 +146,13 @@ func _apply_background_art() -> void:
 		# Pushed back in value so the characters read in front (art-spec bands).
 		sprite.modulate = layer[3]
 		add_child(sprite)
+		# Mirrored copies either side for wide screens (1.0.1).
+		for side in [-1.0, 1.0]:
+			var copy := sprite.duplicate() as Sprite2D
+			copy.name = "%s_%s" % [sprite.name, "L" if side < 0.0 else "R"]
+			copy.flip_h = true
+			copy.position.x += side * float(sprite.texture.get_width())
+			add_child(copy)
 	for node_name in ["Background", "SkyGlow", "Moon", "ShelfA", "ShelfA_Spines", "ShelfB", "ShelfB_Spines", "ShelfC", "ShelfC_Spines"]:
 		var node := get_node_or_null(node_name)
 		if node != null:

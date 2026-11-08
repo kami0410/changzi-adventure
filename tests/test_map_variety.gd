@@ -141,7 +141,7 @@ func _test_room_variety(t: Callable) -> void:
 				for other in placed:
 					var rise := other.position.y - rect.position.y
 					var gap := maxf(maxf(other.position.x - rect.end.x, rect.position.x - other.end.x), 0.0)
-					if rise >= RoomVariety.RISE_MIN - 0.1 and rise <= BigRoomData.MAX_STEP + 0.1 							and gap <= RoomVariety.MAX_GAP + 0.1:
+					if rise >= RoomVariety.RISE_MIN - 0.1 and rise <= RoomVariety.RISE_MAX + 0.1 							and gap <= RoomVariety.MAX_GAP + 0.1:
 						reachable = true
 				if not reachable:
 					ok = false

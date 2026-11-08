@@ -56,7 +56,8 @@ func _build() -> void:
 	_reroll.hide()
 	column.add_child(_reroll)
 	var hint := Label.new()
-	hint.text = "战斗已暂停。用方向键挑一页，按确认键收下。"
+	var flow := get_node_or_null("/root/Flow") as GameFlow
+	hint.text = "战斗已暂停。点一页收下。" if flow != null and flow.using_touch else "战斗已暂停。用方向键挑一页，按确认键收下。"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UIPalette.BONE_DIM)
 	column.add_child(hint)

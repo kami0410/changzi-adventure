@@ -168,6 +168,50 @@ func _on_input_device_changed(_using_gamepad: bool) -> void:
 	_refresh_close_hint()
 
 
+## Touch controls (1.0.1): when to show them, button size and opacity.
+func _add_touch_options(box: Node, flow: GameFlow) -> void:
+	if flow.profile == null:
+		return
+	var mode := OptionButton.new()
+	mode.name = "TouchModeOption"
+	for label in ["触屏按键：自动", "触屏按键：始终显示", "触屏按键：隐藏"]:
+		mode.add_item(label)
+	mode.selected = clampi(flow.profile.touch_mode, 0, 2)
+	mode.item_selected.connect(func(index: int):
+		flow.profile.touch_mode = index
+		flow.apply_touch_settings()
+		_persist_setting(flow))
+	box.add_child(mode)
+	var row := HBoxContainer.new()
+	row.name = "TouchSizeRow"
+	row.add_theme_constant_override("separation", 8)
+	var sizes := [0.85, 1.0, 1.2]
+	var size_option := OptionButton.new()
+	size_option.name = "TouchSizeOption"
+	for label in ["按键 小", "按键 中", "按键 大"]:
+		size_option.add_item(label)
+	size_option.selected = 0 if flow.profile.touch_scale < 0.93 else (2 if flow.profile.touch_scale > 1.1 else 1)
+	size_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_option.item_selected.connect(func(index: int):
+		flow.profile.touch_scale = float(sizes[index])
+		flow.apply_touch_settings()
+		_persist_setting(flow))
+	row.add_child(size_option)
+	var alphas := [0.4, 0.6, 0.8]
+	var alpha_option := OptionButton.new()
+	alpha_option.name = "TouchOpacityOption"
+	for label in ["透明度 淡", "透明度 中", "透明度 浓"]:
+		alpha_option.add_item(label)
+	alpha_option.selected = 0 if flow.profile.touch_opacity < 0.5 else (2 if flow.profile.touch_opacity > 0.7 else 1)
+	alpha_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	alpha_option.item_selected.connect(func(index: int):
+		flow.profile.touch_opacity = float(alphas[index])
+		flow.apply_touch_settings()
+		_persist_setting(flow))
+	row.add_child(alpha_option)
+	box.add_child(row)
+
+
 func _add_accessibility_options() -> void:
 	if _accessibility_built:
 		return
@@ -210,6 +254,7 @@ func _add_accessibility_options() -> void:
 	text_option.selected = maxi(sizes.find(current_size), 0)
 	text_option.item_selected.connect(func(index: int): _set_text_scale(int(sizes[index])))
 	box.add_child(text_option)
+	_add_touch_options(box, flow)
 	var ai_button := Button.new()
 	ai_button.text = "AI 言灵设置"
 	ai_button.pressed.connect(func():
