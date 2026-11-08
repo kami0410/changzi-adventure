@@ -660,10 +660,10 @@ func _on_npc_inspiration_closed() -> void:
 
 ## AI replaces the offline reply; it must never add a second mechanical effect.
 ## One NPC effect per Hub visit, whether it came from offline or AI.
-func _apply_inspiration_effect(npc_id: StringName, effect: Dictionary, ai_configured: bool) -> Dictionary:
+func _apply_inspiration_effect(npc_id: StringName, effect: Dictionary, ai_configured: bool, from_ai := false) -> Dictionary:
 	if ai_configured:
 		return {}
-	return NPCProfiles.apply_effect_once(profile, npc_id, effect, _npc_effect_used)
+	return NPCProfiles.apply_effect_once(profile, npc_id, effect, _npc_effect_used, from_ai)
 
 
 ## The AI sees the same tier the offline evaluator sees. The keys are optional
@@ -709,7 +709,7 @@ func _on_npc_ai_ready(npc_id: StringName, sentence: String, reply: String, data:
 	if npc_id != _inspire_pending_npc:
 		return
 	npc_inspire_ui.set_busy(false)
-	var applied := _apply_inspiration_effect(npc_id, data.get("effect", {}), false)
+	var applied := _apply_inspiration_effect(npc_id, data.get("effect", {}), false, true)
 	npc_inspire_ui.show_reply(reply, String(data.get("mood", "neutral")))
 	var summary := _npc_effect_summary(applied)
 	if not summary.is_empty():
@@ -795,6 +795,10 @@ func _npc_effect_summary(applied: Dictionary) -> String:
 		"fragments": "记忆碎片 +",
 		"corruption": "起始污染 +",
 		"trust": "信任 +",
+		"start_health": "下一局起始生命 +",
+		"start_ink": "下一局起始墨量 +",
+		"start_relics": "下一局起始遗物 +",
+		"weapon_damage": "武器伤害永久 +",
 	}
 	var parts: Array[String] = []
 	for key in applied.keys():

@@ -32,6 +32,10 @@ signal status_changed(slot: int, remaining: float, total: float, cost: int, avai
 signal impact_requested(strength: float, freeze: float)
 ## A purification phrase actually removed pollution; game.gd announces it.
 signal purified(amount: int)
+## 言灵权能 that need the level (reveal / unlock / conjure); game.gd applies them.
+signal world_power_requested(power: StringName, amount: float)
+## Every world power a cast applied, for the HUD toast.
+signal world_powers_cast(powers: Array[StringName])
 
 var cooldown_scale: float = 1.0
 var damage_scale: float = 1.0
@@ -192,6 +196,11 @@ func _cast_spell(phrase: ResolvedPhrase) -> void:
 	var layers := _layers_for(ctx, shape)
 	for layer in layers:
 		_cast_layer(ctx.fork(), layer)
+	if WorldPowers.has_any(phrase.components):
+		var applied := WorldPowers.apply(ctx, phrase.components, _target_list(), func(power: StringName, amount: float) -> void:
+			world_power_requested.emit(power, amount))
+		if not applied.is_empty():
+			world_powers_cast.emit(applied)
 	_apply_corruption(phrase, phrase.components)
 	if ctx.total_dealt() > 0 and ctx.can_draw():
 		CombatFX.spawn(ctx.fx_host, ctx.origin + Vector2(0, -24), &"number", Color("f1ddae"), ctx.direction.x, 30, ctx.total_dealt())

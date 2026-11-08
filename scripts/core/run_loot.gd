@@ -119,6 +119,9 @@ static func weapon_for_run(source: WeaponData, profile: Profile, room_number: in
 		bonded_damage = int(round(
 			profile.npc_blessing(&"ayan", "damage", 0.0)
 			+ profile.npc_blessing(&"wenjin", "damage", 0.0)
+			+ profile.npc_blessing(&"luchen", "damage", 0.0)
+			+ profile.npc_blessing(&"guru", "damage", 0.0)
+			+ profile.npc_blessing(&"baiyu", "damage", 0.0)
 			+ profile.npc_blessing(&"ayan", "forge_bonus", 0.0) * 3.0
 		))
 	weapon.damage += level * 2 + room_number * 2 + bonded_damage

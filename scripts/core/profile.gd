@@ -44,6 +44,11 @@ var discovered_phrases: Array[String] = []
 ## mapped to word ids without guessing, so they are kept verbatim for data
 ## safety but never displayed or consulted by any gameplay logic.
 var legacy_discovered_phrases: Array[String] = []
+## 言灵法典 (1.0): sentences the player chose to keep, across runs. Each entry
+## is {"text", "name", "intent"}; intent holds the AI's reading (empty for an
+## offline sentence), so an AI spell can be re-forged without asking again.
+const GRIMOIRE_MAX := 12
+var grimoire: Array[Dictionary] = []
 var endings: Array[String] = []
 var runs_completed: int = 0
 var records_found: int = 0
@@ -305,6 +310,27 @@ func record_npc_event(event_id: String) -> bool:
 	return true
 
 
+## Keeps a sentence in the grimoire (re-saving the same text updates it; the
+## oldest entry leaves when it is full). Returns false for empty text.
+func add_grimoire(text: String, display_name: String, intent: Dictionary = {}) -> bool:
+	var cleaned := text.strip_edges()
+	if cleaned.is_empty():
+		return false
+	for i in grimoire.size():
+		if String(grimoire[i].get("text", "")) == cleaned:
+			grimoire.remove_at(i)
+			break
+	grimoire.append({"text": cleaned, "name": display_name.substr(0, 24), "intent": intent.duplicate(true)})
+	while grimoire.size() > GRIMOIRE_MAX:
+		grimoire.remove_at(0)
+	return true
+
+
+func remove_grimoire(index: int) -> void:
+	if index >= 0 and index < grimoire.size():
+		grimoire.remove_at(index)
+
+
 func save_profile(path: String = "user://profile.cfg") -> void:
 	var config := ConfigFile.new()
 	config.set_value("meta", "version", SAVE_VERSION)
@@ -332,6 +358,7 @@ func save_profile(path: String = "user://profile.cfg") -> void:
 	config.set_value("npc", "blessings", npc_blessings)
 	config.set_value("npc", "trust", npc_trust)
 	config.set_value("npc", "events", npc_events)
+	config.set_value("codex", "grimoire", grimoire)
 	config.set_value("input", "keybinds", keybinds)
 	config.set_value("input", "joybinds", joybinds)
 
@@ -451,6 +478,16 @@ func load_profile(path: String = "user://profile.cfg") -> bool:
 	shake_scale = clampf(_as_float(config.get_value("settings", "shake_scale", 1.0), 1.0), 0.0, 1.0)
 	flash_scale = clampf(_as_float(config.get_value("settings", "flash_scale", 1.0), 1.0), 0.0, 1.0)
 	master_volume = clampf(_as_float(config.get_value("settings", "master_volume", 1.0), 1.0), 0.0, 1.0)
+
+	grimoire.clear()
+	for value in _as_array(config.get_value("codex", "grimoire", [])):
+		if value is Dictionary and grimoire.size() < GRIMOIRE_MAX:
+			var text := _as_string(value.get("text", "")).strip_edges()
+			if text.is_empty():
+				continue
+			var intent: Variant = value.get("intent", {})
+			grimoire.append({"text": text, "name": _as_string(value.get("name", "")),
+				"intent": intent if intent is Dictionary else {}})
 
 	npc_blessings = {}
 	var blessings := _as_dictionary(config.get_value("npc", "blessings", {}))

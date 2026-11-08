@@ -84,6 +84,10 @@ var aggro_vertical: float = INF
 var home: Vector2 = Vector2.INF
 var _patrol_dir: float = 1.0
 var _patrol_wait: float = 0.0
+## 言灵权能「改写敌名」: seconds left fighting for the player (0 = hostile).
+var _charmed_left: float = 0.0
+var _charm_cooldown: float = 0.0
+const CHARM_TINT := Color(0.62, 1.25, 1.15)
 
 
 func _process(_delta: float) -> void:
@@ -138,6 +142,9 @@ func _physics_process(delta: float) -> void:
 
 	tick_status_effects(delta)
 	_tick_flash(delta)
+	if _charmed_left > 0.0:
+		_tick_charmed(delta)
+		return
 	_attack_cooldown_left = maxf(_attack_cooldown_left - delta, 0.0)
 	_jump_cooldown_left = maxf(_jump_cooldown_left - delta, 0.0)
 
@@ -163,6 +170,69 @@ func _physics_process(delta: float) -> void:
 			velocity.y = move_toward(velocity.y, 0.0, 900.0 * delta)
 	else:
 		_update_ai(delta)
+	move_and_slide()
+
+
+func is_charmed() -> bool:
+	return _charmed_left > 0.0
+
+
+## Rewritten name: for [param seconds] the enemy hunts its own kind, cannot be
+## hit by either side, and falls when the borrowed name burns out (the kill
+## still counts for the room).
+func charm(seconds: float) -> void:
+	if dead or seconds <= 0.0:
+		return
+	_charmed_left = maxf(_charmed_left, seconds)
+	_stun_left = 0.0
+	remove_from_group("enemies")
+	collision_layer = 0
+	if state == STATE_ATTACK:
+		state = STATE_CHASE
+	sprite_base_modulate = CHARM_TINT
+	if sprite_visual != null and is_instance_valid(sprite_visual):
+		sprite_visual.modulate = CHARM_TINT
+
+
+func _tick_charmed(delta: float) -> void:
+	_charmed_left = maxf(_charmed_left - delta, 0.0)
+	_charm_cooldown = maxf(_charm_cooldown - delta, 0.0)
+	if _charmed_left <= 0.0:
+		take_damage(maxi(health, 1))
+		return
+	var prey: Enemy = null
+	var best := 900.0
+	if is_inside_tree():
+		for node in get_tree().get_nodes_in_group("enemies"):
+			var other := node as Enemy
+			if other == null or other == self or other.dead:
+				continue
+			var d := global_position.distance_to(other.global_position)
+			if d < best:
+				best = d
+				prey = other
+	var goal := global_position
+	if prey != null:
+		goal = prey.global_position
+	elif target != null and is_instance_valid(target):
+		goal = target.global_position + Vector2(-90.0 * _facing, 0)
+	var to_goal := goal - global_position
+	var speed := get_move_speed() * 1.2
+	if apply_gravity:
+		velocity.x = signf(to_goal.x) * speed if absf(to_goal.x) > 24.0 else move_toward(velocity.x, 0.0, speed)
+		if not is_on_floor():
+			velocity.y += gravity * delta
+	else:
+		velocity = to_goal.normalized() * speed if to_goal.length() > 24.0 else velocity.move_toward(Vector2.ZERO, speed)
+	if absf(to_goal.x) > 4.0:
+		_face_direction(to_goal.x)
+	if prey != null and best <= maxf(attack_range, 56.0) + 24.0 and _charm_cooldown <= 0.0:
+		_charm_cooldown = maxf(attack_cooldown, 0.6)
+		prey.take_damage(maxi(int(roundf(get_attack_damage() * 1.5)), 1))
+		if _motion != null:
+			_motion.play(&"attack", 0.2)
+		if is_inside_tree():
+			CombatFX.spawn(get_parent(), prey.global_position + Vector2(0, -24), &"slash", CHARM_TINT, _facing, 60)
 	move_and_slide()
 
 

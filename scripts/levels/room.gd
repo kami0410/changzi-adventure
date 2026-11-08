@@ -75,6 +75,12 @@ func lock_until_cleared() -> void:
 		_finish_room()
 
 
+## 言灵「破封」: the doors open while the fight goes on; the room still
+## settles when its last enemy falls.
+func open_doors() -> void:
+	_set_doors_locked(false)
+
+
 func is_locked() -> bool:
 	return _locked
 

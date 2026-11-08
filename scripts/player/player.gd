@@ -172,6 +172,11 @@ func grant_shield(amount: int, duration: float) -> void:
 	_shield_left = maxf(_shield_left, duration)
 	_effect(&"cast", Color("8bbfe5"), 60)
 
+## 言灵权能「无敌」: incoming hits are ignored for [param seconds].
+func grant_invulnerability(seconds: float) -> void:
+	if seconds > 0.0:
+		_invulnerable_left = maxf(_invulnerable_left, seconds)
+
 func grant_haste(multiplier: float, duration: float) -> void:
 	_haste = maxf(_haste, multiplier)
 	_haste_left = maxf(_haste_left, duration)

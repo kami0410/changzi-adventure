@@ -19,7 +19,10 @@ const EFFECT_LABELS := {
 	&"ink_gain": "回墨", &"duration": "持续", &"projectile": "弹道", &"summon": "召唤", &"shield": "护盾",
 	&"move_speed": "移速增幅", &"projectiles": "弹幕", &"pulses": "连发", &"spread": "扇面",
 	&"burn": "灼烧", &"chain": "连锁", &"knockback": "击退", &"homing": "追踪", &"pierce": "贯穿",
-	&"explosion": "爆裂", &"stun": "定身", &"pull": "吸入",
+	&"explosion": "爆裂", &"stun": "定身", &"pull": "吸入", &"purify": "净化",
+	&"time_stop": "时停", &"execute": "处决线", &"charm": "改写敌名", &"blink": "瞬移",
+	&"invulnerable": "无敌", &"terrain": "墨阶", &"reveal": "揭图", &"unlock": "破封",
+	&"conjure": "写出残页",
 }
 
 var _words_title: Label = null
@@ -55,6 +58,12 @@ var _ai_status: Label = null
 ## device switch or rebind can rebuild that key without touching AI results.
 var _ai_config_hint := false
 var _close_button: Button = null
+## 言灵法典: the sentence behind the current forge preview and the AI reading
+## that produced it (empty when offline), so it can be kept and re-forged.
+var _last_text := ""
+var _last_intent: Dictionary = {}
+var _keep_button: Button = null
+var _grimoire_box: HFlowContainer = null
 ## Set while a multi-source boot update assigns its fields, so the grids are
 ## rebuilt once at the end instead of after every setter.
 var _suspend_refresh := false
@@ -248,6 +257,8 @@ func _on_ai_intent(sentence: String, intent: Dictionary) -> void:
 	if phrase == null:
 		_set_ai_status("AI 意图未通过本地校验，已保留离线推演。")
 		return
+	_last_text = sentence
+	_last_intent = intent.duplicate(true)
 	_selected_words.clear()
 	_refresh_words()
 	_last_forge_phrase = phrase
@@ -271,8 +282,11 @@ func _on_free_text_submitted(text: String) -> void:
 	if phrase == null:
 		_forge_label.text = "至少说出一个字。"
 		_last_forge_phrase = null
+		_last_text = ""
 		_update_forge_actions()
 		return
+	_last_text = text.strip_edges()
+	_last_intent = {}
 	_selected_words.clear()
 	_refresh_words()
 	_last_forge_phrase = phrase
@@ -802,7 +816,7 @@ func _build_forge_actions() -> void:
 	examples.name = "FreeCastExamples"
 	examples.add_theme_constant_override("separation", 6)
 	box.add_child(examples)
-	for example in ["让雷落在火里", "把记忆烧成回声", "让时间停下来"]:
+	for example in ["让雷落在火里", "让时间停五秒", "铺一条通天的墨阶", "让三个敌人为我而战"]:
 		var chip := Button.new()
 		chip.text = example
 		chip.add_theme_font_size_override("font_size", 12)
@@ -813,6 +827,22 @@ func _build_forge_actions() -> void:
 				_on_free_text_submitted(example)
 		)
 		examples.add_child(chip)
+	var grimoire_row := HBoxContainer.new()
+	grimoire_row.name = "GrimoireRow"
+	grimoire_row.add_theme_constant_override("separation", 8)
+	var grimoire_label := Label.new()
+	grimoire_label.text = "法典"
+	grimoire_label.add_theme_font_size_override("font_size", 12)
+	grimoire_label.add_theme_color_override("font_color", UIPalette.GOLD)
+	grimoire_row.add_child(grimoire_label)
+	_grimoire_box = HFlowContainer.new()
+	_grimoire_box.name = "Grimoire"
+	_grimoire_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_grimoire_box.add_theme_constant_override("h_separation", 6)
+	_grimoire_box.add_theme_constant_override("v_separation", 4)
+	grimoire_row.add_child(_grimoire_box)
+	box.add_child(grimoire_row)
+	_refresh_grimoire()
 	_ai_status = Label.new()
 	_ai_status.name = "AIStatus"
 	_ai_status.add_theme_font_size_override("font_size", 12)
@@ -832,6 +862,15 @@ func _build_forge_actions() -> void:
 		button.pressed.connect(_request_equip.bind(slot))
 		actions.add_child(button)
 		_equip_buttons.append(button)
+	_keep_button = Button.new()
+	_keep_button.name = "KeepButton"
+	_keep_button.text = "收入法典"
+	_keep_button.tooltip_text = "把这句话（连同 AI 的解读）留在法典里，之后每一局都能一键重铸"
+	_keep_button.focus_mode = Control.FOCUS_ALL
+	_keep_button.add_theme_font_size_override("font_size", 12)
+	_keep_button.disabled = true
+	_keep_button.pressed.connect(keep_in_grimoire)
+	actions.add_child(_keep_button)
 	var clear_button := Button.new()
 	clear_button.text = "清空选择"
 	clear_button.focus_mode = Control.FOCUS_ALL
@@ -848,6 +887,8 @@ func _build_forge_actions() -> void:
 func _update_forge_actions() -> void:
 	for button in _equip_buttons:
 		button.disabled = _last_forge_phrase == null
+	if _keep_button != null:
+		_keep_button.disabled = _last_forge_phrase == null or _last_text.is_empty()
 	if _forge_status != null and _last_forge_phrase == null:
 		_forge_status.text = ""
 
@@ -860,9 +901,94 @@ func _request_equip(slot: int) -> void:
 		_forge_status.text = "已装备到短语 %d：%s" % [slot + 1, _last_forge_phrase.display_name]
 
 
+## Keeps the previewed sentence in the profile's grimoire.
+func keep_in_grimoire() -> bool:
+	var flow := _flow_node()
+	if _last_forge_phrase == null or _last_text.is_empty() or flow == null or flow.profile == null:
+		return false
+	if not flow.profile.add_grimoire(_last_text, _last_forge_phrase.display_name, _last_intent):
+		return false
+	if flow.auto_save:
+		flow.save_profile()
+	_refresh_grimoire()
+	if _forge_status != null:
+		_forge_status.text = "已收入法典：%s" % _last_forge_phrase.display_name
+	return true
+
+
+## Re-forges a kept sentence: the stored AI reading when there is one (no new
+## request), else the offline reading of the text.
+func forge_from_grimoire(index: int) -> ResolvedPhrase:
+	var flow := _flow_node()
+	if flow == null or flow.profile == null or index < 0 or index >= flow.profile.grimoire.size() or _run == null:
+		return null
+	var entry: Dictionary = flow.profile.grimoire[index]
+	var text := String(entry.get("text", ""))
+	var intent: Dictionary = entry.get("intent", {})
+	var phrase: ResolvedPhrase = null
+	if not intent.is_empty():
+		phrase = SpellSynthesizer.compile_intent(text, intent, _run.inventory.words)
+	if phrase == null:
+		phrase = SpellSynthesizer.synthesize(text, _run.inventory.words)
+	if phrase == null:
+		return null
+	if _free_text != null:
+		_free_text.text = text
+	_selected_words.clear()
+	_refresh_words()
+	_last_text = text
+	_last_intent = intent
+	_last_forge_phrase = phrase
+	_display_forge_phrase(phrase)
+	_update_forge_actions()
+	_set_ai_status("从法典重铸：%s%s" % [String(entry.get("name", text)), "（保留 AI 的解读）" if not intent.is_empty() else ""])
+	return phrase
+
+
+func _refresh_grimoire() -> void:
+	if _grimoire_box == null:
+		return
+	_clear(_grimoire_box)
+	var flow := _flow_node()
+	var entries: Array = flow.profile.grimoire if flow != null and flow.profile != null else []
+	if entries.is_empty():
+		var empty := Label.new()
+		empty.text = "还没有收下的句子。推演出满意的言灵后点“收入法典”。"
+		empty.add_theme_font_size_override("font_size", 12)
+		empty.add_theme_color_override("font_color", COLOR_DIM)
+		_grimoire_box.add_child(empty)
+		return
+	for i in entries.size():
+		var entry: Dictionary = entries[i]
+		var chip := Button.new()
+		var label := String(entry.get("name", ""))
+		if label.is_empty():
+			label = String(entry.get("text", "")).substr(0, 10)
+		chip.text = ("✦ " if not (entry.get("intent", {}) as Dictionary).is_empty() else "") + label
+		chip.tooltip_text = String(entry.get("text", ""))
+		chip.add_theme_font_size_override("font_size", 12)
+		chip.focus_mode = Control.FOCUS_ALL
+		chip.pressed.connect(forge_from_grimoire.bind(i))
+		_grimoire_box.add_child(chip)
+		var drop := Button.new()
+		drop.text = "×"
+		drop.tooltip_text = "从法典删去"
+		drop.add_theme_font_size_override("font_size", 12)
+		drop.pressed.connect(func():
+			var f := _flow_node()
+			if f != null and f.profile != null:
+				f.profile.remove_grimoire(i)
+				if f.auto_save:
+					f.save_profile()
+			_refresh_grimoire())
+		_grimoire_box.add_child(drop)
+
+
 func _clear_selection() -> void:
 	_selected_words.clear()
 	_last_forge_phrase = null
+	_last_text = ""
+	_last_intent = {}
 	if _free_text != null:
 		_free_text.text = ""
 	_refresh_words()

@@ -898,6 +898,8 @@ func _setup_phrase_caster() -> void:
 	phrase_caster.status_changed.connect(hud.set_phrase_status)
 	phrase_caster.impact_requested.connect(_on_spell_impact)
 	phrase_caster.purified.connect(_on_phrase_purified)
+	phrase_caster.world_power_requested.connect(_on_world_power)
+	phrase_caster.world_powers_cast.connect(_on_world_powers_cast)
 	for index in 2:
 		_set_phrase_identity(index, run_state.inventory.phrases[index])
 		phrase_caster.equip_phrase(index, run_state.inventory.phrases[index])
@@ -948,6 +950,27 @@ func _apply_npc_blessings() -> void:
 	var start_corruption := mini(int(round(float(pending.get("start_corruption", 0.0)))), 6)
 	if start_corruption > 0:
 		run_state.add_corruption(start_corruption)
+	_apply_ai_run_gifts(pending)
+
+
+## NPC gifts the AI granted with full authority (NPCProfiles.apply_effect with
+## from_ai): uncapped, next run only.
+func _apply_ai_run_gifts(pending: Dictionary) -> void:
+	var pages := int(round(float(pending.get("ai_start_pages", 0.0))))
+	if pages > 0:
+		run_state.add_pages(pages)
+	var health := int(round(float(pending.get("ai_start_health", 0.0))))
+	if health > 0 and player != null:
+		player.max_health += health
+		player.health += health
+		player.health_changed.emit(player.health, player.max_health)
+	var ink := int(round(float(pending.get("ai_start_ink", 0.0))))
+	if ink > 0:
+		run_state.max_ink += ink
+		run_state.restore_ink(ink)
+	var relics := mini(int(round(float(pending.get("ai_start_relics", 0.0)))), 12)
+	for i in relics:
+		_grant_unowned_relic()
 
 
 ## Relics bought from 咕噜 travel into the next run, then leave the stall.
@@ -2452,6 +2475,66 @@ func _end_corruption_frenzy() -> void:
 	# Back to tier 3 so the same 100 value cannot retrigger immediately.
 	run_state.set_corruption(mini(run_state.corruption, 90))
 	hud.show_message("发狂消退 · 生命上限恢复，污染回落到 %d" % run_state.corruption)
+
+
+## 言灵权能 that need the level (WorldPowers.GAME_POWERS).
+func _on_world_power(power: StringName, amount: float) -> void:
+	match power:
+		&"conjure":
+			var pages := maxi(int(roundf(amount)), 1)
+			run_state.add_pages(pages)
+			hud.show_message("言出法随：凭空写出 %d 张残页" % pages)
+		&"reveal":
+			var shown := reveal_chapter_map()
+			hud.show_message("言出法随：本章地图揭开（%d 个区域）" % shown)
+		&"unlock":
+			var opened := unlock_by_word()
+			hud.show_message("言出法随：封锁解除" if opened else "言出法随：这里没有可以打开的东西")
+
+
+## Marks every room of the current world visited on the map. Returns how many
+## rooms were newly shown.
+func reveal_chapter_map() -> int:
+	if _mds_world == null or _mds_world.world == null:
+		return 0
+	var shown := 0
+	for id in _mds_world.world.get_room_ids():
+		if not _mds_world.visited_rooms.has(id):
+			shown += 1
+		_mds_world.visited_rooms[id] = true
+		if _mds_world.map_view != null:
+			_mds_world.map_view.mark_visited(id)
+	return shown
+
+
+## Opens the doors of the locked room the player stands in (the fight still
+## counts when its enemies fall) and the chapter's hub shortcut.
+func unlock_by_word() -> bool:
+	var opened := false
+	for room in _rooms:
+		if is_instance_valid(room) and room.is_locked():
+			room.open_doors()
+			opened = true
+	if _mds_world != null and _chapter >= 1:
+		var flag := "ch%d_shortcut" % (_chapter + 1)
+		if not _mds_world.has_ability(flag):
+			_mds_world.grant_ability(flag)
+			opened = true
+	return opened
+
+
+func _on_world_powers_cast(powers: Array[StringName]) -> void:
+	var names: Array[String] = []
+	for power in powers:
+		if not power in WorldPowers.GAME_POWERS:
+			names.append(String(WorldPowers.LABELS.get(power, power)))
+	if names.is_empty():
+		return
+	if _screen_fx != null:
+		_screen_fx.flash(Color(0.75, 0.92, 1.0, 0.2), 0.25)
+	if powers.has(&"time_stop") and _hit_stop != null:
+		_hit_stop.freeze(0.12, 0.2)
+	hud.show_message("言灵权能：" + "、".join(names))
 
 
 func _on_phrase_purified(amount: int) -> void:

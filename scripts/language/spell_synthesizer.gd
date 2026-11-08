@@ -156,6 +156,19 @@ const SCALE_WORDS: Dictionary = {
 	&"burn": ["灼烧", "点燃", "焚烧", "燃尽"],
 	&"long": ["持续", "永久", "长久", "不灭", "一直"],
 }
+## 言灵权能 offline: phrase -> (component, value, extra ink, extra corruption).
+## Saying it is enough; the price is ink, cooldown and corruption.
+const POWER_WORDS: Dictionary = {
+	&"time_stop": [["时停", "时间停止", "停止时间", "时间静止", "冻结时间", "让时间停", "世界停", "定格"], 3.0, 12, 6],
+	&"execute": [["处决", "抹杀", "抹去", "斩杀", "删除", "除名", "一笔勾销"], 0.35, 10, 8],
+	&"charm": [["改写名字", "改写敌", "策反", "倒戈", "臣服", "为我而战", "效忠", "魅惑", "听我号令"], 2.0, 10, 6],
+	&"blink": [["瞬移", "闪现", "传送", "跃迁", "穿越", "缩地"], 300.0, 4, 1],
+	&"invulnerable": [["无敌", "不死", "不朽", "金身", "刀枪不入", "免疫一切"], 3.0, 10, 8],
+	&"terrain": [["阶梯", "台阶", "造桥", "铺路", "架桥", "通天", "登天", "平台", "墨阶"], 4.0, 6, 2],
+	&"reveal": [["揭示", "显现", "真相", "全知", "洞察", "看见一切", "地图", "照亮"], 1.0, 8, 3],
+	&"unlock": [["打开", "开门", "解锁", "破门", "破封", "解封", "钥匙"], 1.0, 6, 3],
+	&"conjure": [["残页", "财富", "点石成金", "造纸", "黄金", "宝藏"], 10.0, 8, 6],
+}
 const TARGET_SELF: Array[String] = ["自己", "自身", "我"]
 const TARGET_AREA: Array[String] = ["周围", "四周", "附近", "全场", "身边"]
 
@@ -217,6 +230,13 @@ static func analyze(text: String, known_words: Array) -> Dictionary:
 	}
 	for key in [&"homing", &"pierce", &"explosion", &"stun", &"knockback", &"pull", &"burn", &"long"]:
 		intent[key] = _contains_any(canonical, SCALE_WORDS[key])
+	var powers: Array[StringName] = []
+	for key in POWER_WORDS:
+		if _contains_any(canonical, POWER_WORDS[key][0]):
+			powers.append(StringName(key))
+	intent[&"powers"] = powers
+	intent[&"seconds"] = count_before(canonical, SECOND_MEASURES)
+	intent[&"power_count"] = count_before(canonical, POWER_MEASURES)
 	intent[&"count"] = count_before(canonical, COUNT_MEASURES)
 	intent[&"repeat"] = count_before(canonical, REPEAT_MEASURES)
 	var shape: StringName = &""
@@ -301,6 +321,13 @@ static func _apply_intent(phrase: ResolvedPhrase, analysis: Dictionary) -> void:
 		components[&"burn"] = float(components.get(&"burn", 0.0)) + 3.0
 	if bool(intent.get(&"long", false)):
 		components[&"duration"] = float(components.get(&"duration", 0.0)) + 3.0
+	var power_cost := 0
+	var power_corruption := 0
+	for key in intent.get(&"powers", []):
+		var spec: Array = POWER_WORDS[key]
+		components[key] = maxf(float(components.get(key, 0.0)), float(spec[1]))
+		power_cost += int(spec[2])
+		power_corruption += int(spec[3])
 	var count := int(intent.get(&"count", 0))
 	var repeat := int(intent.get(&"repeat", 0))
 	# 说得越大，代价越大：numbers in the sentence buy volume with ink, time and
@@ -315,10 +342,23 @@ static func _apply_intent(phrase: ResolvedPhrase, analysis: Dictionary) -> void:
 		phrase.spell[&"pulses"] = maxi(int(phrase.spell.get(&"pulses", 1)), repeat)
 		claim_cost += mini(repeat, 32) * 2
 		claim_corruption += maxi(repeat - 4, 0)
+	# A numbered world power scales with the number: "让时间停十秒",
+	# "造二十级台阶", "让五个敌人为我而战".
+	var seconds := int(intent.get(&"seconds", 0))
+	var power_count := int(intent.get(&"power_count", 0))
+	for key in intent.get(&"powers", []):
+		if seconds >= 1 and key in [&"time_stop", &"invulnerable"]:
+			components[key] = maxf(float(components[key]), float(seconds))
+			power_cost += mini(seconds, 60)
+			power_corruption += maxi(seconds - 3, 0)
+		elif power_count >= 2 and key in [&"charm", &"terrain", &"conjure"]:
+			components[key] = maxf(float(components[key]), float(power_count))
+			power_cost += mini(power_count, 60) / 2
+			power_corruption += maxi(power_count - 4, 0) / 2
 	phrase.components = components
-	phrase.ink_cost += claim_cost
-	phrase.cooldown += minf(float(claim_cost) * 0.04, 3.0)
-	phrase.corruption_gain += claim_corruption
+	phrase.ink_cost += claim_cost + power_cost
+	phrase.cooldown += minf(float(claim_cost + power_cost) * 0.04, 4.0)
+	phrase.corruption_gain += claim_corruption + power_corruption
 	var shape: StringName = StringName(analysis.get(&"shape", &""))
 	if shape != &"" and SpellStyle.NAMES.has(shape):
 		phrase.spell[&"shape"] = shape
@@ -518,6 +558,8 @@ const WILD_TAGS: Array[StringName] = [&"flame", &"thunder", &"blood", &"time", &
 ## spell releases ("三十道雷", "100 颗星") or how often it repeats ("三连斩").
 const COUNT_MEASURES: Array[String] = ["颗", "道", "发", "支", "枚", "根", "把", "只", "个", "条", "柄", "朵", "片", "团", "群"]
 const REPEAT_MEASURES: Array[String] = ["次", "重", "连", "轮", "段", "遍"]
+const SECOND_MEASURES: Array[String] = ["秒"]
+const POWER_MEASURES: Array[String] = ["颗", "道", "发", "支", "枚", "根", "把", "只", "个", "条", "柄", "朵", "片", "团", "群", "级", "阶", "页", "张", "名"]
 const DIGITS := {"零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
 const UNITS := {"十": 10, "百": 100, "千": 1000, "万": 10000}
 
@@ -623,6 +665,10 @@ const INTENT_COMPONENTS: Array[StringName] = [
 	&"summon", &"ink_gain", &"corruption_gain", &"burn", &"chain",
 	&"pulses", &"projectiles", &"spread", &"duration", &"knockback",
 	&"homing", &"pierce", &"explosion", &"stun", &"pull", &"move_speed",
+	&"purify",
+	# 言灵权能 (WorldPowers): the sentence rewrites the world, not just numbers.
+	&"time_stop", &"execute", &"charm", &"blink", &"invulnerable",
+	&"terrain", &"reveal", &"unlock", &"conjure",
 ]
 ## Below this confidence the AI admits it did not understand: the abyss
 ## finishes the sentence. Still strong, but it reads you back.

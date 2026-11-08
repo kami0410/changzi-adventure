@@ -310,19 +310,23 @@ const FORGE_BONUS_TOTAL_CAP := 3.0
 
 ## One mechanical effect per NPC per Hub visit. The `used` dictionary is owned
 ## by the Hub scene and therefore resets when the Hub is rebuilt.
-static func apply_effect_once(profile: Profile, npc_id: StringName, effect: Dictionary, used: Dictionary) -> Dictionary:
+static func apply_effect_once(profile: Profile, npc_id: StringName, effect: Dictionary, used: Dictionary, from_ai := false) -> Dictionary:
 	if profile == null or npc_id == &"":
 		return {}
 	if used.has(npc_id):
 		return {}
 	used[npc_id] = true
-	return apply_effect(profile, npc_id, effect)
+	return apply_effect(profile, npc_id, effect, from_ai)
 
 
 ## Apply the mechanical part of an NPC 言灵 with per-effect caps. Unknown keys
 ## are ignored. Start-of-run values go to pending_run_bonuses, not permanent
 ## blessings, so they cannot be stacked forever.
-static func apply_effect(profile: Profile, npc_id: StringName, effect: Dictionary) -> Dictionary:
+##
+## [param from_ai]: the AI speaks for the NPC with full authority (1.0). Its
+## numbers skip the offline caps; start-of-run gifts go to the ai_* pending
+## keys that game.gd applies uncapped. Still one effect per NPC per visit.
+static func apply_effect(profile: Profile, npc_id: StringName, effect: Dictionary, from_ai := false) -> Dictionary:
 	if profile == null:
 		return {}
 	var applied: Dictionary = {}
@@ -330,11 +334,12 @@ static func apply_effect(profile: Profile, npc_id: StringName, effect: Dictionar
 		var value := float(effect[key])
 		if not is_finite(value) or value <= 0.0:
 			continue
-		value = minf(value, float(EFFECT_LIMITS.get(String(key), INF)))
+		if not from_ai or String(key) in ["forge_discount", "shop_discount"]:
+			value = minf(value, float(EFFECT_LIMITS.get(String(key), INF)))
 		match String(key):
 			"forge_bonus":
 				var remaining := maxf(FORGE_BONUS_TOTAL_CAP - profile.npc_blessing(&"ayan", "forge_bonus", 0.0), 0.0)
-				value = minf(value, remaining)
+				value = value if from_ai else minf(value, remaining)
 				if value <= 0.0:
 					continue
 				profile.add_npc_blessing(&"ayan", "forge_bonus", value)
@@ -349,7 +354,27 @@ static func apply_effect(profile: Profile, npc_id: StringName, effect: Dictionar
 				profile.add_npc_blessing(&"guru", "shop_discount", value)
 				applied[key] = value
 			"map_pages":
-				profile.add_pending_run_bonus(&"start_pages", value)
+				profile.add_pending_run_bonus(&"ai_start_pages" if from_ai else &"start_pages", value)
+				applied[key] = value
+			"start_health":
+				if not from_ai:
+					continue
+				profile.add_pending_run_bonus(&"ai_start_health", value)
+				applied[key] = value
+			"start_ink":
+				if not from_ai:
+					continue
+				profile.add_pending_run_bonus(&"ai_start_ink", value)
+				applied[key] = value
+			"start_relics":
+				if not from_ai:
+					continue
+				profile.add_pending_run_bonus(&"ai_start_relics", value)
+				applied[key] = value
+			"weapon_damage":
+				if not from_ai:
+					continue
+				profile.add_npc_blessing(npc_id, "damage", value)
 				applied[key] = value
 			"intel":
 				profile.add_npc_blessing(&"wenjin", "intel", value)
