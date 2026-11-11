@@ -28,6 +28,10 @@
 - `resources/shaders/paper_grain.gdshader`：参考 **Paper Shaders**（Apache-2.0，https://shaders.paper.design ）的
   paper-texture 思路自行编写，未复制上游代码。
 
+- `assets/concept/magpie/*_sheet.png` 与由它们切出的 `assets/sprites/creatures/<id>/`（20 个：blank_man、breath_hound、choir_summoner、collapse_husk、echo_enemy、hanging_scribe、ink_archivist、ink_bomber、ink_hound、last_reader、lung_bell_guardian、lung_moth、mask_enemy、mirror_sniper、page_swarm、rust_whisperer、scribe_bug、seat_husk、smiling_archivist、typo_beast）：
+  2026-11-11 用 **Magpie MCP**（`mcp__magpie-image__generate_image`，工具未回报具体模型）以游戏内原立绘为参考图生成的
+  4×6 动作表（待机 / 移动 / 攻击 / 死亡），经 `tools/import_magpie_sheets.py` 去底、切帧、对齐身高与脚线；项目自用生成素材。
+
 ## 音频
 
 - 配乐为项目内程序化原创素材（`tools/generate_music.py`，v2：8 首 + 4 条战斗层，共用「名册」主导动机）；

@@ -1529,6 +1529,50 @@
       "history": [
         "2026-11-02 generated transparent strip, sliced and normalized with tools/slice_anim_sheet.py; reviewed in-engine at 1280x720"
       ]
+    },
+    {
+      "id": "creature_action_strips_1_1",
+      "role": "16 种敌人与 4 个 Boss 的逐帧动作条（待机 / 移动 / 蓄力 / 攻击 / 受击 / 死亡）",
+      "path": "assets/sprites/creatures/<id>/ ; 原始动作表 assets/concept/magpie/<id>_sheet.png",
+      "ids": [
+        "blank_man",
+        "breath_hound",
+        "choir_summoner",
+        "collapse_husk",
+        "echo_enemy",
+        "hanging_scribe",
+        "ink_archivist",
+        "ink_bomber",
+        "ink_hound",
+        "last_reader",
+        "lung_bell_guardian",
+        "lung_moth",
+        "mask_enemy",
+        "mirror_sniper",
+        "page_swarm",
+        "rust_whisperer",
+        "scribe_bug",
+        "seat_husk",
+        "smiling_archivist",
+        "typo_beast"
+      ],
+      "status": "animated-normalized",
+      "technical": {
+        "sheet_grid": "4x6",
+        "alpha": true,
+        "anchor": "bottom-center",
+        "normalization": "tools/import_magpie_sheets.py：alpha 阈值去底、连通域取形、缩放到原立绘身高、每行统一脚线",
+        "filtering_recommended": "nearest"
+      },
+      "source": {
+        "kind": "generated",
+        "tool": "Magpie MCP / mcp__magpie-image__generate_image",
+        "model": "未由工具回报",
+        "created_at": "2026-11-11",
+        "references": "各自的游戏内原立绘（assets/sprites/enemies、assets/sprites/bosses）",
+        "prompt": "ROLE/PURPOSE: production sprite sheet for a 2D side-view action game enemy. SUBJECT: the exact creature in the reference image; 4 rows x 6 columns, same creature, same size and facing in every cell. Row 1 IDLE, Row 2 MOVE, Row 3 ATTACK (2 wind-up, strike, impact, 2 recover), Row 4 DEATH (recoil, stagger, collapse, break apart, dissolve into ink).",
+        "license": "项目自用生成素材"
+      }
     }
   ],
   "known_gaps": [
