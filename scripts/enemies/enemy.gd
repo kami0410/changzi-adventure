@@ -113,6 +113,7 @@ func _process(_delta: float) -> void:
 		_motion = ActorMotion.new()
 		add_child(_motion)
 		_motion.bind(sprite_visual)
+		PixelSprite.apply_role(_motion, &"boss" if WorldPowers.is_boss(self) else &"enemy")
 		_motion.set_style(_style_from_name())
 		_motion.accent = telegraph_color
 		if health_bar != null:

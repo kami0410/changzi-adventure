@@ -140,6 +140,8 @@ var world_acts := WorldActs.new()
 ## Enemies a sentence made outside any encounter live here, so allies and
 ## strays never hold a room's doors shut.
 var _word_room: ArenaRoom
+## 1.1 readability: the veil between the backdrop and the play plane.
+var _depth_haze: DepthHaze
 ## 开口即言灵 (1.1): the one-line sentence input and its echo between uses.
 var _speak_bar: SpeakBar
 var _speak_cooldown := 0.0
@@ -318,6 +320,10 @@ func _ready() -> void:
 	_shop_ui.buy.connect(_on_shop_buy)
 	_shop_ui.closed.connect(_on_shop_closed)
 	_setup_speak_bar()
+	_depth_haze = DepthHaze.new()
+	_depth_haze.name = "DepthHaze"
+	_depth_haze.target = player
+	add_child(_depth_haze)
 	_screen_fx = ScreenFX.new()
 	add_child(_screen_fx)
 	_hit_stop = HitStop.new()
@@ -1853,6 +1859,8 @@ func _start_mds_chapter(index: int) -> void:
 	_teardown_mds(not resume)
 	_chapter = chapter_index
 	var chapter := CampaignData.chapter(chapter_index)
+	if _depth_haze != null:
+		_depth_haze.set_look(StringName(chapter.get("id", &"")))
 	_chapter_plan = _load_chapter_plan(chapter_index)
 	_event_room_id = ""
 	_mds_active = true

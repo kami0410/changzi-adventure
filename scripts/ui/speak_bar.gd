@@ -90,6 +90,15 @@ func _build() -> void:
 	_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_line.custom_minimum_size = Vector2(0, 40)
 	_line.add_theme_font_size_override("font_size", 16)
+	# The bar sits on ink, not on a paper page: the theme's paper controls
+	# (dark text on a clear button) would vanish here.
+	_line.add_theme_color_override("font_color", PAPER)
+	_line.add_theme_color_override("font_placeholder_color", Color(PAPER, 0.38))
+	_line.add_theme_color_override("caret_color", TEAL)
+	_line.add_theme_color_override("font_uneditable_color", Color(PAPER, 0.5))
+	_line.add_theme_stylebox_override("normal", _field(Color(TEAL, 0.45)))
+	_line.add_theme_stylebox_override("focus", _field(TEAL))
+	_line.add_theme_stylebox_override("read_only", _field(Color(GOLD, 0.6)))
 	_line.text_submitted.connect(_submit)
 	row.add_child(_line)
 	_send = Button.new()
@@ -97,6 +106,7 @@ func _build() -> void:
 	_send.text = "说出"
 	_send.custom_minimum_size = Vector2(76, 40)
 	_send.pressed.connect(func() -> void: _submit(_line.text))
+	_dress(_send, true)
 	row.add_child(_send)
 
 	_chips = HBoxContainer.new()
@@ -199,7 +209,49 @@ func _refresh_chips() -> void:
 		chip.add_theme_font_size_override("font_size", 12)
 		chip.custom_minimum_size = Vector2(0, 30)
 		chip.pressed.connect(_submit.bind(sentence))
+		_dress(chip, false)
 		_chips.add_child(chip)
+
+
+## The sentence field: a well of darker ink with one bright line under it.
+func _field(line: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.02, 0.05, 0.065, 0.96)
+	style.border_color = line
+	style.border_width_bottom = 2
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 6.0
+	style.content_margin_bottom = 6.0
+	return style
+
+
+## On-ink buttons. [param solid] is the one primary action (teal block, ink
+## text); the rest are quiet outlined chips.
+func _dress(button: Button, solid: bool) -> void:
+	for state: String in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var style := StyleBoxFlat.new()
+		var lit := state == "hover" or state == "focus"
+		if solid:
+			style.bg_color = TEAL if not lit else Color("c4fff6")
+			if state == "pressed":
+				style.bg_color = Color("5fbfb3")
+			elif state == "disabled":
+				style.bg_color = Color(TEAL, 0.22)
+		else:
+			style.bg_color = Color(TEAL, 0.2 if lit or state == "pressed" else 0.07)
+			style.border_color = Color(TEAL, 0.9 if lit else 0.4)
+			style.set_border_width_all(1)
+		style.set_corner_radius_all(2)
+		style.content_margin_left = 10.0
+		style.content_margin_right = 10.0
+		style.content_margin_top = 4.0
+		style.content_margin_bottom = 4.0
+		button.add_theme_stylebox_override(state, style)
+	var text := INK if solid else PAPER
+	for role: String in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color"]:
+		button.add_theme_color_override(role, text)
+	button.add_theme_color_override("font_disabled_color", Color(PAPER, 0.45))
 
 
 func _submit(text: String) -> void:

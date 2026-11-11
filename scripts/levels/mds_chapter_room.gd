@@ -220,6 +220,7 @@ func _build_ground() -> void:
 					TileVariants.fill(active.tile_set, GROUND_FILL_TILE, row - active.floor_row))
 		add_child(fill)
 		add_child(tiles)
+		SurfaceEdge.trace(tiles)
 		return
 	var ground := StaticBody2D.new()
 	ground.name = "Ground"
@@ -252,6 +253,7 @@ func _build_platforms() -> void:
 					TileVariants.pick(active.tile_set, PLATFORM_FILL_TILE, column + 7, row))
 		add_child(fill)
 		add_child(tiles)
+		SurfaceEdge.trace(tiles)
 		return
 	var positions: Array[Vector2] = []
 	match platform_pattern % 3:

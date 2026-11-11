@@ -220,7 +220,8 @@ func _run() -> void:
 	check(not bar.is_open() and not paused, "speak_closes_and_resumes")
 	check(heard.has("wall"), "spoken_sentence_takes_effect")
 	check(scene.run_state.ink < ink_full, "spoken_sentence_costs_ink")
-	check(scene._speak_cooldown >= scene.SPEAK_MIN_COOLDOWN, "spoken_sentence_echoes")
+	# Two frames have already run off the echo by now.
+	check(scene._speak_cooldown > scene.SPEAK_MIN_COOLDOWN - 0.5, "spoken_sentence_echoes")
 	scene._open_speak_bar()
 	check(not bar.is_open(), "speak_waits_for_the_echo")
 	# The AI path: the line waits, and a late or failed answer falls back.

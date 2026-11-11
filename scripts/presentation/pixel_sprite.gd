@@ -12,6 +12,14 @@ const ALPHA_THRESHOLD := 24
 
 static var _rects: Dictionary = {}
 static var _material: ShaderMaterial
+static var _role_materials: Dictionary = {}
+## 1.1 readability: who an actor is decides how its silhouette is traced —
+## [outline colour, outline strength, lit-rim colour, lit-rim strength].
+const ROLE_LOOKS := {
+	&"player": [Color("bff3ea"), 0.62, Color("eafffb"), 0.9],
+	&"enemy": [Color("e08a63"), 0.45, Color("ffc79e"), 0.75],
+	&"boss": [Color("f0a04e"), 0.6, Color("ffe0a8"), 0.85],
+}
 
 
 ## Pins the opaque bounds used for [param texture]. Animated actors give every
@@ -97,6 +105,25 @@ static func material() -> ShaderMaterial:
 		_material = ShaderMaterial.new()
 		_material.shader = PIXEL_SHADER
 	return _material
+
+
+## Same crisp sampling, with the silhouette traced for [param role]
+## (&"player", &"enemy", &"boss"). Unknown roles keep the shared material.
+static func apply_role(item: CanvasItem, role: StringName) -> void:
+	if item == null or not ROLE_LOOKS.has(role):
+		return
+	if not _role_materials.has(role):
+		var look: Array = ROLE_LOOKS[role]
+		var made := ShaderMaterial.new()
+		made.shader = PIXEL_SHADER
+		made.set_shader_parameter(&"outline_color", look[0])
+		made.set_shader_parameter(&"outline_strength", float(look[1]))
+		made.set_shader_parameter(&"rim_color", look[2])
+		made.set_shader_parameter(&"rim_strength", float(look[3]))
+		made.set_shader_parameter(&"edge_pixels", 1.25)
+		_role_materials[role] = made
+	item.material = _role_materials[role]
+	item.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 
 
 static func apply_material(item: CanvasItem) -> void:

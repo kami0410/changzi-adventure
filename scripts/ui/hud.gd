@@ -203,6 +203,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	_ensure_nodes()
+	_dress()
 	var profile := _profile()
 	apply_text_scale(profile.text_scale if profile != null else 16)
 	if _run != null:
@@ -499,6 +500,7 @@ func _refresh() -> void:
 	if _frenzy_seconds > 0:
 		set_frenzy(_frenzy_seconds)
 	_apply_bar(health_bar, _run.health, _run.max_health)
+	_show_health(_run.health, _run.max_health)
 	_apply_bar(ink_bar, _run.ink, _run.max_ink)
 	_apply_bar(corruption_bar, _run.corruption, 100)
 	_refresh_relics()
@@ -595,6 +597,7 @@ func _on_health_changed(current: int, maximum: int) -> void:
 		return
 	health_label.text = _health_text(current, maximum)
 	_apply_bar(health_bar, current, maximum)
+	_show_health(current, maximum)
 
 
 func _on_ink_changed(value: int) -> void:
@@ -661,6 +664,128 @@ func _on_inventory_changed() -> void:
 
 ## 言灵世界改写 (1.1): the rules a sentence left standing on the run, listed
 ## under the objective so the player can see what the world is bent into.
+# --- 1.1 dressing -----------------------------------------------------------
+# The HUD is ink laid over the scene, not boxes on top of it: the corner
+# panels melt toward the middle of the screen, every label carries a one-pixel
+# shadow, lost health lingers as a pale trail before it drains, and the frame
+# of the screen bleeds red while the player is close to death.
+
+const LOW_HEALTH_RATIO := 0.3
+const TRAIL_HOLD := 0.35
+const TRAIL_DRAIN := 0.45
+
+var _health_trail: ColorRect = null
+var _trail_ratio := 1.0
+var _health_ratio := 1.0
+var _trail_tween: Tween
+var _danger: ColorRect = null
+var _danger_tween: Tween
+
+
+func _dress() -> void:
+	var ui_root := get_node_or_null("UIRoot") as Control
+	if ui_root == null or _danger != null:
+		return
+	var hud_theme := ui_root.theme
+	if hud_theme != null:
+		hud_theme.set_color("font_shadow_color", "Label", Color(0.0, 0.01, 0.02, 0.85))
+		hud_theme.set_constant("shadow_offset_x", "Label", 1)
+		hud_theme.set_constant("shadow_offset_y", "Label", 1)
+	var left := ui_root.get_node_or_null("TopLeft") as PanelContainer
+	if left != null:
+		left.add_theme_stylebox_override("panel", _melting_panel(false))
+	var right := ui_root.get_node_or_null("TopRight") as PanelContainer
+	if right != null:
+		right.add_theme_stylebox_override("panel", _melting_panel(true))
+	if health_bar != null:
+		health_bar.custom_minimum_size.y = 8.0
+		_health_trail = ColorRect.new()
+		_health_trail.name = "Trail"
+		_health_trail.color = Color(UIPalette.BONE, 0.9)
+		_health_trail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_health_trail.visible = false
+		health_bar.add_child(_health_trail)
+	_danger = ColorRect.new()
+	_danger.name = "Danger"
+	_danger.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_danger.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_danger.visible = false
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://resources/shaders/danger_frame.gdshader")
+	_danger.material = material
+	ui_root.add_child(_danger)
+	ui_root.move_child(_danger, 0)
+
+
+func _melting_panel(mirrored: bool) -> StyleBoxTexture:
+	var gradient := Gradient.new()
+	var night := UIPalette.INK_NIGHT
+	if mirrored:
+		gradient.offsets = PackedFloat32Array([0.0, 0.3, 1.0])
+		gradient.colors = PackedColorArray([Color(night, 0.0), Color(night, 0.66), Color(night, 0.8)])
+	else:
+		gradient.offsets = PackedFloat32Array([0.0, 0.7, 1.0])
+		gradient.colors = PackedColorArray([Color(night, 0.8), Color(night, 0.66), Color(night, 0.0)])
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.width = 64
+	texture.height = 4
+	var style := StyleBoxTexture.new()
+	style.texture = texture
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
+	return style
+
+
+func is_danger_shown() -> bool:
+	return _danger != null and _danger.visible
+
+
+func _show_health(current: int, maximum: int) -> void:
+	_ensure_nodes()
+	_dress()
+	var ratio := clampf(float(current) / float(maxi(maximum, 1)), 0.0, 1.0)
+	if _health_trail != null:
+		if ratio < _health_ratio:
+			_trail_ratio = maxf(_trail_ratio, _health_ratio)
+			if _trail_tween != null:
+				_trail_tween.kill()
+			_trail_tween = create_tween()
+			_trail_tween.tween_interval(TRAIL_HOLD)
+			_trail_tween.tween_method(_set_trail, _trail_ratio, ratio, TRAIL_DRAIN)
+		else:
+			_trail_ratio = ratio
+		_health_ratio = ratio
+		_set_trail(_trail_ratio)
+	if _danger == null:
+		return
+	var low := current > 0 and ratio <= LOW_HEALTH_RATIO
+	if low == _danger.visible:
+		return
+	_danger.visible = low
+	if _danger_tween != null:
+		_danger_tween.kill()
+		_danger_tween = null
+	if low:
+		_danger_tween = create_tween().set_loops()
+		_danger_tween.tween_property(_danger, "modulate:a", 1.0, 0.55).from(0.45).set_trans(Tween.TRANS_SINE)
+		_danger_tween.tween_property(_danger, "modulate:a", 0.45, 0.55).set_trans(Tween.TRANS_SINE)
+
+
+func _set_trail(value: float) -> void:
+	_trail_ratio = value
+	if _health_trail == null or health_bar == null:
+		return
+	var width := health_bar.size.x
+	var from := _health_ratio * width
+	var span := (value - _health_ratio) * width
+	_health_trail.visible = span > 0.5
+	_health_trail.position = Vector2(from, 1.0)
+	_health_trail.size = Vector2(maxf(span, 0.0), maxf(health_bar.size.y - 2.0, 1.0))
+
+
 var _world_rules_label: Label = null
 var _world_rules_text: String = ""
 

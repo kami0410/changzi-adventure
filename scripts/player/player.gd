@@ -226,6 +226,7 @@ func _ready() -> void:
 		_motion = ActorMotion.new()
 		add_child(_motion)
 		_motion.bind(sprite_visual)
+		PixelSprite.apply_role(_motion, &"player")
 		# The roll frames already turn the body; ActorMotion only adds the trail.
 		_motion.roll_spin = false
 		_motion.set_style(ActorMotion.Style.HUMANOID)

@@ -36,8 +36,12 @@ func _run() -> void:
 		acts.apply(WorldActs.sanitize([{"do": "summon", "id": id, "count": 1, "seconds": 8, "hostile": 1}])[0], true)
 	await create_timer(0.9).timeout
 	await _capture(directory.path_join("02_painted_enemies"))
+	var hud := get_first_node_in_group(&"hud") as HUD
+	hud._show_health(120, 120)
+	hud._show_health(28, 120)
 	await create_timer(0.35).timeout
 	await _capture(directory.path_join("03_painted_enemies_later"))
+	hud._show_health(120, 120)
 
 	acts.perform(WorldActs.sanitize([
 		{"do": "shrink", "target": "all", "scale": 0.5, "seconds": 20},

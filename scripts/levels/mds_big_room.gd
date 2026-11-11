@@ -325,6 +325,8 @@ func _make_tile_layer(layer_name: String) -> TileMapLayer:
 	layer.collision_enabled = false
 	add_child(layer)
 	_track(layer)
+	if layer_name.ends_with("Tiles"):
+		SurfaceEdge.trace(layer)
 	return layer
 
 
