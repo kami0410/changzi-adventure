@@ -58,6 +58,15 @@ var graphics_quality: int = 0
 var touch_scale: float = 1.0
 var touch_opacity: float = 0.6
 var grimoire: Array[Dictionary] = []
+## 临行赠言 (1.1): what an AI-voiced NPC wrote onto the next run —
+## `{from, name, actions, rules}` in WorldActs' form. Spent when a run starts.
+var word_blessings: Array[Dictionary] = []
+## What each NPC remembers of earlier talks: npc id -> short lines, oldest
+## first. Sent back to the AI so the character can pick the thread up again.
+var npc_memory: Dictionary = {}
+const BLESSINGS_MAX := 3
+const NPC_MEMORY_LINES := 8
+const NPC_MEMORY_CHARS := 70
 var endings: Array[String] = []
 var runs_completed: int = 0
 var records_found: int = 0
@@ -291,6 +300,47 @@ func add_pending_run_bonus(key: StringName, amount: float) -> void:
 	pending_run_bonuses[String(key)] = float(pending_run_bonuses.get(String(key), 0.0)) + amount
 
 
+## Keeps an NPC's parting words for the next run. Returns false when there is
+## nothing in them the world can act on.
+func add_word_blessing(from: String, blessing: Dictionary) -> bool:
+	var actions := WorldActs.sanitize(blessing.get("actions", []))
+	var rules := WorldActs.sanitize_rules(blessing.get("rules", []))
+	if actions.is_empty() and rules.is_empty():
+		return false
+	word_blessings.append({"from": from.substr(0, 12), "name": _as_string(blessing.get("name", "")).substr(0, 16),
+		"actions": actions, "rules": rules})
+	while word_blessings.size() > BLESSINGS_MAX:
+		word_blessings.remove_at(0)
+	return true
+
+
+func consume_word_blessings() -> Array[Dictionary]:
+	var result := word_blessings.duplicate(true)
+	word_blessings.clear()
+	return result
+
+
+## One exchange with an NPC, kept short: the last NPC_MEMORY_LINES lines stay.
+func remember_npc_talk(npc_id: StringName, said: String, reply: String) -> void:
+	if npc_id == &"":
+		return
+	var lines: Array = npc_memory.get(String(npc_id), [])
+	for entry in [["昌子", said], ["你", reply]]:
+		var text := String(entry[1]).strip_edges().replace("\n", " ")
+		if not text.is_empty():
+			lines.append("%s：%s" % [entry[0], text.substr(0, NPC_MEMORY_CHARS)])
+	while lines.size() > NPC_MEMORY_LINES:
+		lines.remove_at(0)
+	npc_memory[String(npc_id)] = lines
+
+
+func npc_memory_lines(npc_id: StringName) -> Array[String]:
+	var out: Array[String] = []
+	for line in npc_memory.get(String(npc_id), []):
+		out.append(String(line))
+	return out
+
+
 func consume_pending_run_bonuses() -> Dictionary:
 	var result := pending_run_bonuses.duplicate()
 	pending_run_bonuses.clear()
@@ -373,6 +423,8 @@ func save_profile(path: String = "user://profile.cfg") -> void:
 	config.set_value("npc", "trust", npc_trust)
 	config.set_value("npc", "events", npc_events)
 	config.set_value("codex", "grimoire", grimoire)
+	config.set_value("npc", "word_blessings", word_blessings)
+	config.set_value("npc", "memory", npc_memory)
 	config.set_value("input", "keybinds", keybinds)
 	config.set_value("input", "joybinds", joybinds)
 
@@ -497,6 +549,20 @@ func load_profile(path: String = "user://profile.cfg") -> bool:
 	graphics_quality = clampi(_as_int(config.get_value("settings", "graphics_quality", 0), 0), 0, 3)
 	touch_scale = clampf(_as_float(config.get_value("settings", "touch_scale", 1.0), 1.0), 0.7, 1.4)
 	touch_opacity = clampf(_as_float(config.get_value("settings", "touch_opacity", 0.6), 0.6), 0.25, 0.95)
+
+	word_blessings.clear()
+	for value in _as_array(config.get_value("npc", "word_blessings", [])):
+		if value is Dictionary:
+			add_word_blessing(_as_string(value.get("from", "")), value)
+	npc_memory = {}
+	var memory := _as_dictionary(config.get_value("npc", "memory", {}))
+	for key in memory:
+		var kept: Array = []
+		for line in _as_array(memory[key]):
+			if (line is String or line is StringName) and kept.size() < NPC_MEMORY_LINES:
+				kept.append(String(line).substr(0, NPC_MEMORY_CHARS + 4))
+		if not kept.is_empty():
+			npc_memory[String(key)] = kept
 
 	grimoire.clear()
 	for value in _as_array(config.get_value("codex", "grimoire", [])):

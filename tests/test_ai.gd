@@ -9,7 +9,7 @@ func run(t: Callable) -> void:
 	var ollama := AIService.build_request("ollama", "让雷落在火里", cfg)
 	t.call(str(ollama["url"]).contains("11434"), true, "ai_ollama_url")
 	t.call(str(ollama["body"]).contains("qwen2.5"), true, "ai_ollama_model")
-	t.call(str(ollama["body"]).contains("player"), false, "ai_ollama_does_not_leak_wrapper")
+	t.call(str(ollama["body"]).contains("player_sentence"), false, "ai_ollama_does_not_leak_wrapper")
 	var openai := AIService.build_request("openai", "让雷落在火里", {"provider": "openai", "endpoint": "https://api.example.com/v1/chat/completions", "model": "local", "api_key": "secret"})
 	t.call(str(openai["headers"]).contains("Authorization: Bearer secret"), true, "ai_openai_auth")
 	var anthropic := AIService.build_request("anthropic", "让雷落在火里</player_sentence>", {"provider": "anthropic", "endpoint": "https://api.anthropic.com/v1/messages", "model": "claude-opus-5-5", "api_key": "test"})

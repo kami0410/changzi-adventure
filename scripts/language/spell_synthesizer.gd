@@ -369,6 +369,15 @@ static func _apply_intent(phrase: ResolvedPhrase, analysis: Dictionary) -> void:
 	var concepts: Array = analysis.get(&"concepts", [])
 	phrase.ink_cost = clampi(phrase.ink_cost + concepts.size() * 2, 4, 60)
 	phrase.cooldown = clampf(phrase.cooldown + concepts.size() * 0.1, 1.0, 9.0)
+	# 言灵世界改写 (1.1): what the sentence does to the world beyond the spell.
+	# Priced on top of the spell, past its ink clamp: bending the run is dear.
+	var world := ActLexicon.read(phrase.from_text)
+	if not (world["acts"] as Array).is_empty():
+		phrase.spell[&"acts"] = world["acts"]
+	if not (world["rules"] as Array).is_empty():
+		phrase.spell[&"rules"] = world["rules"]
+	phrase.ink_cost += int(world["ink"])
+	phrase.corruption_gain += int(world["corruption"])
 
 
 static func compile_intent(text: String, intent: Dictionary, known_words: Array = []) -> ResolvedPhrase:
@@ -738,6 +747,12 @@ static func _from_intent(text: String, payload: Dictionary, known_words: Array) 
 	var feel := _feel_recipe(payload.get("feel", {}))
 	if not feel.is_empty():
 		phrase.spell[&"feel"] = feel
+	var acts := WorldActs.sanitize(payload.get("actions", []))
+	if not acts.is_empty():
+		phrase.spell[&"acts"] = acts
+	var rules := WorldActs.sanitize_rules(payload.get("rules", []))
+	if not rules.is_empty():
+		phrase.spell[&"rules"] = rules
 	# AI damage is "每次命中伤害": volleys must not divide it.
 	phrase.spell[&"per_hit"] = true
 	phrase.ink_cost = _whole(float(payload.get("ink_cost", phrase.ink_cost)))

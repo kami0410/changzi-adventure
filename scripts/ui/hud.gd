@@ -649,7 +649,7 @@ func _refresh_relics() -> void:
 		if relic == null:
 			continue
 		names.append(relic.display_name)
-		details.append("%s：%s" % [relic.display_name, RelicEffects.describe(relic.effect_id)])
+		details.append("%s：%s" % [relic.display_name, RelicEffects.describe_relic(relic)])
 	relic_label.text = "遗物 %d · %s" % [names.size(), " · ".join(names)]
 	relic_label.tooltip_text = "\n".join(details)
 	relic_label.add_theme_color_override("font_color", Color("d8b56a"))
@@ -657,3 +657,43 @@ func _refresh_relics() -> void:
 
 func _on_inventory_changed() -> void:
 	_refresh()
+
+
+## 言灵世界改写 (1.1): the rules a sentence left standing on the run, listed
+## under the objective so the player can see what the world is bent into.
+var _world_rules_label: Label = null
+var _world_rules_text: String = ""
+
+func set_world_rules(lines: Array[String]) -> void:
+	var text := ""
+	if not lines.is_empty():
+		var shown := lines.slice(0, WORLD_RULES_SHOWN)
+		if lines.size() > WORLD_RULES_SHOWN:
+			shown.append("… 还有 %d 条" % (lines.size() - WORLD_RULES_SHOWN))
+		text = "言出法随\n" + "\n".join(shown)
+	if text == _world_rules_text:
+		return
+	_world_rules_text = text
+	if _world_rules_label == null:
+		var root := find_child("UIRoot", true, false) as Control
+		if root == null:
+			return
+		_world_rules_label = Label.new()
+		_world_rules_label.name = "WorldRules"
+		_world_rules_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_world_rules_label.anchor_left = 1.0
+		_world_rules_label.anchor_right = 1.0
+		_world_rules_label.offset_left = -276.0
+		_world_rules_label.offset_right = -16.0
+		_world_rules_label.offset_top = 122.0
+		_world_rules_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_world_rules_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_world_rules_label.add_theme_font_size_override("font_size", 12)
+		_world_rules_label.add_theme_color_override("font_color", Color("8fe8dc"))
+		_world_rules_label.add_theme_color_override("font_outline_color", Color("0b1418"))
+		_world_rules_label.add_theme_constant_override("outline_size", 4)
+		root.add_child(_world_rules_label)
+	_world_rules_label.text = text
+	_world_rules_label.visible = not text.is_empty()
+
+const WORLD_RULES_SHOWN := 4

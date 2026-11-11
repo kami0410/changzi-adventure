@@ -19,6 +19,9 @@ var corruption: int = 0
 var pages: int = 0
 ## Chapter mutator (RunMutators.CORRUPTION_GAIN); set at chapter start, not saved.
 var mutator_corruption_scale: float = 1.0
+## 言灵世界改写 (1.1): a sentence's run rule on corruption gain; not saved here
+## (WorldActs saves its own run-long rules).
+var word_corruption_scale: float = 1.0
 var inventory := Inventory.new()
 var current_biome: StringName = &""
 var authority: AuthorityData
@@ -61,8 +64,11 @@ func spend_pages(amount: int) -> bool:
 func add_corruption(amount: int) -> void:
 	if amount == 0:
 		return
-	if amount > 0 and not is_equal_approx(corruption_gain_multiplier * mutator_corruption_scale, 1.0):
-		amount = maxi(int(ceilf(float(amount) * corruption_gain_multiplier * mutator_corruption_scale)), 1)
+	var gain := corruption_gain_multiplier * mutator_corruption_scale * word_corruption_scale
+	if amount > 0 and not is_equal_approx(gain, 1.0):
+		amount = maxi(int(ceilf(float(amount) * gain)), 0 if is_zero_approx(gain) else 1)
+		if amount == 0:
+			return
 	corruption = clampi(corruption + amount, 0, 100)
 	corruption_changed.emit(corruption)
 	var tier := corruption_tier()

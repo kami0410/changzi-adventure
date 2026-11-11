@@ -36,9 +36,13 @@ signal purified(amount: int)
 signal world_power_requested(power: StringName, amount: float)
 ## Every world power a cast applied, for the HUD toast.
 signal world_powers_cast(powers: Array[StringName])
+## 言灵世界改写 (1.1): the sentence carries acts and rules (WorldActs).
+signal world_acts_cast(acts: Array, rules: Array)
 
 var cooldown_scale: float = 1.0
 var damage_scale: float = 1.0
+## Run-wide ink price multiplier (WorldActs modifier `ink_cost`; 0 = free).
+var ink_cost_scale: float = 1.0
 var last_context: SpellContext
 var _last_status: Array[String] = ["", ""]
 var _active_slot: int = -1
@@ -96,7 +100,7 @@ func effective_ink_cost(slot: int) -> int:
 	if phrase == null:
 		return 0
 	var scale := _run.corruption_ink_cost_multiplier() if _run != null else 1.0
-	scale *= 1.0 - _mastery_ink_discount(phrase)
+	scale *= (1.0 - _mastery_ink_discount(phrase)) * maxf(ink_cost_scale, 0.0)
 	return maxi(int(ceilf(float(phrase.ink_cost) * scale)), 0)
 
 
@@ -160,6 +164,25 @@ func cast(slot: int) -> bool:
 	return true
 
 
+## 开口即言灵 (1.1): casts a sentence that is not in a slot. It pays its ink
+## like any phrase; the run scene keeps the cooldown between spoken sentences.
+func spoken_ink_cost(phrase: ResolvedPhrase) -> int:
+	if phrase == null:
+		return 0
+	var scale := _run.corruption_ink_cost_multiplier() if _run != null else 1.0
+	return maxi(int(ceilf(float(phrase.ink_cost) * scale * maxf(ink_cost_scale, 0.0))), 0)
+
+
+func cast_spoken(phrase: ResolvedPhrase) -> bool:
+	if phrase == null or _run == null or _player == null or not is_instance_valid(_player):
+		return false
+	if not _run.spend_ink(spoken_ink_cost(phrase)):
+		return false
+	_active_slot = -1
+	_apply_phrase(phrase)
+	return true
+
+
 func tick(delta: float) -> void:
 	if delta <= 0.0:
 		return
@@ -201,6 +224,10 @@ func _cast_spell(phrase: ResolvedPhrase) -> void:
 			world_power_requested.emit(power, amount))
 		if not applied.is_empty():
 			world_powers_cast.emit(applied)
+	var acts: Array = phrase.spell.get(&"acts", [])
+	var rules: Array = phrase.spell.get(&"rules", [])
+	if not acts.is_empty() or not rules.is_empty():
+		world_acts_cast.emit(acts, rules)
 	_apply_corruption(phrase, phrase.components)
 	if ctx.total_dealt() > 0 and ctx.can_draw():
 		CombatFX.spawn(ctx.fx_host, ctx.origin + Vector2(0, -24), &"number", Color("f1ddae"), ctx.direction.x, 30, ctx.total_dealt())

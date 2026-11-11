@@ -9,6 +9,8 @@ signal damaged(amount: int)
 signal hit_landed
 ## A hit landed inside the roll's invulnerable window (once per roll).
 signal perfect_dodged
+## Left the ground or jumped again in the air (言灵规则「每次起跳」).
+signal jumped
 
 @export var move_speed: float = 300.0
 @export var jump_velocity: float = -500.0
@@ -107,6 +109,9 @@ var hud_bottom_pad: float = 0.0
 var _hud_pad := 0.0
 ## Multiplier applied to every incoming hit; game.gd raises it with corruption.
 var damage_taken_multiplier: float = 1.0
+## 言灵世界改写 (1.1): run-wide move speed and gravity rules, set by the run scene.
+var word_speed_scale: float = 1.0
+var word_gravity_scale: float = 1.0
 ## Multiplier applied to every weapon hit; game.gd sets it from run authorities.
 var damage_dealt_multiplier: float = 1.0
 
@@ -267,7 +272,7 @@ func _physics_process(delta: float) -> void:
 	_coyote_left = coyote_time if grounded else maxf(_coyote_left - delta, 0.0)
 	_jump_buffer_left = maxf(_jump_buffer_left - delta, 0.0)
 	if not grounded and dodge_kind != &"air":
-		velocity.y += gravity * delta
+		velocity.y += gravity * word_gravity_scale * delta
 	var direction := Input.get_axis("move_left", "move_right")
 	if not is_zero_approx(direction) and not is_dodging:
 		facing = Vector2(signf(direction), 0.0)
@@ -296,6 +301,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y = jump_velocity
 		_jump_buffer_left = 0.0
 		_coyote_left = 0.0
+		jumped.emit()
 		_play_sfx(&"jump")
 		_effect(&"dust", Color("9fbfb9"), 26)
 	if Input.is_action_just_released("jump") and velocity.y < -150:
@@ -313,7 +319,7 @@ func _physics_process(delta: float) -> void:
 	elif _tile_drop_left > 0.0:
 		velocity.x = 0.0
 	else:
-		velocity.x = move_toward(velocity.x, direction * move_speed * _haste, 2400.0 * delta)
+		velocity.x = move_toward(velocity.x, direction * move_speed * _haste * word_speed_scale, 2400.0 * delta)
 	var fall_speed := velocity.y
 	move_and_slide()
 	if not grounded:
@@ -771,6 +777,7 @@ func _one_way_platform_below() -> PhysicsBody2D:
 func _double_jump() -> void:
 	_air_jumps_left -= 1
 	velocity.y = double_jump_velocity
+	jumped.emit()
 	_jump_buffer_left = 0.0
 	_play_sfx(&"jump")
 	if _motion != null:

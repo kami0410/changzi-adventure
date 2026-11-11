@@ -202,7 +202,12 @@ func _display_forge_phrase(phrase: ResolvedPhrase) -> void:
 		if explanation.get("intent", "") != "":
 			read_line += "   意图：%s" % explanation["intent"]
 		line += "\n" + read_line
-	_forge_label.text = line + "\n" + SpellStyle.label(phrase.spell) + "\n" + "、".join(effects)
+	var text := line + "\n" + SpellStyle.label(phrase.spell) + "\n" + "、".join(effects)
+	# 言灵世界改写 (1.1): what the sentence does beyond the spell.
+	var world := WorldActs.describe_all(phrase.spell.get(&"acts", []), phrase.spell.get(&"rules", []))
+	if not world.is_empty():
+		text += "\n改写世界：" + "；".join(world)
+	_forge_label.text = text
 
 
 static func _short_number(value: float) -> String:
@@ -212,6 +217,10 @@ static func _short_number(value: float) -> String:
 		return str(int(roundf(value)))
 	return "%.1f" % value
 
+
+## () -> String: the current fight in a few words, sent to the AI as
+## reference data so it can pick targets and let the boss answer.
+var situation_provider: Callable
 
 func _on_ai_requested() -> void:
 	var text := _free_text.text.strip_edges() if _free_text != null else ""
@@ -226,7 +235,7 @@ func _on_ai_requested() -> void:
 	if _ai_button != null:
 		_ai_button.disabled = true
 	_set_ai_status("AI 正在读这句话…")
-	ai.request_intent(text)
+	ai.request_intent(text, String(situation_provider.call()) if situation_provider.is_valid() else "")
 
 
 func _set_ai_status(text: String, config_hint: bool = false) -> void:

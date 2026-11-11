@@ -696,6 +696,7 @@ func _npc_prompt_profile(npc_id: StringName) -> Dictionary:
 		var tier := TrustData.tier_for(profile, npc_id)
 		data["trust_tier"] = TrustData.TIER_NAMES[tier]
 		data["trust_attitude"] = NPCProfiles.trust_line(npc_id, tier)
+		data["memory"] = profile.npc_memory_lines(npc_id)
 	return data
 
 
@@ -738,6 +739,15 @@ func _on_npc_ai_ready(npc_id: StringName, sentence: String, reply: String, data:
 		npc_inspire_ui.show_status("AI 的言灵改变了 TA 的职能：" + summary)
 	else:
 		npc_inspire_ui.show_status("AI 用 %s 的声音回答了你。" % String(NPCProfiles.get_profile(npc_id).get("name", "TA")))
+	if profile != null:
+		profile.remember_npc_talk(npc_id, sentence, reply)
+		# 临行赠言 (1.1): the NPC wrote something onto the next run.
+		var blessing: Dictionary = data.get("blessing", {})
+		var npc_name := String(NPCProfiles.get_profile(npc_id).get("name", "TA"))
+		if not blessing.is_empty() and profile.add_word_blessing(npc_name, blessing):
+			var lines := WorldActs.describe_all(blessing.get("actions", []), blessing.get("rules", []))
+			npc_inspire_ui.show_status("%s 的临行赠言「%s」会在下一局生效：%s" % [
+				npc_name, String(blessing.get("name", "赠言")), "；".join(lines)])
 	_save_shared_profile()
 	_refresh_fragment_label()
 	var action_text := _apply_ai_action(npc_id, data.get("action", {}))

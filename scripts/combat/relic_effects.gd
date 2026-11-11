@@ -8,6 +8,16 @@ var _second: float = 0.0
 var _lifesteal_bank: float = 0.0
 var _purify_seconds: float = 0.0
 
+## A relic's line in the HUD and the bag. Relics a sentence wrote (1.1) carry
+## their own text; the shipped ones are described by their effect.
+static func describe_relic(relic: RelicData) -> String:
+	if relic == null:
+		return ""
+	if relic.effect_id == &"word_made":
+		return relic.description.replace("\n", "；") if not relic.description.is_empty() else "一句话写出来的东西。"
+	return describe(relic.effect_id)
+
+
 static func describe(effect_id: StringName) -> String:
 	match effect_id:
 		&"ink_regen": return "每秒额外恢复 3 墨量。"

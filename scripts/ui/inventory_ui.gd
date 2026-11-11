@@ -547,7 +547,7 @@ func _build_relics_text(relics: Array[RelicData]) -> String:
 	for relic in relics:
 		if relic == null:
 			continue
-		parts.append("%s：%s" % [relic.display_name, RelicEffects.describe(relic.effect_id)])
+		parts.append("%s：%s" % [relic.display_name, RelicEffects.describe_relic(relic)])
 	return "\n".join(parts)
 
 

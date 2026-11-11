@@ -96,6 +96,9 @@ func layout() -> void:
 		_button(&"cast_2", "言2", jump + Vector2(-226, -124) * k, 44.0 * k),
 		_button(&"swap", "换武", jump + Vector2(-100, -222) * k, 36.0 * k),
 	]
+	# 开口即言灵 (1.1): only in a run, where the action exists.
+	if InputMap.has_action(&"speak") and not _in_hub():
+		_buttons.append(_button(&"speak", "说", jump + Vector2(-338, -92) * k, 38.0 * k))
 	var in_hub := _in_hub()
 	if in_hub:
 		var kept: Array[Dictionary] = []

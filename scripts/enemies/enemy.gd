@@ -89,6 +89,17 @@ var aggro_vertical: float = INF
 var home: Vector2 = Vector2.INF
 var _patrol_dir: float = 1.0
 var _patrol_wait: float = 0.0
+## 言灵世界改写 (1.1): run-wide rules the sentence set for every enemy. The
+## run scene writes them each frame and resets them when it leaves.
+static var world_speed_scale: float = 1.0
+static var world_damage_scale: float = 1.0
+static var world_gravity_scale: float = 1.0
+## 言灵世界改写 (1.1): attack damage multiplier and timed rewrites.
+var attack_scale: float = 1.0
+var _disarm_left: float = 0.0
+var _weaken_left: float = 0.0
+var _resize_left: float = 0.0
+var _resize_damage: float = 1.0
 ## 言灵权能「改写敌名」: seconds left fighting for the player (0 = hostile).
 var _charmed_left: float = 0.0
 var _charm_cooldown: float = 0.0
@@ -147,6 +158,7 @@ func _physics_process(delta: float) -> void:
 
 	tick_status_effects(delta)
 	_tick_flash(delta)
+	_tick_rewrites(delta)
 	if _charmed_left > 0.0:
 		_tick_charmed(delta)
 		return
@@ -159,7 +171,7 @@ func _physics_process(delta: float) -> void:
 		target = get_tree().get_first_node_in_group("player") as Node2D
 
 	if apply_gravity and not is_on_floor():
-		velocity.y += gravity * delta
+		velocity.y += gravity * world_gravity_scale * delta
 
 	if _stun_left > 0.0:
 		# Stunned: frozen in place, no steering and no attacks.
@@ -308,7 +320,7 @@ func take_damage(amount: int) -> void:
 
 func get_move_speed() -> float:
 	var base_speed := _data.speed if _data != null else 80.0
-	return base_speed * speed_multiplier
+	return base_speed * speed_multiplier * world_speed_scale
 
 
 ## 施加减速：multiplier 为速度倍率（0.5 = 半速），duration 为秒。
@@ -369,7 +381,49 @@ func is_stunned() -> bool:
 
 
 func get_attack_damage() -> int:
-	return _data.contact_damage if _data != null else 0
+	if _disarm_left > 0.0 or _data == null:
+		return 0
+	return maxi(int(roundf(float(_data.contact_damage) * attack_scale)), 0)
+
+
+# --- 言灵世界改写 (1.1, scripts/ai/world_acts.gd) -----------------------------
+
+## Cannot hurt anything for [param seconds]: melee, contact and its own shots.
+func disarm(seconds: float) -> void:
+	_disarm_left = maxf(_disarm_left, seconds)
+
+
+func is_disarmed() -> bool:
+	return _disarm_left > 0.0
+
+
+## Multiplies its attack damage for [param seconds] (below 1 weakens it).
+func weaken(multiplier: float, seconds: float) -> void:
+	attack_scale = maxf(multiplier, 0.0)
+	_weaken_left = maxf(seconds, 0.05)
+
+
+## Drawn and collided at [param factor] of its size for [param seconds]; a
+## shrunken enemy also hits proportionally softer, a grown one harder.
+func resize(factor: float, seconds: float) -> void:
+	var clamped := clampf(factor, 0.2, 4.0)
+	scale = Vector2.ONE * clamped
+	_resize_left = maxf(seconds, 0.05)
+	_resize_damage = clamped
+
+
+func _tick_rewrites(delta: float) -> void:
+	if _disarm_left > 0.0:
+		_disarm_left = maxf(_disarm_left - delta, 0.0)
+	if _weaken_left > 0.0:
+		_weaken_left = maxf(_weaken_left - delta, 0.0)
+		if _weaken_left <= 0.0:
+			attack_scale = 1.0
+	if _resize_left > 0.0:
+		_resize_left = maxf(_resize_left - delta, 0.0)
+		if _resize_left <= 0.0:
+			scale = Vector2.ONE
+			_resize_damage = 1.0
 
 
 func is_dead() -> bool:
@@ -585,6 +639,7 @@ func _face_direction(direction_x: float) -> void:
 
 
 func _damage_target(amount: int) -> void:
+	amount = int(roundf(float(amount) * _resize_damage * world_damage_scale))
 	if amount <= 0 or not _has_valid_target():
 		return
 	if target.has_method("take_damage"):

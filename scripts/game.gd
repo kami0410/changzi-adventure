@@ -63,6 +63,8 @@ const CHAPTER_PLAN_PATHS: Array[String] = [
 ]
 ## A weapon never vanishes: equipping swaps with the held one and drops it.
 const WEAPON_DROP_CHANCE := 0.04
+## Ink per kill for each +1.0 of the 言灵 `kill_ink` run rule.
+const WORD_KILL_INK := 5.0
 ## 章节异象 (RunMutators) for the current chapter; NONE in the fixed-content
 ## acceptance suites, which turn Flow.encounter_variation off.
 var _mutator: StringName = RunMutators.NONE
@@ -133,6 +135,16 @@ var run_state: RunState
 var resolver := PhraseResolver.new()
 var phrase_caster := PhraseCaster.new()
 var relic_effects := RelicEffects.new()
+## 言灵世界改写 (1.1): acts and standing rules a sentence puts on the run.
+var world_acts := WorldActs.new()
+## Enemies a sentence made outside any encounter live here, so allies and
+## strays never hold a room's doors shut.
+var _word_room: ArenaRoom
+## 开口即言灵 (1.1): the one-line sentence input and its echo between uses.
+var _speak_bar: SpeakBar
+var _speak_cooldown := 0.0
+var _speak_pending := ""
+const SPEAK_MIN_COOLDOWN := 1.5
 var _chapters: Array[Dictionary] = []
 var _chapter := 0
 var _chapter_plan: ChapterPlanData = null
@@ -273,6 +285,7 @@ func _ready() -> void:
 		persistent_phrases = Flow.profile.discovered_phrases
 	codex_ui.bind_state(resolver, run_state, _example_phrases, persistent_phrases)
 	codex_ui.phrase_equip_requested.connect(_on_codex_equip)
+	codex_ui.situation_provider = ai_situation
 	# Bind the sender: a page can close as a Settings subpage while another
 	# overlay is on top, and that must not tear down the settings page too.
 	inventory_ui.close_requested.connect(_close_overlay.bind(inventory_ui))
@@ -286,6 +299,7 @@ func _ready() -> void:
 	pause_menu.pause_requested.connect(_toggle_pause)
 	pause_menu.settings_requested.connect(_on_pause_settings)
 	_setup_phrase_caster()
+	_setup_world_acts()
 	_setup_campaign()
 	_reward_ui = RewardChoice.new()
 	$UI.add_child(_reward_ui)
@@ -303,6 +317,7 @@ func _ready() -> void:
 	$UI.add_child(_shop_ui)
 	_shop_ui.buy.connect(_on_shop_buy)
 	_shop_ui.closed.connect(_on_shop_closed)
+	_setup_speak_bar()
 	_screen_fx = ScreenFX.new()
 	add_child(_screen_fx)
 	_hit_stop = HitStop.new()
@@ -311,6 +326,7 @@ func _ready() -> void:
 	player.hit_landed.connect(_on_melee_hit)
 	player.perfect_dodged.connect(_on_perfect_dodge)
 	phrase_caster.cast_succeeded.connect(_on_cast_succeeded)
+	player.jumped.connect(world_acts.trigger.bind(&"on_jump"))
 	for biome in [level, level2, level3]:
 		var backdrop := LivingBackdrop.new()
 		backdrop.breathing = biome == level2
@@ -565,7 +581,9 @@ func _build_run_save() -> Dictionary:
 			words.append(entry)
 	var relics: Array = []
 	for relic in run_state.inventory.relics:
-		relics.append(String(relic.id))
+		# Written relics are saved by WorldActs with the act that made them.
+		if relic.effect_id != &"word_made":
+			relics.append(String(relic.id))
 	var authority: Dictionary = {}
 	var active_authority := run_state.authority if run_state.authority != null else _authority.authority
 	if active_authority != null:
@@ -630,6 +648,7 @@ func _build_run_save() -> Dictionary:
 			"opened_chests": _legacy_opened_chests.keys(),
 			"boss_defeated": _boss_defeated,
 			"relic_revive_used": relic_effects.revive_used,
+			"word": world_acts.save_state(),
 			"shops": _serialize_shop_cache(),
 			"frenzy": {
 				"active": _frenzy_active,
@@ -689,11 +708,18 @@ func _process(delta: float) -> void:
 	_update_boss_bar()
 	_update_stele_prompts()
 	relic_effects.tick(delta, get_tree().get_nodes_in_group("enemies"))
-	phrase_caster.cooldown_scale = relic_effects.cooldown_scale() * RunMutators.value(RunMutators.PHRASE_COOLDOWN, _mutator)
-	var authority_damage := _authority.damage_multiplier(run_state) * RunMutators.value(RunMutators.DAMAGE_DEALT, _mutator)
+	phrase_caster.cooldown_scale = relic_effects.cooldown_scale() * RunMutators.value(RunMutators.PHRASE_COOLDOWN, _mutator) \
+		* world_acts.modifier(&"cooldown")
+	var authority_damage := _authority.damage_multiplier(run_state) * RunMutators.value(RunMutators.DAMAGE_DEALT, _mutator) \
+		* world_acts.modifier(&"damage_dealt")
+	_apply_world_rules()
 	phrase_caster.damage_scale = 3.0 * relic_effects.damage_scale() * _archive_damage_multiplier * authority_damage
 	player.damage_dealt_multiplier = authority_damage
 	phrase_caster.tick(delta)
+	_speak_cooldown = maxf(_speak_cooldown - delta, 0.0)
+	if Input.is_action_just_pressed("speak"):
+		_open_speak_bar()
+		return
 	if Input.is_action_just_pressed("cast_1"):
 		_try_cast(0)
 	if Input.is_action_just_pressed("cast_2"):
@@ -731,6 +757,9 @@ func _input(event: InputEvent) -> void:
 	if Flow.input_capture_active:
 		return
 	if _finished or _ending_pending:
+		return
+	# The sentence line owns the keyboard while it is open.
+	if _speak_bar != null and _speak_bar.is_open():
 		return
 	# The boss authority pick is a required modal that owns its own pause. A
 	# pause press must not resume the world underneath it or open the pause
@@ -903,6 +932,233 @@ func _close_overlay(overlay: Control = null) -> void:
 		previous.grab_focus()
 	get_tree().paused = _finished or (_reward_ui != null and _reward_ui.visible)
 
+# === 开口即言灵 ================================================================
+
+func _setup_speak_bar() -> void:
+	if not InputMap.has_action(&"speak"):
+		InputMap.add_action(&"speak")
+		var key := InputEventKey.new()
+		key.physical_keycode = KEY_T
+		InputMap.action_add_event(&"speak", key)
+		var pad := InputEventJoypadButton.new()
+		pad.button_index = JOY_BUTTON_RIGHT_STICK
+		InputMap.action_add_event(&"speak", pad)
+	_speak_bar = SpeakBar.new()
+	_speak_bar.name = "SpeakBar"
+	$UI.add_child(_speak_bar)
+	_speak_bar.spoken.connect(_on_spoken)
+	_speak_bar.cancelled.connect(func() -> void: _speak_pending = "")
+	var ai := get_node_or_null("/root/AI") as AIService
+	if ai != null:
+		ai.intent_ready.connect(_on_spoken_intent)
+		ai.intent_failed.connect(_on_spoken_failed)
+	if Flow.profile != null:
+		var known: Array[String] = []
+		for entry in Flow.profile.grimoire:
+			known.append(String(entry.get("text", "")))
+		_speak_bar.set_recent(known)
+
+
+func _open_speak_bar() -> void:
+	if _speak_bar == null or _speak_bar.is_open() or _overlay != null or get_tree().paused:
+		return
+	if _speak_cooldown > 0.0:
+		hud.show_message("上一句话的回声还没散（%.1f 秒）" % _speak_cooldown)
+		return
+	_speak_bar.open("回车说出 · Esc 收回 · 墨量 %d · 说得越大，墨与污染越重" % run_state.ink)
+
+
+func _on_spoken(text: String) -> void:
+	var ai := get_node_or_null("/root/AI") as AIService
+	if ai != null and ai.is_configured():
+		_speak_pending = text
+		_speak_bar.wait("世界在听这句话…")
+		ai.request_intent(text, ai_situation())
+		return
+	_speak_now(SpellSynthesizer.synthesize(text, run_state.inventory.words), text)
+
+
+func _on_spoken_intent(sentence: String, intent: Dictionary) -> void:
+	if _speak_pending.is_empty() or sentence != _speak_pending:
+		return
+	_speak_pending = ""
+	var phrase := SpellSynthesizer.compile_intent(sentence, intent, run_state.inventory.words)
+	if phrase == null:
+		phrase = SpellSynthesizer.synthesize(sentence, run_state.inventory.words)
+	_speak_now(phrase, sentence)
+
+
+func _on_spoken_failed(sentence: String, _error: String) -> void:
+	if _speak_pending.is_empty() or sentence != _speak_pending:
+		return
+	_speak_pending = ""
+	# The AI did not answer: the sentence is still read, offline.
+	_speak_now(SpellSynthesizer.synthesize(sentence, run_state.inventory.words), sentence)
+
+
+## Casts a spoken sentence at once, or keeps the line open with the reason.
+func _speak_now(phrase: ResolvedPhrase, text: String) -> void:
+	if _speak_bar == null or not _speak_bar.is_open():
+		return
+	if phrase == null:
+		_speak_bar.fail("这句话没有落到任何东西上，换个说法。")
+		return
+	var cost := phrase_caster.spoken_ink_cost(phrase)
+	if run_state.ink < cost:
+		_speak_bar.fail("墨不够：这句话要 %d 墨，你只有 %d。说小一点，或先去杀敌回墨。" % [cost, run_state.ink])
+		return
+	_speak_bar.remember(text)
+	_speak_bar.close()
+	if not phrase_caster.cast_spoken(phrase):
+		return
+	_speak_cooldown = maxf(phrase.cooldown * phrase_caster.cooldown_scale, SPEAK_MIN_COOLDOWN)
+	Audio.play_sfx(&"attack")
+	_discover_phrase(phrase)
+	world_acts.trigger(&"on_cast")
+	player.play_cast_pose()
+	if is_inside_tree():
+		VFX.spawn(player.get_parent(), &"cast_circle", player.global_position + Vector2(0, Player.FOOT_Y), false, 0.7)
+	var name := String(phrase.spell.get(&"name", phrase.display_name))
+	hud.show_message("「%s」——%s · 墨 -%d · 污染 +%d" % [text, name, cost, phrase.corruption_gain])
+	_update_hud()
+
+
+## NPC 临行赠言 (1.1): what the Hub's AI-voiced characters wrote onto this run.
+func _apply_word_blessings() -> void:
+	if Flow.profile == null or _finished or not is_inside_tree():
+		return
+	for blessing in Flow.profile.consume_word_blessings():
+		hud.show_message("%s 的临行赠言「%s」生效了" % [String(blessing.get("from", "TA")), String(blessing.get("name", "赠言"))])
+		world_acts.perform(blessing.get("actions", []), blessing.get("rules", []))
+	Flow.save_profile()
+
+
+func _setup_world_acts() -> void:
+	world_acts.name = "WorldActs"
+	add_child(world_acts)
+	_word_room = ArenaRoom.new()
+	_word_room.name = "WordRoom"
+	add_child(_word_room)
+	world_acts.player = player
+	world_acts.run = run_state
+	world_acts.host = self
+	world_acts.targets = func() -> Array: return get_tree().get_nodes_in_group("enemies")
+	world_acts.notify = hud.show_message
+	world_acts.spawner = _spawn_word_enemy
+	world_acts.game_power = _on_world_power
+	world_acts.weapon_dropper = _drop_weapon
+	world_acts.relic_giver = func(relic: RelicData) -> bool: return run_state.inventory.add_relic(relic)
+	world_acts.weapon_bases = {
+		"melee": ContentLibrary.weapon_by_id(&"broken_page_sword"),
+		"ranged": SECOND_WEAPON,
+	}
+	var ids: Array[StringName] = []
+	for id in ENEMY_SCENES:
+		ids.append(StringName(id))
+	world_acts.enemy_ids = ids
+	world_acts.acted.connect(_on_world_act)
+	phrase_caster.world_acts_cast.connect(world_acts.perform)
+	if _resume_restored:
+		var word: Variant = _resume_data.get("world", {}).get("word", {})
+		if word is Dictionary:
+			world_acts.load_state(word)
+	elif Flow.profile != null and not Flow.profile.word_blessings.is_empty():
+		# After the first room is up, so gifts land at the caster's feet.
+		get_tree().create_timer(1.2).timeout.connect(_apply_word_blessings)
+
+
+## The fight as the AI may know it: numbers and names from the game only,
+## never anything the player typed or anything about the player themself.
+func ai_situation() -> String:
+	var names: Dictionary = {}
+	for node in get_tree().get_nodes_in_group("enemies"):
+		var enemy := node as Enemy
+		if enemy == null or enemy.dead or enemy == _boss or enemy.data == null:
+			continue
+		var id := String(enemy.data.id)
+		names[id] = int(names.get(id, 0)) + 1
+	var enemies: Array[String] = []
+	for id in names:
+		enemies.append("%s×%d" % [id, names[id]])
+	var parts: Array[String] = [
+		"章节 %d" % (_chapter + 1),
+		"生命 %d/%d" % [player.health, player.max_health],
+		"墨量 %d/%d" % [run_state.ink, run_state.max_ink],
+		"污染 %d/100" % run_state.corruption,
+		"在场敌人 %s" % ("、".join(enemies.slice(0, 8)) if not enemies.is_empty() else "无"),
+	]
+	if _boss != null and is_instance_valid(_boss) and not _boss.dead:
+		parts.append("Boss %s 生命 %d/%d" % [_boss.data.display_name if _boss.data != null else "", _boss.health, _boss.max_health])
+	var relics: Array[String] = []
+	for relic in run_state.inventory.relics:
+		if relic != null:
+			relics.append(relic.display_name)
+	if not relics.is_empty():
+		parts.append("遗物 %s" % "、".join(relics.slice(0, 8)))
+	var standing := world_acts.status_lines()
+	if not standing.is_empty():
+		parts.append("已生效的规则 %s" % "；".join(standing.slice(0, 4)))
+	return "；".join(parts)
+
+
+## Run-wide rules a sentence wrote, pushed to everything they govern.
+func _apply_world_rules() -> void:
+	phrase_caster.ink_cost_scale = world_acts.modifier(&"ink_cost")
+	run_state.word_corruption_scale = world_acts.modifier(&"corruption_gain")
+	player.word_speed_scale = world_acts.modifier(&"player_speed")
+	var gravity_scale := world_acts.modifier(&"gravity")
+	player.word_gravity_scale = gravity_scale
+	Enemy.world_gravity_scale = gravity_scale
+	Enemy.world_speed_scale = world_acts.modifier(&"enemy_speed")
+	Enemy.world_damage_scale = world_acts.modifier(&"enemy_damage")
+	_apply_corruption_penalties()
+	hud.set_world_rules(world_acts.status_lines())
+
+
+func _exit_tree() -> void:
+	Enemy.world_gravity_scale = 1.0
+	Enemy.world_speed_scale = 1.0
+	Enemy.world_damage_scale = 1.0
+
+
+## A sentence made an enemy: dressed and scaled like any other. Hostile ones
+## join the encounter the player is fighting; otherwise the word room keeps them.
+func _spawn_word_enemy(id: StringName, at: Vector2, hostile: bool = true) -> Enemy:
+	if not ENEMY_SCENES.has(id):
+		return null
+	var room := _word_room
+	for candidate in _rooms:
+		if hostile and is_instance_valid(candidate) and not _is_boss_room(candidate) and not candidate.is_cleared() \
+				and (candidate.is_locked() or candidate.roaming) \
+				and candidate.global_position.distance_to(at) < 2600.0:
+			room = candidate
+			break
+	var enemies := room.get_node_or_null("Enemies")
+	var before := enemies.get_child_count() if enemies != null else 0
+	_spawn_group(room, [id], 0.0, {}, 0, [at + Vector2(0, ENEMY_FOOT_Y + 2.0)])
+	enemies = room.get_node_or_null("Enemies")
+	if enemies == null or enemies.get_child_count() <= before:
+		return null
+	var made := enemies.get_child(enemies.get_child_count() - 1) as Enemy
+	if made != null:
+		# Written next to the caster: it notices at once instead of patrolling.
+		made.aggro_range = 600.0
+		made.aggro_vertical = 400.0
+		made.patrol_radius = 0.0
+	return made
+
+
+## Feedback for an act: the world visibly answers the sentence.
+func _on_world_act(act: Dictionary) -> void:
+	match String(act.get("do", "")):
+		"time_scale", "gravity", "darkness", "mutator", "kill", "transform":
+			if _screen_fx != null:
+				_screen_fx.flash(Color("8fe8dc", 0.16), 0.2)
+		"damage", "knockback", "launch", "pull":
+			player.add_shake(0.25)
+	_update_hud()
+
+
 func _setup_phrase_caster() -> void:
 	phrase_caster.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(phrase_caster)
@@ -1058,7 +1314,8 @@ func _archive_offers() -> Array[Dictionary]:
 			"desc": "武器 · 伤害 %d · 间隔 %.2f 秒" % [weapon.damage, weapon.attack_cooldown],
 		})
 	for relic in run_state.inventory.relics:
-		if relic == null:
+		# A written relic cannot be archived: it exists only in this run's words.
+		if relic == null or relic.effect_id == &"word_made":
 			continue
 		offers.append({
 			"kind": &"relic",
@@ -2314,6 +2571,7 @@ func _on_room_cleared(room: ArenaRoom, chapter_index: int) -> void:
 	run_state.add_pages(maxi(1, int(round((4 + Flow.difficulty * 2) * Difficulty.reward_multiplier(Flow.difficulty)))))
 	hud.set_progress(_cleared_in_chapter, _chapter_progress_total())
 	relic_effects.on_room_cleared()
+	world_acts.trigger(&"on_room_clear")
 	if _cleared_in_chapter >= _chapter_clear_target():
 		hud.set_objective("前往章节尽头 · 击败 " + String(CampaignData.chapter(_chapter)["boss_name"]))
 	_update_hud()
@@ -2470,6 +2728,7 @@ func _open_hub_shortcut(room_id: String) -> void:
 const HUD_BOTTOM_PAD := 96.0
 
 func _on_perfect_dodge() -> void:
+	world_acts.trigger(&"on_dodge")
 	if _hit_stop != null:
 		_hit_stop.freeze(0.07, 0.15)
 	run_state.restore_ink(PERFECT_DODGE_INK)
@@ -2478,6 +2737,7 @@ func _on_perfect_dodge() -> void:
 
 
 func _on_melee_hit() -> void:
+	world_acts.trigger(&"on_hit")
 	if _hit_stop != null:
 		_hit_stop.freeze(0.035, 0.3)
 
@@ -2507,6 +2767,7 @@ func _on_spell_impact(strength: float, freeze: float) -> void:
 
 
 func _on_player_damaged(_amount: int) -> void:
+	world_acts.trigger(&"on_hurt")
 	if _screen_fx != null:
 		_screen_fx.flash(Color(0.75, 0.12, 0.18, 0.2), 0.12)
 
@@ -2517,6 +2778,7 @@ func _apply_corruption_penalties() -> void:
 			Difficulty.enemy_damage(Flow.difficulty)
 			* run_state.corruption_damage_taken_multiplier()
 			* RunMutators.value(RunMutators.DAMAGE_TAKEN, _mutator)
+			* world_acts.modifier(&"damage_taken")
 		)
 
 
@@ -2679,6 +2941,7 @@ func _on_cast_succeeded(slot: int) -> void:
 			if word != null:
 				Flow.profile.add_word_mastery(word.id)
 	_discover_phrase(phrase)
+	world_acts.trigger(&"on_cast")
 	if phrase.spell.get(&"shape", &"") == &"void":
 		_screen_fx.flash(Color("9b5be0", 0.24), 0.18)
 		_hit_stop.freeze(0.04, 0.12)
@@ -2688,6 +2951,11 @@ func _on_cast_succeeded(slot: int) -> void:
 
 
 func _on_enemy_died(enemy: Node) -> void:
+	if enemy != null and enemy.has_meta(&"word_ally"):
+		# A summoned ally's borrowed name burned out: not a kill.
+		if enemy is Node2D and is_inside_tree():
+			VFX.spawn((enemy as Node2D).get_parent(), &"enemy_die", (enemy as Node2D).global_position + Vector2(0, ENEMY_FOOT_Y))
+		return
 	_kills += 1
 	if enemy is Node2D and is_inside_tree():
 		var elite := enemy.has_meta(&"elite")
@@ -2698,11 +2966,14 @@ func _on_enemy_died(enemy: Node) -> void:
 		run_state.add_pages(int(round(EncounterVariation.ELITE_PAGES * RunMutators.value(RunMutators.ELITE_PAGES_SCALE, _mutator))))
 	var kill_pages := (1 + Flow.difficulty * 0.5) * Difficulty.reward_multiplier(Flow.difficulty)
 	kill_pages = kill_pages * RunMutators.value(RunMutators.KILL_PAGES_SCALE, _mutator) 		+ RunMutators.value(RunMutators.KILL_PAGES_BONUS, _mutator, 0.0)
-	run_state.add_pages(maxi(1, int(round(kill_pages))))
-	var kill_ink := int(RunMutators.value(RunMutators.KILL_INK, _mutator, 0.0))
+	run_state.add_pages(maxi(1, int(round(kill_pages * world_acts.modifier(&"kill_pages")))))
+	# kill_ink rule: every +1.0 above 1 is WORD_KILL_INK ink per kill.
+	var kill_ink := int(RunMutators.value(RunMutators.KILL_INK, _mutator, 0.0)) \
+		+ int(roundf(maxf(world_acts.modifier(&"kill_ink") - 1.0, 0.0) * WORD_KILL_INK))
 	if kill_ink > 0:
 		run_state.restore_ink(kill_ink)
 	relic_effects.on_kill()
+	world_acts.trigger(&"on_kill")
 	_update_hud()
 	if enemy is Node2D and run_state.rng.randf() < WEAPON_DROP_CHANCE * RunMutators.value(RunMutators.WEAPON_DROP_SCALE, _mutator):
 		var dropped := RunLoot.dropped_weapon(run_state, Flow.profile, _chapter)

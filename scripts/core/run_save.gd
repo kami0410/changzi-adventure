@@ -113,7 +113,7 @@ static func _has_valid_shape(saved: Dictionary) -> bool:
 	]:
 		if world.has(key) and not world[key] is Array:
 			return false
-	for key in ["shops", "frenzy"]:
+	for key in ["shops", "frenzy", "word"]:
 		if world.has(key) and not world[key] is Dictionary:
 			return false
 
