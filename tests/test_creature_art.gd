@@ -11,6 +11,15 @@ const IDS := [
 const COUNTS := {&"idle": 4, &"move": 4, &"windup": 2, &"attack": 3, &"hurt": 1, &"death": 5}
 
 
+const PAINTED: Array[StringName] = [
+	&"ink_archivist", &"lung_bell_guardian", &"last_reader", &"smiling_archivist",
+	&"ink_hound", &"scribe_bug", &"blank_man", &"hanging_scribe", &"echo_enemy",
+	&"typo_beast", &"mask_enemy", &"seat_husk", &"ink_bomber", &"choir_summoner",
+	&"mirror_sniper", &"page_swarm", &"breath_hound", &"lung_moth", &"rust_whisperer",
+	&"collapse_husk",
+]
+const PAINTED_COUNTS := {&"idle": 6, &"move": 6, &"windup": 2, &"attack": 4, &"hurt": 1, &"death": 6}
+
 func run(t: Callable) -> void:
 	_test_manifest(t)
 	_test_pick(t)
@@ -19,7 +28,18 @@ func run(t: Callable) -> void:
 
 
 func _test_manifest(t: Callable) -> void:
-	t.call(CreatureArt.manifest().size(), IDS.size(), "creature_manifest_count")
+	t.call(CreatureArt.manifest().size(), IDS.size() + PAINTED.size(), "creature_manifest_count")
+	# 1.1: the enemies and bosses that were one painting each now have action
+	# strips cut from Magpie sheets (tools/import_magpie_sheets.py).
+	for id in PAINTED:
+		t.call(CreatureArt.has(id), true, "painted_has_%s" % id)
+		t.call(CreatureArt.is_painted(id), true, "painted_flag_%s" % id)
+		var painted := CreatureArt.animations_for(id)
+		for anim in PAINTED_COUNTS:
+			var frames: Array = painted.get(anim, {}).get("frames", [])
+			t.call(frames.size(), PAINTED_COUNTS[anim], "painted_%s_%s_frames" % [id, anim])
+	for id in IDS:
+		t.call(CreatureArt.is_painted(id), false, "art_pack_creature_not_painted_%s" % id)
 	for id in IDS:
 		t.call(CreatureArt.has(id), true, "creature_has_%s" % id)
 		var anims := CreatureArt.animations_for(id)

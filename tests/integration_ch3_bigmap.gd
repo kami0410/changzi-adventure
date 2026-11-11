@@ -663,8 +663,8 @@ func _check_enemy_art(arena: ArenaRoom, id: StringName, sprite_suffix: String,
 	check(found.sprite_visual != null, "ch3_enemy_sprite_%s" % id)
 	if found.sprite_visual == null:
 		return
-	check(found.sprite_visual.texture != null
-		and found.sprite_visual.texture.resource_path.ends_with(sprite_suffix),
+	# 1.1: painted enemies play drawn strips, so art is compared by name.
+	check(CreatureArt.art_key(found) == sprite_suffix.get_file().get_basename(),
 		"ch3_enemy_art_%s" % id)
 	check(found.sprite_visual.modulate == tint, "ch3_enemy_art_tint_%s" % id)
 
@@ -1597,8 +1597,7 @@ func _run() -> void:
 			# The authored portrait from the campaign table is the Last Reader's.
 			check(boss.sprite_visual != null, "boss_has_sprite")
 			if boss.sprite_visual != null:
-				check(boss.sprite_visual.texture.resource_path.ends_with(
-					"assets/sprites/bosses/last_reader.png"), "boss_uses_last_reader_art")
+				check(CreatureArt.art_key(boss) == "last_reader", "boss_uses_last_reader_art")
 				check(boss.sprite_visual.modulate == Color.WHITE,
 					"boss_no_fallback_tint")
 		scene.player._invulnerable_left = 100

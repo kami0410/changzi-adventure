@@ -125,8 +125,8 @@ func _check_enemy_art(arena: ArenaRoom, id: StringName, sprite_suffix: String,
 	check(found.sprite_visual != null, "ch2_enemy_sprite_%s" % id)
 	if found.sprite_visual == null:
 		return
-	check(found.sprite_visual.texture != null
-		and found.sprite_visual.texture.resource_path.ends_with(sprite_suffix),
+	# 1.1: painted enemies play drawn strips, so art is compared by name.
+	check(CreatureArt.art_key(found) == sprite_suffix.get_file().get_basename(),
 		"ch2_enemy_art_%s" % id)
 	check(found.sprite_visual.modulate == tint, "ch2_enemy_art_tint_%s" % id)
 
@@ -840,8 +840,7 @@ func _run() -> void:
 		if choir != null:
 			check(choir.sprite_visual != null, "choir_summoner_has_sprite")
 			if choir.sprite_visual != null:
-				check(choir.sprite_visual.texture.resource_path.ends_with(
-					"assets/sprites/enemies/choir_summoner.png"),
+				check(CreatureArt.art_key(choir) == "choir_summoner",
 					"choir_summoner_uses_dedicated_art")
 				check(choir.sprite_visual.modulate == Color.WHITE,
 					"choir_summoner_no_fallback_tint")

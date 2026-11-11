@@ -1,382 +1,1162 @@
 {
- "watcher_eye": {
-  "frame_size": [
-   96,
-   96
-  ],
-  "opaque_rect": [
-   2,
-   7,
-   92,
-   89
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
+  "watcher_eye": {
+    "frame_size": [
+      96,
+      96
+    ],
+    "opaque_rect": [
+      2,
+      7,
+      92,
+      89
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "ink_wisp": {
+    "frame_size": [
+      64,
+      64
+    ],
+    "opaque_rect": [
+      2,
+      25,
+      58,
+      39
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "skull_lantern": {
+    "frame_size": [
+      96,
+      96
+    ],
+    "opaque_rect": [
+      2,
+      3,
+      92,
+      93
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "abyss_jelly": {
+    "frame_size": [
+      96,
+      128
+    ],
+    "opaque_rect": [
+      2,
+      53,
+      92,
+      75
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "name_snake": {
+    "frame_size": [
+      128,
+      64
+    ],
+    "opaque_rect": [
+      2,
+      25,
+      123,
+      39
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "echo_bat": {
+    "frame_size": [
+      96,
+      64
+    ],
+    "opaque_rect": [
+      2,
+      14,
+      91,
+      50
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "rust_bellman": {
+    "frame_size": [
+      96,
+      96
+    ],
+    "opaque_rect": [
+      14,
+      24,
+      68,
+      72
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "drowned_scribe": {
+    "frame_size": [
+      96,
+      96
+    ],
+    "opaque_rect": [
+      2,
+      9,
+      92,
+      87
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "spine_centipede": {
+    "frame_size": [
+      128,
+      64
+    ],
+    "opaque_rect": [
+      2,
+      8,
+      123,
+      56
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "string_puppet": {
+    "frame_size": [
+      96,
+      128
+    ],
+    "opaque_rect": [
+      7,
+      33,
+      81,
+      95
+    ],
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 7
+      },
+      "move": {
+        "frames": 4,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 8
+      },
+      "attack": {
+        "frames": 3,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 5,
+        "fps": 10
+      }
+    }
+  },
+  "lung_bell_guardian": {
+    "frame_size": [
+      288,
+      265
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      38,
+      11,
+      241,
+      252
+    ]
+  },
+  "ink_archivist": {
+    "frame_size": [
+      310,
+      265
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      38,
+      2,
+      233,
+      261
+    ]
+  },
+  "ink_hound": {
+    "frame_size": [
+      138,
+      90
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      16,
+      6,
+      106,
+      82
+    ]
+  },
+  "last_reader": {
+    "frame_size": [
+      268,
+      256
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      34,
+      3,
+      220,
+      251
+    ]
+  },
+  "scribe_bug": {
+    "frame_size": [
+      140,
+      93
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      20,
+      5,
+      108,
+      86
+    ]
+  },
+  "smiling_archivist": {
+    "frame_size": [
+      258,
+      258
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      37,
+      2,
+      196,
+      254
+    ]
+  },
+  "blank_man": {
+    "frame_size": [
+      122,
+      98
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      21,
+      2,
+      83,
+      94
+    ]
+  },
+  "breath_hound": {
+    "frame_size": [
+      106,
+      60
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      10,
+      4,
+      89,
+      54
+    ]
+  },
+  "choir_summoner": {
+    "frame_size": [
+      112,
+      99
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      22,
+      2,
+      74,
+      95
+    ]
+  },
+  "collapse_husk": {
+    "frame_size": [
+      126,
+      99
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      34,
+      3,
+      71,
+      94
+    ]
+  },
+  "echo_enemy": {
+    "frame_size": [
+      122,
+      100
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      15,
+      2,
+      94,
+      96
+    ]
+  },
+  "hanging_scribe": {
+    "frame_size": [
+      114,
+      98
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      16,
+      2,
+      88,
+      94
+    ]
+  },
+  "ink_bomber": {
+    "frame_size": [
+      126,
+      91
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      22,
+      5,
+      88,
+      84
+    ]
+  },
+  "lung_moth": {
+    "frame_size": [
+      116,
+      88
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      12,
+      9,
+      95,
+      77
+    ]
+  },
+  "mask_enemy": {
+    "frame_size": [
+      118,
+      95
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      14,
+      6,
+      96,
+      87
+    ]
+  },
+  "mirror_sniper": {
+    "frame_size": [
+      110,
+      70
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      11,
+      2,
+      90,
+      66
+    ]
+  },
+  "page_swarm": {
+    "frame_size": [
+      136,
+      74
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      17,
+      8,
+      104,
+      64
+    ]
+  },
+  "rust_whisperer": {
+    "frame_size": [
+      116,
+      98
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      29,
+      2,
+      64,
+      94
+    ]
+  },
+  "seat_husk": {
+    "frame_size": [
+      124,
+      101
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      25,
+      6,
+      88,
+      93
+    ]
+  },
+  "typo_beast": {
+    "frame_size": [
+      138,
+      98
+    ],
+    "anims": {
+      "idle": {
+        "frames": 6,
+        "fps": 7
+      },
+      "move": {
+        "frames": 6,
+        "fps": 10
+      },
+      "windup": {
+        "frames": 2,
+        "fps": 6
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 12
+      },
+      "hurt": {
+        "frames": 1,
+        "fps": 10
+      },
+      "death": {
+        "frames": 6,
+        "fps": 12
+      }
+    },
+    "source": "magpie",
+    "opaque_rect": [
+      24,
+      3,
+      99,
+      93
+    ]
   }
- },
- "ink_wisp": {
-  "frame_size": [
-   64,
-   64
-  ],
-  "opaque_rect": [
-   2,
-   25,
-   58,
-   39
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
-  }
- },
- "skull_lantern": {
-  "frame_size": [
-   96,
-   96
-  ],
-  "opaque_rect": [
-   2,
-   3,
-   92,
-   93
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
-  }
- },
- "abyss_jelly": {
-  "frame_size": [
-   96,
-   128
-  ],
-  "opaque_rect": [
-   2,
-   53,
-   92,
-   75
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
-  }
- },
- "name_snake": {
-  "frame_size": [
-   128,
-   64
-  ],
-  "opaque_rect": [
-   2,
-   25,
-   123,
-   39
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
-  }
- },
- "echo_bat": {
-  "frame_size": [
-   96,
-   64
-  ],
-  "opaque_rect": [
-   2,
-   14,
-   91,
-   50
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
-  }
- },
- "rust_bellman": {
-  "frame_size": [
-   96,
-   96
-  ],
-  "opaque_rect": [
-   14,
-   24,
-   68,
-   72
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
-  }
- },
- "drowned_scribe": {
-  "frame_size": [
-   96,
-   96
-  ],
-  "opaque_rect": [
-   2,
-   9,
-   92,
-   87
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
-  }
- },
- "spine_centipede": {
-  "frame_size": [
-   128,
-   64
-  ],
-  "opaque_rect": [
-   2,
-   8,
-   123,
-   56
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
-  }
- },
- "string_puppet": {
-  "frame_size": [
-   96,
-   128
-  ],
-  "opaque_rect": [
-   7,
-   33,
-   81,
-   95
-  ],
-  "anims": {
-   "idle": {
-    "frames": 4,
-    "fps": 7
-   },
-   "move": {
-    "frames": 4,
-    "fps": 10
-   },
-   "windup": {
-    "frames": 2,
-    "fps": 8
-   },
-   "attack": {
-    "frames": 3,
-    "fps": 12
-   },
-   "hurt": {
-    "frames": 1,
-    "fps": 10
-   },
-   "death": {
-    "frames": 5,
-    "fps": 10
-   }
-  }
- }
 }

@@ -1375,7 +1375,10 @@ func _spawn_group(room: ArenaRoom, ids: Array, start_offset: float,
 		if not roaming:
 			VFX.spawn(enemy.get_parent(), &"enemy_spawn", enemy.global_position + Vector2(0, ENEMY_FOOT_Y))
 		if CreatureArt.has(id):
-			_apply_creature_art(enemy, id)
+			# Enemies that used to be one painting keep the body they had.
+			_apply_creature_art(enemy, id, 0.0, Color.WHITE, CreatureArt.is_painted(id))
+			if ENEMY_ANIM_STYLE.has(id) or CreatureArt.is_painted(id):
+				enemy.actor_style = ENEMY_ANIM_STYLE.get(id, &"humanoid")
 		else:
 			var art_id: StringName = ENEMY_ART_FALLBACK.get(id, id)
 			var tint := ENEMY_FALLBACK_TINT if ENEMY_ART_FALLBACK.has(id) else Color.WHITE
@@ -1474,8 +1477,15 @@ func _spawn_boss(room: ArenaRoom, chapter: Dictionary, chapter_index: int) -> In
 	boss.aggro_range = 700.0
 	boss.deaggro_range = 1200.0
 	boss.attack_windup = 0.7
-	var texture: Texture2D = load(chapter["boss_texture"])
-	_apply_art(boss, texture, chapter["boss_scale"], chapter["boss_tint"], &"elite")
+	# Bosses with drawn action strips (1.1) animate like the creature enemies;
+	# the single painting stays as the fallback.
+	var boss_art := StringName(String(chapter["boss_texture"]).get_file().get_basename())
+	if CreatureArt.has(boss_art):
+		boss.actor_style = &"elite"
+		_apply_creature_art(boss, boss_art, float(chapter["boss_scale"]), chapter["boss_tint"], true)
+	else:
+		var texture: Texture2D = load(chapter["boss_texture"])
+		_apply_art(boss, texture, chapter["boss_scale"], chapter["boss_tint"], &"elite")
 	boss.died.connect(_on_boss_died.bind(chapter_index))
 	boss.health_changed.connect(hud.update_boss)
 	boss.damaged.connect(relic_effects.on_damage)
@@ -1510,17 +1520,19 @@ func _apply_art(enemy: Enemy, texture: Texture2D, art_scale: float, tint: Color,
 ## Frame-animated creature art: same Sprite2D + ActorMotion path as painted
 ## enemies, with a CreatureArt child swapping the frames. The collider follows
 ## the drawn size (a snake stays low enough to jump over).
-func _apply_creature_art(enemy: Enemy, id: StringName) -> void:
+func _apply_creature_art(enemy: Enemy, id: StringName, scale_override := 0.0, tint := Color.WHITE,
+		tall := false) -> void:
 	var first := CreatureArt.first_frame(id)
 	if first == null:
 		return
-	var scale_factor := CreatureArt.display_scale(id)
+	var scale_factor := scale_override if scale_override > 0.0 else CreatureArt.display_scale(id)
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite"
 	PixelSprite.setup(sprite, first, scale_factor, ENEMY_FOOT_Y)
+	sprite.modulate = tint
 	enemy.add_child(sprite)
 	enemy.sprite_visual = sprite
-	enemy.sprite_base_modulate = Color.WHITE
+	enemy.sprite_base_modulate = tint
 	enemy.frame_animated = true
 	enemy.death_delay = maxf(enemy.death_delay, CreatureArt.death_length(id) + 0.25)
 	var animator := CreatureArt.new()
@@ -1533,8 +1545,13 @@ func _apply_creature_art(enemy: Enemy, id: StringName) -> void:
 	var collider := enemy.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if collider != null:
 		var shape := CapsuleShape2D.new()
-		shape.radius = clampf(minf(visual.x, visual.y) * 0.32, 10.0, 30.0)
-		shape.height = clampf(visual.y * 0.7, shape.radius * 2.0, 160.0)
+		if tall:
+			# Same body as the painted bosses and humanoids had (_apply_art).
+			shape.radius = clampf(visual.y * 0.18, 16.0, 34.0)
+			shape.height = clampf(visual.y * 0.75, 60.0, 210.0)
+		else:
+			shape.radius = clampf(minf(visual.x, visual.y) * 0.32, 10.0, 30.0)
+			shape.height = clampf(visual.y * 0.7, shape.radius * 2.0, 160.0)
 		collider.shape = shape
 		collider.position.y = ENEMY_FOOT_Y - shape.height * 0.5
 	for node_name in ["Body", "Eye"]:

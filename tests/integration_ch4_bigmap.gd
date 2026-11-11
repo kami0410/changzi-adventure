@@ -680,7 +680,8 @@ func _enemy_art_paths(arena: ArenaRoom) -> PackedStringArray:
 	for child in arena.get_node(ArenaRoom.ENEMIES_NODE).get_children():
 		if child is Enemy and child.sprite_visual != null \
 				and child.sprite_visual.texture != null:
-			paths.append(child.sprite_visual.texture.resource_path)
+			# 1.1: painted enemies play drawn strips, so art is compared by name.
+			paths.append(CreatureArt.art_key(child))
 	paths.sort()
 	return paths
 
@@ -691,7 +692,7 @@ func _expected_art_paths(wave: Array, art: Dictionary) -> PackedStringArray:
 	for id in wave:
 		var texture: Texture2D = art.get(id, null)
 		if texture != null:
-			paths.append(texture.resource_path)
+			paths.append(texture.resource_path.get_file().get_basename())
 	paths.sort()
 	return paths
 
@@ -705,7 +706,7 @@ func _check_enemy_art(arena: ArenaRoom, sprite_suffix: String, tint: Color) -> v
 		for child in arena.get_node(ArenaRoom.ENEMIES_NODE).get_children():
 			if child is Enemy and child.sprite_visual != null \
 					and child.sprite_visual.texture != null \
-					and child.sprite_visual.texture.resource_path.ends_with(sprite_suffix):
+					and CreatureArt.art_key(child) == sprite_suffix.get_file().get_basename():
 				found = child
 				break
 	check(found != null, "ch4_enemy_present_%s" % sprite_suffix.get_file())
@@ -729,7 +730,7 @@ func _check_wave_enemy_art(arena: ArenaRoom, wave: Array, art: Dictionary,
 		var texture: Texture2D = child.sprite_visual.texture
 		check(texture != null, "wave_enemy_texture_%s_%d" % [tag, index])
 		if texture != null:
-			check(expected.has(texture.resource_path),
+			check(expected.has(CreatureArt.art_key(child)),
 				"wave_enemy_dedicated_art_%s_%d" % [tag, index])
 		check(child.sprite_visual.modulate == Color.WHITE,
 			"wave_enemy_white_tint_%s_%d" % [tag, index])
@@ -1719,8 +1720,7 @@ func _run() -> void:
 			# Archivist's; no fallback tint.
 			check(boss.sprite_visual != null, "boss_has_sprite")
 			if boss.sprite_visual != null:
-				check(boss.sprite_visual.texture.resource_path.ends_with(
-					"assets/sprites/bosses/smiling_archivist.png"), "boss_uses_smiling_art")
+				check(CreatureArt.art_key(boss) == "smiling_archivist", "boss_uses_smiling_art")
 				check(boss.sprite_visual.modulate == Color.WHITE,
 					"boss_no_fallback_tint")
 		scene.player._invulnerable_left = 100

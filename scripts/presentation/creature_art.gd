@@ -40,6 +40,12 @@ static func has(enemy_id: StringName) -> bool:
 	return manifest().has(String(enemy_id))
 
 
+## True for strips cut from a Magpie sheet of an enemy that used to be a
+## single painting (tools/import_magpie_sheets.py).
+static func is_painted(enemy_id: StringName) -> bool:
+	return String((manifest().get(String(enemy_id), {}) as Dictionary).get("source", "")) == "magpie"
+
+
 static func display_scale(enemy_id: StringName) -> float:
 	return float(SCALES.get(enemy_id, 1))
 
@@ -76,6 +82,19 @@ static func animations_for(enemy_id: StringName) -> Dictionary:
 		out[StringName(anim_name)] = {"frames": list, "fps": float(def.get("fps", 10))}
 	_cache[key] = out
 	return out
+
+
+## The art an enemy wears, by name: the creature id when it plays drawn
+## strips, else the file name of its painting ("" without a sprite).
+static func art_key(target: Enemy) -> String:
+	if target == null:
+		return ""
+	for child in target.get_children():
+		if child is CreatureArt:
+			return String((child as CreatureArt).creature_id)
+	if target.sprite_visual != null and target.sprite_visual.texture != null:
+		return target.sprite_visual.texture.resource_path.get_file().get_basename()
+	return ""
 
 
 static func first_frame(enemy_id: StringName) -> Texture2D:
