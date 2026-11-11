@@ -49,6 +49,11 @@ const STATE_DEAD: StringName = &"dead"
 @export var art_tint: Color = Color.WHITE
 @export var art_offset_y: float = 16.0
 
+## How an enemy leaves the player's head: px per physics frame and the
+## sideways speed it keeps.
+const HEAD_SLIDE_STEP := 5.0
+const HEAD_SLIDE_SPEED := 190.0
+
 var health: int = 0
 var max_health: int = 10
 var state: StringName = STATE_IDLE
@@ -171,6 +176,24 @@ func _physics_process(delta: float) -> void:
 	else:
 		_update_ai(delta)
 	move_and_slide()
+	_slide_off_player()
+
+
+## An enemy that landed on the player's head stood there out of reach of every
+## weapon (1.1). It slips off to the nearer side instead of resting.
+func _slide_off_player() -> void:
+	for index in get_slide_collision_count():
+		var collision := get_slide_collision(index)
+		var player := collision.get_collider() as Player
+		if player == null or collision.get_normal().y > -0.5:
+			continue
+		var side := signf(global_position.x - player.global_position.x)
+		if is_zero_approx(side):
+			side = 1.0 if (get_instance_id() % 2) == 0 else -1.0
+		# move_and_collide keeps it out of walls; the velocity carries it clear.
+		move_and_collide(Vector2(side * HEAD_SLIDE_STEP, 0.0))
+		velocity.x = side * HEAD_SLIDE_SPEED
+		return
 
 
 func is_charmed() -> bool:
