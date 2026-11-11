@@ -8,8 +8,13 @@ extends RefCounted
 ## threads right after boot and keeps a reference to each resource, so the
 ## later "first use" is a cache hit.
 ##
-## Flow starts it and polls it every frame; nothing waits for it. A scene that
-## wants everything ready (the run scene) can call [method finish].
+## Flow starts it and polls it every frame. Nothing ever waits for it: 1.1.0
+## blocked on the unfinished loads when the player left the Hub, and the main
+## thread deadlocked against a worker that was loading the run scene (the game
+## froze on the way into a level). Two rules since 1.1.1:
+##   - only plain data (textures, sounds) goes to worker threads; scripts,
+##     scenes and resources load on the main thread, a few milliseconds a frame;
+##   - the main thread never calls a blocking wait on a worker's load.
 
 ## Folders walked recursively. Music and voice stay out: they are long streams
 ## that are loaded when played.
@@ -22,11 +27,19 @@ const ROOTS: Array[String] = [
 ]
 const SKIP_DIRS: Array[String] = ["res://assets/audio/music/", "res://assets/audio/voice/"]
 const EXTENSIONS: Array[String] = ["gd", "tscn", "png", "wav", "ogg", "tres", "gdshader"]
+## Loaded on worker threads. Everything else in EXTENSIONS loads on the main
+## thread within MAIN_BUDGET_MSEC a frame.
+const THREADED: Array[String] = ["png", "wav", "ogg"]
+## Not warmed: the run scene and its script pull in most of the game in one
+## load, which would be a long stall in the Hub. They load at the door.
+const SKIP_FILES: Array[String] = ["res://scenes/main.tscn", "res://scripts/game.gd"]
 ## Requests handed to the loader per frame, so boot itself never stalls.
 const REQUESTS_PER_FRAME := 12
+const MAIN_BUDGET_MSEC := 3
 
 static var _held: Dictionary = {}
 static var _queue: Array[String] = []
+static var _main_queue: Array[String] = []
 static var _loading: Array[String] = []
 static var _started := false
 
@@ -64,35 +77,33 @@ static func poll() -> bool:
 		if ResourceLoader.load_threaded_request(path) == OK:
 			_loading.append(path)
 			budget -= 1
+	var deadline := Time.get_ticks_msec() + MAIN_BUDGET_MSEC
+	while not _main_queue.is_empty() and Time.get_ticks_msec() < deadline:
+		var path: String = _main_queue.pop_back()
+		if not _held.has(path):
+			_held[path] = load(path)
 	return is_done()
 
 
 static func is_done() -> bool:
-	return _started and _queue.is_empty() and _loading.is_empty()
+	return _started and _queue.is_empty() and _main_queue.is_empty() and _loading.is_empty()
 
 
 ## Share of the work done, 0–1, for a loading hint.
 static func progress() -> float:
-	var total := _held.size() + _queue.size() + _loading.size()
+	var total := _held.size() + _queue.size() + _main_queue.size() + _loading.size()
 	return 1.0 if total == 0 else float(_held.size()) / float(total)
 
 
-## Blocks until everything is loaded. Used behind a fade, never mid-play.
-static func finish() -> void:
-	if not _started:
-		return
-	while not _queue.is_empty():
-		var path: String = _queue.pop_back()
-		if not _held.has(path):
-			_held[path] = load(path)
-	for path in _loading:
-		_held[path] = ResourceLoader.load_threaded_get(path)
-	_loading.clear()
+## Number of loads still on worker threads.
+static func pending_threaded() -> int:
+	return _loading.size()
 
 
 ## Drops every held reference (engine exit), so nothing outlives the servers.
 static func release() -> void:
 	_queue.clear()
+	_main_queue.clear()
 	_loading.clear()
 	_held.clear()
 
@@ -107,5 +118,8 @@ static func _collect(dir: String) -> void:
 	for entry in ResourceLoader.list_directory(dir):
 		if entry.ends_with("/"):
 			_collect(dir + entry)
-		elif EXTENSIONS.has(entry.get_extension()):
-			_queue.append(dir + entry)
+		elif EXTENSIONS.has(entry.get_extension()) and not SKIP_FILES.has(dir + entry):
+			if THREADED.has(entry.get_extension()):
+				_queue.append(dir + entry)
+			else:
+				_main_queue.append(dir + entry)

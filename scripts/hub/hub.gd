@@ -189,9 +189,8 @@ func _on_title_started() -> void:
 
 
 func _on_run_requested() -> void:
-	# Anything the background warmup has not reached yet is loaded here, on
-	# the way out of the hub, instead of as stalls inside the run.
-	Warmup.finish()
+	# The warmup keeps going in the background; nothing here may wait for it
+	# (1.1.0 did, and froze on the way into a level).
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 
