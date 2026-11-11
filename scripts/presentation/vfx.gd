@@ -74,7 +74,9 @@ static func attach(target: Node2D, id: StringName, seconds: float, offset := Vec
 		return null
 	# One instance per effect per target: refresh it instead of stacking.
 	var key := StringName("vfx_" + String(id))
-	var existing: Variant = target.get_meta(key, null)
+	# get_meta() with a null default still reports a missing key as an error
+	# (and prints a stack), which cost tens of milliseconds per burning hit.
+	var existing: Variant = target.get_meta(key) if target.has_meta(key) else null
 	if existing is VFX and is_instance_valid(existing):
 		(existing as VFX).life = maxf((existing as VFX).life, seconds)
 		return existing

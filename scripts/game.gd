@@ -1684,6 +1684,10 @@ const INK_FADE := preload("res://resources/shaders/ink_fade.gdshader")
 func _dress_room_fade(world: MDSWorldGame) -> void:
 	if world._fade == null:
 		return
+	# The ink shader runs layered noise on every screen pixel; on the smooth
+	# quality steps the fade stays a plain dark wipe.
+	if Perf.low:
+		return
 	var material := ShaderMaterial.new()
 	material.shader = INK_FADE
 	material.set_shader_parameter(&"seed", randf_range(0.0, 50.0))

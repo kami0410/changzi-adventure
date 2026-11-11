@@ -15,6 +15,10 @@ var duration := 0.28
 var elapsed := 0.0
 var amount := 0
 const FONT = preload("res://assets/fonts/fusion-pixel-12px-monospaced-zh_hans.ttf.woff2")
+## Kinds that carry information and are never dropped by the live cap.
+const ESSENTIAL: Array[StringName] = [&"number", &"telegraph", &"heal"]
+
+static var _live := 0
 
 
 static func spawn(host: Node, at: Vector2, type: StringName, color: Color = Color("70e1d0"), facing: float = 1.0, size: float = 55.0, value: int = 0) -> CombatFX:
@@ -25,6 +29,11 @@ static func spawn(host: Node, at: Vector2, type: StringName, color: Color = Colo
 	effect.radius = size
 	effect.amount = value
 	effect.duration = _duration_for(type)
+	# Past the cap a decorative effect still exists for its caller but is
+	# never drawn and frees itself on its first frame.
+	if _live >= Perf.fx_cap and not ESSENTIAL.has(type):
+		effect.duration = 0.0
+		effect.visible = false
 	effect.process_mode = Node.PROCESS_MODE_PAUSABLE
 	host.add_child(effect)
 	effect.global_position = at
@@ -51,10 +60,19 @@ func _ready() -> void:
 	z_index = 8
 
 
+func _enter_tree() -> void:
+	_live += 1
+
+
+func _exit_tree() -> void:
+	_live = maxi(_live - 1, 0)
+
+
 func _process(delta: float) -> void:
 	elapsed += delta
 	if elapsed >= duration:
 		queue_free()
+		return
 	queue_redraw()
 
 

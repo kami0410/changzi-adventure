@@ -40,7 +40,7 @@ func _ready() -> void:
 		_motifs.add_child(pillar)
 	var dust := CPUParticles2D.new()
 	dust.position = Vector2(world_width * 0.5, 320)
-	dust.amount = 72
+	dust.amount = int(72 * Perf.ambient_scale)
 	dust.lifetime = 12.0
 	dust.preprocess = 12.0
 	dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
@@ -73,7 +73,8 @@ func _process(delta: float) -> void:
 		_far.scale = Vector2.ONE * coverage
 		_far.position.x = center.x - _base_x - (clampf(left, 0, world_width) / world_width - 0.5) * 90
 		_motifs.position.x = clampf(left, 0, world_width) * 0.12
-	queue_redraw()
+	if Perf.ambient_frame():
+		queue_redraw()
 
 func _draw() -> void:
 	var ink := Color("6fc7c1") if not breathing else Color("b4cb7e")

@@ -112,6 +112,7 @@ func _ready() -> void:
 	flash_scale = profile.flash_scale
 	apply_master_volume()
 	apply_window_mode()
+	apply_graphics()
 	ensure_actions()
 	touch_overlay = TouchOverlay.new()
 	touch_overlay.name = "TouchOverlay"
@@ -123,6 +124,24 @@ func _ready() -> void:
 	# Explicit quit() calls (pause menu, tests) still exit immediately.
 	if get_tree() != null:
 		get_tree().auto_accept_quit = false
+	# Headless runs (tests, import) have no stalls to hide and must exit
+	# without half-finished background loads.
+	if DisplayServer.get_name() != "headless":
+		Warmup.start()
+	else:
+		set_process(false)
+
+
+func _process(_delta: float) -> void:
+	# Background preloading; stops costing anything once it is done.
+	if Warmup.poll():
+		set_process(false)
+
+
+func _exit_tree() -> void:
+	# Held resources must go before the servers do, or the engine reports
+	# them as leaked at exit.
+	Warmup.release()
 
 
 func _input(event: InputEvent) -> void:
@@ -186,6 +205,7 @@ func _notification(what: int) -> void:
 	var tree := get_tree()
 	if tree == null:
 		return
+	Warmup.release()
 	var scene := tree.current_scene
 	if scene != null and scene.has_method("save_run_on_exit"):
 		scene.call("save_run_on_exit")
@@ -513,6 +533,18 @@ func apply_window_mode() -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if profile.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
 
 
+## Graphics quality: effect density and internal resolution.
+func apply_graphics() -> void:
+	Perf.configure(profile.graphics_quality if profile != null else Perf.AUTO)
+	if DisplayServer.get_name() == "headless" or get_tree() == null:
+		return
+	# Rendering the 2D scene at the logical 720p and scaling the finished
+	# frame up costs the GPU far fewer pixels than drawing at 1440p.
+	var fastest := Perf.mode == Perf.FASTEST
+	get_tree().root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT if fastest \
+		else Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
+
+
 func apply_master_volume() -> void:
 	var volume := clampf(profile.master_volume if profile != null else 1.0, 0.0, 1.0)
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(volume, 0.001)))
@@ -532,6 +564,7 @@ func reset_profile() -> void:
 		profile.master_volume = old.master_volume
 		profile.fullscreen = old.fullscreen
 		profile.touch_mode = old.touch_mode
+		profile.graphics_quality = old.graphics_quality
 		profile.touch_scale = old.touch_scale
 		profile.touch_opacity = old.touch_opacity
 		profile.grimoire = old.grimoire.duplicate(true)

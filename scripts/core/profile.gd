@@ -53,6 +53,8 @@ var fullscreen: bool = false
 ## Touch controls (1.0.1): 0 = auto (shown while a finger is the device),
 ## 1 = always, 2 = never; button size and opacity.
 var touch_mode: int = 0
+## Perf.AUTO / FULL / SMOOTH / FASTEST.
+var graphics_quality: int = 0
 var touch_scale: float = 1.0
 var touch_opacity: float = 0.6
 var grimoire: Array[Dictionary] = []
@@ -364,6 +366,7 @@ func save_profile(path: String = "user://profile.cfg") -> void:
 	config.set_value("settings", "master_volume", master_volume)
 	config.set_value("settings", "fullscreen", fullscreen)
 	config.set_value("settings", "touch_mode", touch_mode)
+	config.set_value("settings", "graphics_quality", graphics_quality)
 	config.set_value("settings", "touch_scale", touch_scale)
 	config.set_value("settings", "touch_opacity", touch_opacity)
 	config.set_value("npc", "blessings", npc_blessings)
@@ -491,6 +494,7 @@ func load_profile(path: String = "user://profile.cfg") -> bool:
 	master_volume = clampf(_as_float(config.get_value("settings", "master_volume", 1.0), 1.0), 0.0, 1.0)
 	fullscreen = _as_bool(config.get_value("settings", "fullscreen", false), false)
 	touch_mode = clampi(_as_int(config.get_value("settings", "touch_mode", 0), 0), 0, 2)
+	graphics_quality = clampi(_as_int(config.get_value("settings", "graphics_quality", 0), 0), 0, 3)
 	touch_scale = clampf(_as_float(config.get_value("settings", "touch_scale", 1.0), 1.0), 0.7, 1.4)
 	touch_opacity = clampf(_as_float(config.get_value("settings", "touch_opacity", 0.6), 0.6), 0.25, 0.95)
 

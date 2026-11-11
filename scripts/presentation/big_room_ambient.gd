@@ -26,7 +26,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
-	queue_redraw()
+	if Perf.ambient_frame():
+		queue_redraw()
 
 
 ## Camera-visible part of [member bounds], in this node's local coordinates.
@@ -55,7 +56,7 @@ func mote_count() -> int:
 	if window.size.x <= 0.0 or window.size.y <= 0.0:
 		return 0
 	var share := (window.size.x * window.size.y) / REFERENCE_AREA
-	return clampi(int(round(64.0 * maxf(density, 0.0) * share)), 0, MAX_MOTES)
+	return clampi(int(round(64.0 * maxf(density, 0.0) * share * Perf.ambient_scale)), 0, MAX_MOTES)
 
 
 func _draw() -> void:

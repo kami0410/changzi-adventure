@@ -168,6 +168,23 @@ func _on_input_device_changed(_using_gamepad: bool) -> void:
 	_refresh_close_hint()
 
 
+## Graphics quality (1.1): effect density and, at the fastest step, a 720p
+## internal resolution for phones that struggle.
+func _add_graphics_option(box: Node, flow: GameFlow) -> void:
+	if flow.profile == null:
+		return
+	var option := OptionButton.new()
+	option.name = "GraphicsOption"
+	for label in Perf.LABELS:
+		option.add_item(label)
+	option.selected = clampi(flow.profile.graphics_quality, 0, Perf.LABELS.size() - 1)
+	option.item_selected.connect(func(index: int):
+		flow.profile.graphics_quality = index
+		flow.apply_graphics()
+		_persist_setting(flow))
+	box.add_child(option)
+
+
 ## Touch controls (1.0.1): when to show them, button size and opacity.
 func _add_touch_options(box: Node, flow: GameFlow) -> void:
 	if flow.profile == null:
@@ -254,6 +271,7 @@ func _add_accessibility_options() -> void:
 	text_option.selected = maxi(sizes.find(current_size), 0)
 	text_option.item_selected.connect(func(index: int): _set_text_scale(int(sizes[index])))
 	box.add_child(text_option)
+	_add_graphics_option(box, flow)
 	_add_touch_options(box, flow)
 	var ai_button := Button.new()
 	ai_button.text = "AI 言灵设置"
